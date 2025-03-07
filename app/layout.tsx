@@ -8,10 +8,12 @@ interface LayoutProps {
 
 export default function RootLayout({ children }: LayoutProps) {
   return (
-    <div className="bg-black text-white">
-      <Header />
-      <main className="container mx-auto px-4">{children}</main>
-      <Footer />
-    </div>
+    <html lang="en">
+      <body className="bg-black text-white">
+        <Header />
+        <main className="container mx-auto px-4">{children}</main>
+        <Footer />
+      </body>
+    </html>
   );
 }
