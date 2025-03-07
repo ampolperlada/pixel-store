@@ -17,16 +17,3 @@ const Header: React.FC = () => {
 };
 
 export default Header;
-
-// src/components/Footer.tsx
-import React from "react";
-
-const Footer: React.FC = () => {
-  return (
-    <footer className="bg-black text-cyan-400 py-4 text-center border-t border-cyan-400 mt-10">
-      <p className="text-sm font-mono">&copy; 2025 Pixel Store. All rights reserved.</p>
-    </footer>
-  );
-};
-
-export default Footer;

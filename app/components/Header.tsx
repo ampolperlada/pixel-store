@@ -6,5 +6,5 @@ function Header({ children }: { children?: React.ReactNode }) {
     </header>
   );
 }
-
+  
 export default Header;
