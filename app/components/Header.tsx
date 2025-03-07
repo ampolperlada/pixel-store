@@ -1,7 +1,10 @@
 // components/Header.tsx
+"use client";
+
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

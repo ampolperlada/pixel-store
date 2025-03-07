@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import '@/app/globals.css'; // ✅ If using absolute imports (check your tsconfig.json)
 
 interface LayoutProps {
   children: ReactNode;

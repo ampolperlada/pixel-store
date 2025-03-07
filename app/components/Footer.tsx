@@ -1,19 +1,27 @@
-// src/components/Header.tsx
-import React from "react";
+import React, { ReactNode } from 'react';
+import { Inter } from 'next/font/google';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 
-const Header: React.FC = () => {
-  return (
-    <header className="bg-black text-cyan-400 py-4 px-6 flex justify-between items-center shadow-lg border-b border-cyan-400">
-      <h1 className="text-2xl font-mono tracking-widest">Pixel Store</h1>
-      <nav>
-        <ul className="flex space-x-6">
-          <li><a href="#" className="hover:text-cyan-200">Home</a></li>
-          <li><a href="#" className="hover:text-cyan-200">Shop</a></li>
-          <li><a href="#" className="hover:text-cyan-200">About</a></li>
-        </ul>
-      </nav>
-    </header>
-  );
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata = {
+  title: 'Pixel Store - Digital Pixel Art Marketplace',
+  description: 'Buy, sell and trade unique pixel art collectibles',
 };
 
-export default Header;
+export default function RootLayout({
+  children,
+}: {
+  children?: ReactNode; // Made children optional
+}) {
+  return (
+    <html lang="en">
+      <body className={`${inter.className} min-h-screen flex flex-col bg-black text-white`}>
+        <Header />
+        <main className="flex-grow">{children}</main> {/* Will render nothing if children is undefined */}
+        <Footer />
+      </body>
+    </html>
+  );
+}
