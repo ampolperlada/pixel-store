@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import '@/app/globals.css'; // ✅ If using absolute imports (check your tsconfig.json)
+import "./globals.css"; // ✅ Correct for the App Router
 
 interface LayoutProps {
   children: ReactNode;
