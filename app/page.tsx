@@ -1,101 +1,107 @@
-import Image from "next/image";
+// app/page.tsx
+import React from 'react';
+import Link from 'next/link';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  // Sample featured pixel art data
+  const featuredArt = [
+    { id: 1, title: 'Neon City', artist: 'PixelMaster', price: '0.05 ETH', image: '/api/placeholder/300/300' },
+    { id: 2, title: 'Cyber Samurai', artist: 'RetroArtist', price: '0.08 ETH', image: '/api/placeholder/300/300' },
+    { id: 3, title: 'Digital Dreams', artist: 'VoxelQueen', price: '0.03 ETH', image: '/api/placeholder/300/300' },
+    { id: 4, title: 'Glitch Landscape', artist: 'ByteCrafter', price: '0.07 ETH', image: '/api/placeholder/300/300' },
+  ];
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  return (
+    <main className="min-h-screen bg-black text-white">
+      {/* Hero Section with Pixel Art Styling */}
+      <section className="relative h-96 overflow-hidden border-b-4 border-pink-500 border-dotted">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-900 to-blue-900 opacity-70"></div>
+        <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 opacity-20">
+          {/* This creates a pixel grid effect in the background */}
+          {Array(144).fill(0).map((_, i) => (
+            <div key={i} className="border border-blue-500/20"></div>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        
+        <div className="relative z-10 h-full flex flex-col items-center justify-center px-4 text-center">
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 pixel-font">
+            PIXEL MARKETPLACE
+          </h1>
+          <p className="text-xl md:text-2xl mb-8 text-cyan-300 font-mono">Collect • Trade • Create</p>
+          <div className="space-x-4">
+            <Link href="/shop" className="px-6 py-3 bg-pink-600 text-white font-bold hover:bg-pink-700 transition-all border-2 border-pink-400 shadow-lg shadow-pink-500/50">
+              EXPLORE ART
+            </Link>
+            <Link href="/about" className="px-6 py-3 bg-transparent text-cyan-300 font-bold hover:text-cyan-100 transition-all border-2 border-cyan-500 shadow-lg shadow-cyan-500/30">
+              LEARN MORE
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Pixel Art */}
+      <section className="py-12 px-4 md:px-8">
+        <h2 className="text-3xl font-bold mb-8 text-cyan-300 border-b-2 border-cyan-500 pb-2 inline-block font-mono">FEATURED ARTWORK</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {featuredArt.map((art) => (
+            <div key={art.id} className="bg-gray-900 border-2 border-purple-500 hover:border-pink-500 transition-all p-4 group">
+              <div className="relative aspect-square mb-3 overflow-hidden">
+                <img 
+                  src={art.image} 
+                  alt={art.title}
+                  className="object-cover w-full h-full group-hover:scale-105 transition-transform"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p className="text-pink-400 font-bold">{art.price}</p>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-white">{art.title}</h3>
+              <p className="text-cyan-400">by {art.artist}</p>
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-8 text-center">
+          <Link href="/shop" className="px-6 py-3 bg-purple-700 text-white font-bold hover:bg-purple-800 transition-all border-2 border-purple-500 inline-block">
+            VIEW ALL ARTWORK
+          </Link>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-12 px-4 md:px-8 bg-gradient-to-b from-gray-900 to-black">
+        <h2 className="text-3xl font-bold mb-8 text-cyan-300 border-b-2 border-cyan-500 pb-2 inline-block font-mono">HOW IT WORKS</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="bg-gray-900 p-6 border-l-4 border-pink-500">
+            <div className="text-4xl font-bold text-pink-500 mb-3">01</div>
+            <h3 className="text-xl font-bold text-white mb-2">Create or Purchase</h3>
+            <p className="text-gray-300">Browse our marketplace for pixel art or list your own creations for others to enjoy.</p>
+          </div>
+          
+          <div className="bg-gray-900 p-6 border-l-4 border-purple-500">
+            <div className="text-4xl font-bold text-purple-500 mb-3">02</div>
+            <h3 className="text-xl font-bold text-white mb-2">Secure Ownership</h3>
+            <p className="text-gray-300">Each piece of art comes with verified ownership and transaction history.</p>
+          </div>
+          
+          <div className="bg-gray-900 p-6 border-l-4 border-cyan-500">
+            <div className="text-4xl font-bold text-cyan-500 mb-3">03</div>
+            <h3 className="text-xl font-bold text-white mb-2">Trade & Collect</h3>
+            <p className="text-gray-300">Build your collection or trade with other enthusiasts in our community.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Call to Action */}
+      <section className="py-16 px-4 text-center bg-gradient-to-r from-pink-900/50 to-purple-900/50">
+        <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white font-mono">JOIN THE PIXEL REVOLUTION</h2>
+        <p className="text-xl text-cyan-300 mb-8 max-w-2xl mx-auto">Sign up today and get exclusive access to limited edition pixel art drops and community events.</p>
+        <button className="px-8 py-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold hover:from-pink-700 hover:to-purple-700 transition-all border-2 border-pink-400 shadow-lg shadow-pink-500/30 uppercase tracking-wider">
+          Sign Up Now
+        </button>
+      </section>
+    </main>
   );
 }
