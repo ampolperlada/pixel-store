@@ -1,8 +1,6 @@
-/* app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 @layer base {
   /* Import pixel font (you'll need to download or link an actual pixel font) */
   @font-face {
