@@ -1,7 +1,5 @@
 import { ReactNode } from "react";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import "./globals.css"; // ✅ Correct for the App Router
+import "./globals.css";
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,10 +8,8 @@ interface LayoutProps {
 export default function RootLayout({ children }: LayoutProps) {
   return (
     <html lang="en">
-      <body className="bg-black text-white">
-        <Header />
-        <main className="container mx-auto px-4">{children}</main>
-        <Footer />
+      <body style={{ backgroundColor: 'black', color: 'white' }}>
+        <main>{children}</main>
       </body>
     </html>
   );
