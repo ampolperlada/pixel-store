@@ -8,5 +8,6 @@ module.exports = {
   theme: {
     extend: {},
   },
+  safelist: ['bg-black'],
   plugins: [],
 };
