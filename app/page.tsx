@@ -1,5 +1,6 @@
 // app/page.tsx
-import React from 'react';
+'use client';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -9,7 +10,24 @@ export default function Home() {
     { id: 2, title: 'Cyber Samurai', artist: 'RetroArtist', price: '0.08 ETH', image: '/api/placeholder/300/300' },
     { id: 3, title: 'Digital Dreams', artist: 'VoxelQueen', price: '0.03 ETH', image: '/api/placeholder/300/300' },
     { id: 4, title: 'Glitch Landscape', artist: 'ByteCrafter', price: '0.07 ETH', image: '/api/placeholder/300/300' },
+    { id: 4, title: 'Glitch Landscape', artist: 'ByteCrafter', price: '0.07 ETH', image: '/api/placeholder/300/300' },
+    { id: 4, title: 'Glitch Landscape', artist: 'ByteCrafter', price: '0.07 ETH', image: '/api/placeholder/300/300' },
+
   ];
+
+  // For carousel functionality
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // Auto-sliding functionality
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => 
+        prevIndex === featuredArt.length - 1 ? 0 : prevIndex + 1
+      );
+    }, 3000); // Change slide every 3 seconds
+    
+    return () => clearInterval(interval);
+  }, [featuredArt.length]);
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -39,27 +57,50 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Pixel Art */}
+      {/* Featured Pixel Art Auto-Sliding Carousel */}
       <section className="py-12 px-4 md:px-8">
         <h2 className="text-3xl font-bold mb-8 text-cyan-300 border-b-2 border-cyan-500 pb-2 inline-block font-mono">FEATURED ARTWORK</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredArt.map((art) => (
-            <div key={art.id} className="bg-gray-900 border-2 border-purple-500 hover:border-pink-500 transition-all p-4 group">
-              <div className="relative aspect-square mb-3 overflow-hidden">
-                <img 
-                  src={art.image} 
-                  alt={art.title}
-                  className="object-cover w-full h-full group-hover:scale-105 transition-transform"
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-pink-400 font-bold">{art.price}</p>
+        {/* Smaller Auto-Sliding Carousel */}
+        <div className="max-w-5xl mx-auto">
+          <div className="overflow-hidden">
+            <div 
+              className="flex transition-transform duration-1000 ease-in-out"
+              style={{ transform: `translateX(-${currentIndex * 25}%)` }}
+            >
+              {featuredArt.map((art) => (
+                <div key={art.id} className="min-w-[25%] px-2">
+                  <div className="bg-gray-900 border-2 border-purple-500 hover:border-pink-500 transition-all p-3 group">
+                    <div className="relative aspect-square mb-2 overflow-hidden">
+                      <img 
+                        src={art.image} 
+                        alt={art.title}
+                        className="object-cover w-full h-full group-hover:scale-105 transition-transform"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-pink-400 font-bold text-sm">{art.price}</p>
+                      </div>
+                    </div>
+                    <h3 className="text-sm font-bold text-white truncate">{art.title}</h3>
+                    <p className="text-cyan-400 text-xs">by {art.artist}</p>
+                  </div>
                 </div>
-              </div>
-              <h3 className="text-xl font-bold text-white">{art.title}</h3>
-              <p className="text-cyan-400">by {art.artist}</p>
+              ))}
             </div>
-          ))}
+          </div>
+          
+          {/* Indicator Dots */}
+          <div className="flex justify-center mt-4 space-x-2">
+            {featuredArt.map((_, index) => (
+              <button
+                key={index}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  currentIndex === index ? 'bg-pink-500' : 'bg-gray-600'
+                }`}
+                onClick={() => setCurrentIndex(index)}
+              />
+            ))}
+          </div>
         </div>
         
         <div className="mt-8 text-center">
