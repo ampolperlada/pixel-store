@@ -12,7 +12,7 @@ export default function Home() {
     { id: 5, title: 'Cyber Shogun', artist: 'ByteCrafter', price: '0.07 ETH', image: '/api/placeholder/300/300', gameReady: true },
     { id: 6, title: 'Mecha Ronin', artist: 'ByteCrafter', price: '0.07 ETH', image: '/api/placeholder/300/300', gameReady: false },
     { id: 7, title: 'Neon Oni', artist: 'ByteCrafter', price: '0.07 ETH', image: '/api/placeholder/300/300', gameReady: true },
-    { id: 8, title: 'Digital Creator', artist: 'ByteCrafter', price: '0.07 ETH', image: '/api/placeholder/300/300', gameReady: true },
+    { id: 8, title: 'Digital Drifter', artist: 'ByteCrafter', price: '0.07 ETH', image: '/api/placeholder/300/300', gameReady: true },
     { id: 9, title: 'Shadow Hacker', artist: 'ByteCrafter', price: '0.07 ETH', image: '/api/placeholder/300/300', gameReady: true },
   ];
 
