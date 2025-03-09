@@ -3,6 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 
+// Inside your component JSX:
+<Link href="/create" className="px-4 py-2 bg-purple-700 text-white rounded hover:bg-purple-600 transition">
+  Create Pixel Art
+</Link>
+
 export default function HeroSection() {
   return (
     <section className="relative h-96 overflow-hidden border-b-4 border-pink-500 border-dotted">
