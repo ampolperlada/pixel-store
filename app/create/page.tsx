@@ -17,8 +17,8 @@ export default function CreatorStudio() {
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [currentTool, setCurrentTool] = useState('pencil');
   const [isDrawing, setIsDrawing] = useState(false);
-  const [pixels, setPixels] = useState(Array(canvasSize * canvasSize).fill('#FFFFFF'));
-  const [history, setHistory] = useState([Array(canvasSize * canvasSize).fill('#FFFFFF')]);
+  const [pixels, setPixels] = useState<string[]>(Array(canvasSize * canvasSize).fill('#FFFFFF'));
+  const [history, setHistory] = useState<string[][]>([Array(canvasSize * canvasSize).fill('#FFFFFF')]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [artworkName, setArtworkName] = useState('Untitled Artwork');
   const [artworkDescription, setArtworkDescription] = useState('');
@@ -26,7 +26,7 @@ export default function CreatorStudio() {
   const [artworkTags, setArtworkTags] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     // Initialize empty canvas
@@ -40,7 +40,7 @@ export default function CreatorStudio() {
     setHistoryIndex(0);
   };
   
-  const handlePixelClick = (index) => {
+  const handlePixelClick = (index: number) => {
     if (currentTool === 'pencil') {
       const newPixels = [...pixels];
       newPixels[index] = selectedColor;
@@ -57,12 +57,12 @@ export default function CreatorStudio() {
     }
   };
   
-  const handleMouseDown = (index) => {
+  const handleMouseDown = (index: number) => {
     setIsDrawing(true);
     handlePixelClick(index);
   };
   
-  const handleMouseOver = (index) => {
+  const handleMouseOver = (index: number) => {
     if (isDrawing) {
       handlePixelClick(index);
     }
@@ -72,7 +72,7 @@ export default function CreatorStudio() {
     setIsDrawing(false);
   };
   
-  const addToHistory = (newPixels) => {
+  const addToHistory = (newPixels: string[]) => {
     // Remove any future history if we're in the middle of the history array
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newPixels);
@@ -100,16 +100,16 @@ export default function CreatorStudio() {
     }
   };
   
-  const fillBucket = (startIndex, targetColor, newColor) => {
+  const fillBucket = (startIndex: number, targetColor: string, newColor: string) => {
     if (targetColor === newColor) return;
     
-    const stack = [startIndex];
+    const stack: number[] = [startIndex];
     const newPixels = [...pixels];
     const width = canvasSize;
     
     while (stack.length > 0) {
       const currentIndex = stack.pop();
-      if (currentIndex < 0 || currentIndex >= pixels.length) continue;
+      if (currentIndex === undefined || currentIndex < 0 || currentIndex >= pixels.length) continue;
       if (newPixels[currentIndex] !== targetColor) continue;
       
       newPixels[currentIndex] = newColor;
@@ -128,7 +128,7 @@ export default function CreatorStudio() {
     addToHistory(newPixels);
   };
   
-  const handleFill = (index) => {
+  const handleFill = (index: number) => {
     fillBucket(index, pixels[index], selectedColor);
   };
   
@@ -137,6 +137,12 @@ export default function CreatorStudio() {
     canvas.width = canvasSize;
     canvas.height = canvasSize;
     const ctx = canvas.getContext('2d');
+    
+    // Fix for 'ctx' is possibly 'null'
+    if (!ctx) {
+      alert('Your browser does not support canvas operations');
+      return;
+    }
     
     // Draw pixels to canvas
     for (let i = 0; i < pixels.length; i++) {

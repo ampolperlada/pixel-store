@@ -1,4 +1,3 @@
-// app/page.jsx
 'use client';
 import React from 'react';
 import HeroSection from './components/HeroSection';
@@ -18,8 +17,16 @@ export default function Home() {
       <StatisticsSection />
       <CallToAction />
 
-      <div className="text-center py-8">
-        <Link href="/create" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+      <div className="text-center py-12 bg-gray-900">
+        <h2 className="text-3xl font-bold mb-4 text-cyan-300">Ready to Create?</h2>
+        <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
+          Launch our pixel art creator studio and start making your own digital masterpieces.
+          Create, mint, and sell your artwork directly on our marketplace.
+        </p>
+        <Link 
+          href="/create" 
+          className="bg-pink-600 hover:bg-pink-500 text-white font-bold py-3 px-8 rounded-md transition-colors"
+        >
           Open Pixel Creator Studio
         </Link>
       </div>  
