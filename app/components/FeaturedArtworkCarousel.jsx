@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 const FeaturedArtworkCarousel = ({ featuredArt }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoplay, setAutoplay] = useState(true);
-  const [filteredArt, setFilteredArt] = useState(featuredArt);
+  const [filteredArt, setFilteredArt] = useState(featuredArt || []);
   const [filter, setFilter] = useState('all');
 
   // Auto-advance carousel
   useEffect(() => {
-    if (!autoplay) return;
+    if (!autoplay || filteredArt.length === 0) return;
     
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % filteredArt.length);
@@ -41,6 +41,11 @@ const FeaturedArtworkCarousel = ({ featuredArt }) => {
       }
     });
   };
+
+  // Safety check to prevent rendering with empty data
+  if (!featuredArt || featuredArt.length === 0) {
+    return <div className="py-16 bg-black text-center text-white">No artwork available</div>;
+  }
 
   return (
     <section className="py-16 bg-black relative">
@@ -107,14 +112,16 @@ const FeaturedArtworkCarousel = ({ featuredArt }) => {
                           className={`relative overflow-hidden rounded-lg border-2 ${isCurrentItem ? 'border-pink-500' : 'border-gray-700'} group transition-all duration-300 hover:scale-[1.02]`}
                         >
                           <div className="aspect-square relative">
-                            <Image 
-                              src={art.imageUrl} 
-                              alt={art.title}
-                              layout="fill"
-                              objectFit="cover"
-                              priority={isCurrentItem}
-                              sizes="(max-width: 768px) 100vw, 25vw"
-                            />
+                            {art.imageUrl && (
+                              <Image 
+                                src={art.imageUrl} 
+                                alt={art.title || "Artwork"}
+                                fill
+                                style={{ objectFit: "cover" }}
+                                priority={isCurrentItem}
+                                sizes="(max-width: 768px) 100vw, 25vw"
+                              />
+                            )}
                             {art.gameReady && (
                               <div className="absolute top-3 right-3 bg-cyan-500 text-xs text-white px-2 py-1 rounded">
                                 Game Ready
@@ -128,8 +135,8 @@ const FeaturedArtworkCarousel = ({ featuredArt }) => {
                           </div>
                           
                           <div className="p-3 bg-gray-900">
-                            <h3 className="font-bold text-lg">{art.title}</h3>
-                            <p className="text-cyan-300 text-sm">by {art.artist}</p>
+                            <h3 className="font-bold text-lg">{art.title || "Untitled"}</h3>
+                            <p className="text-cyan-300 text-sm">by {art.artist || "Unknown Artist"}</p>
                             
                             {/* Hover overlay with action buttons */}
                             <div className="absolute inset-0 bg-black/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
