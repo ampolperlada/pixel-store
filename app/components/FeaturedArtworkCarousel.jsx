@@ -2,26 +2,49 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Define a type for the artwork items
-interface ArtworkItem {
-  id: string;
-  title: string;
-  artist: string;
-  imageUrl: string;
-  category: string;
-  gameReady?: boolean;
-  price: string;
-}
+// Sample data for testing if none is provided
+const sampleArt = [
+  {
+    id: '1',
+    title: 'Neo Ronin',
+    artist: 'PixelMaster',
+    imageUrl: '/path/to/image1.jpg',
+    category: 'cyberpunk',
+    gameReady: true,
+    price: '0.05 ETH'
+  },
+  {
+    id: '2',
+    title: 'Cyber Samurai',
+    artist: 'RetroArtist',
+    imageUrl: '/path/to/image2.jpg',
+    category: 'cyberpunk',
+    gameReady: true,
+    price: '0.08 ETH'
+  },
+  {
+    id: '3',
+    title: 'Glitch Ninja',
+    artist: 'VoxelQueen',
+    imageUrl: '/path/to/image3.jpg',
+    category: 'cyberpunk',
+    price: '0.03 ETH'
+  },
+  {
+    id: '4',
+    title: 'Cyber Zombie',
+    artist: 'ByteCrafter',
+    imageUrl: '/path/to/image4.jpg',
+    category: 'cyberpunk',
+    gameReady: true,
+    price: '0.07 ETH'
+  }
+];
 
-// Update the props interface with the defined type
-interface FeaturedArtworkCarouselProps {
-  featuredArt?: ArtworkItem[];
-}
-
-const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({ featuredArt = [] }) => {
+const FeaturedArtworkCarousel = ({ featuredArt = [] }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoplay, setAutoplay] = useState(true);
-  const [filteredArt, setFilteredArt] = useState<ArtworkItem[]>([]);
+  const [filteredArt, setFilteredArt] = useState([]);
   const [filter, setFilter] = useState('all');
 
   // Initialize filtered art when component mounts or featuredArt changes
@@ -41,7 +64,7 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({ featu
   }, [autoplay, filteredArt.length]);
 
   // Handle filtering artwork
-  const handleFilterChange = (newFilter: string) => {
+  const handleFilterChange = (newFilter) => {
     setFilter(newFilter);
     if (newFilter === 'all') {
       setFilteredArt(featuredArt);
@@ -52,7 +75,7 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({ featu
   };
 
   // Navigate to previous or next artwork
-  const navigate = (direction: 'prev' | 'next') => {
+  const navigate = (direction) => {
     if (filteredArt.length <= 1) return;
     
     setCurrentIndex((prevIndex) => {
@@ -63,45 +86,6 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({ featu
       }
     });
   };
-
-  // Sample data for testing if none is provided
-  const sampleArt: ArtworkItem[] = [
-    {
-      id: '1',
-      title: 'Neo Ronin',
-      artist: 'PixelMaster',
-      imageUrl: '/path/to/image1.jpg',
-      category: 'cyberpunk',
-      gameReady: true,
-      price: '0.05 ETH'
-    },
-    {
-      id: '2',
-      title: 'Cyber Samurai',
-      artist: 'RetroArtist',
-      imageUrl: '/path/to/image2.jpg',
-      category: 'cyberpunk',
-      gameReady: true,
-      price: '0.08 ETH'
-    },
-    {
-      id: '3',
-      title: 'Glitch Ninja',
-      artist: 'VoxelQueen',
-      imageUrl: '/path/to/image3.jpg',
-      category: 'cyberpunk',
-      price: '0.03 ETH'
-    },
-    {
-      id: '4',
-      title: 'Cyber Zombie',
-      artist: 'ByteCrafter',
-      imageUrl: '/path/to/image4.jpg',
-      category: 'cyberpunk',
-      gameReady: true,
-      price: '0.07 ETH'
-    }
-  ];
 
   // Use sample data if no artwork is provided
   const artworkToDisplay = filteredArt.length > 0 ? filteredArt : sampleArt;
@@ -164,10 +148,7 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({ featu
                       className={`relative overflow-hidden rounded-lg border-2 ${isCurrentItem ? 'border-pink-500' : 'border-gray-700'} transition-all duration-300 hover:scale-[1.02]`}
                     >
                       <div className="aspect-square relative bg-gray-800">
-                        {/* Use placeholder image for demo */}
-                        <div className="absolute top-0 left-0 w-full h-full bg-gray-800">
-                          {/* You can replace this with actual Image component when you have real images */}
-                        </div>
+                        <Image src={art.imageUrl} alt={art.title} layout="fill" objectFit="cover" />
                         {art.gameReady && (
                           <div className="absolute top-3 right-3 bg-cyan-500 text-xs text-white px-2 py-1 rounded">
                             Game Ready

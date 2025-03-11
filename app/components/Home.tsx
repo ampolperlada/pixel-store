@@ -1,11 +1,11 @@
 'use client';
 import React from 'react';
-import HeroSection from './components/HeroSection';
-import FeaturedArtworkCarousel from './components/FeaturedArtworkCarousel';
-import FeaturesTabs from './components/FeaturesTabs'; 
-import StatisticsSection from './components/StatisticsSection';
-import CallToAction from './components/CallToAction';
-import { featuredArt, featuredGames } from './data/sampleData';
+import HeroSection from '../components/HeroSection';
+import FeaturedArtworkCarousel from '../components/FeaturedArtworkCarousel';
+import FeaturesTabs from '../components/FeaturesTabs'; 
+import StatisticsSection from '../components/StatisticsSection';
+import CallToAction from '../components/CallToAction';
+import { featuredArt, featuredGames } from '../data/sampleData';
 import Link from 'next/link';
 
 export default function Home() {
