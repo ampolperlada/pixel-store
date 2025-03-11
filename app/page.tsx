@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import HeroSection from './components/HeroSection';
-import FeaturedArtworkCarousel from './components/FeaturedArtworkCarousel.tsx';
+import FeaturedArtworkCarousel from './components/FeaturedArtworkCarousel';
 import FeaturesTabs from './components/FeaturesTabs'; 
 import StatisticsSection from './components/StatisticsSection';
 import CallToAction from './components/CallToAction';
