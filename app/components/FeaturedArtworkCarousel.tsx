@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArtworkItem } from '../data/sampleData'; // ✅ Use ArtworkItem from sampleData
+import { ArtworkItem } from '../data/sampleData';
 import ArtworkCard from '../components/ArtworkCard';
 
 interface FeaturedArtworkCarouselProps {
@@ -14,7 +14,10 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({ featu
 
         <div className="artwork-grid mt-6">
           {featuredArt.map(artwork => (
-            <ArtworkCard key={artwork.id} artwork={{ ...artwork, image: artwork.imageUrl }} />
+            <ArtworkCard
+              key={artwork.id}
+              artwork={{ ...artwork, image: artwork.image || `/public/${artwork.title}.png` }} // Auto-load image
+            />
           ))}
         </div>
       </div>
