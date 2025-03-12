@@ -5,14 +5,14 @@ import FeaturedArtwork from './components/layout/FeaturedArtwork'; // ✅ Ensure
 import FeaturesTabs from './components/FeaturesTabs';
 import StatisticsSection from './components/StatisticsSection';
 import CallToAction from './components/CallToAction';
-import { featuredArt, featuredGames } from './data/sampleData';
+import { featuredArt, featuredGames } from './data/sampleData'; // ✅ Ensure relative path is correct
 import Link from 'next/link';
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
       <HeroSection />
-      <FeaturedArtwork artworks={featuredArt} /> {/* ✅ Ensure it gets the correct prop */}
+      <FeaturedArtwork featuredArt={featuredArt} />
       <FeaturesTabs featuredGames={featuredGames} />
       <StatisticsSection />
       <CallToAction />

@@ -1,4 +1,4 @@
-// Define and export ArtworkItem interface
+// 📌 Ensure this is inside `data/sampleData.ts`
 export interface ArtworkItem {
   id: string;
   title: string;
@@ -8,12 +8,11 @@ export interface ArtworkItem {
   category: string;
 }
 
-// Export sample artwork data
 export const featuredArt: ArtworkItem[] = [
   {
     id: '1',
     title: 'Ariza',
-    image: '/Ariza.png', // ✅ Image from public folder
+    image: '/Ariza.png',
     artist: 'John Doe',
     price: '$200',
     category: 'Cyberpunk',
@@ -28,10 +27,48 @@ export const featuredArt: ArtworkItem[] = [
   },
   {
     id: '3',
-    title: 'Digital Creator',
-    image: '/Digital Creator.png',
-    artist: 'Alex Smith',
-    price: '$300',
-    category: 'Futuristic',
-  }
+    title: 'Neo Ronin',
+    image: '/Neo Ronin.png',
+    artist: 'Jane Doe',
+    price: '$250',
+    category: 'Cyber',
+  },
+  {
+    id: '4',
+    title: 'Neo Oni',
+    image: '/Neon Oni.png',
+    artist: 'Jane Doe',
+    price: '$250',
+    category: 'Cyber',
+  },
+  {
+    id: '5',
+    title: 'Shadow Hacker',
+    image: '/Shadow Hacker.png',
+    artist: 'Jane Doe',
+    price: '$250',
+    category: 'Cyber',
+  },
+  {
+    id: '6',
+    title: 'Cyber Zombie',
+    image: '/Cyber Zombie.png',
+    artist: 'Jane Doe',
+    price: '$250',
+    category: 'Cyber',
+  },
+
+];
+
+export const featuredGames = [
+  {
+    id: '1',
+    title: 'Neon Nightmares',
+    genre: 'Cyberpunk',
+  },
+  {
+    id: '2',
+    title: 'Pixel Pirates',
+    genre: 'Adventure',
+  },
 ];
