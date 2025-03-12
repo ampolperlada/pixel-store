@@ -1,14 +1,8 @@
-// FeaturedArtwork.tsx - Main component
 import React, { useState, useEffect } from 'react';
-import ArtworkCard from '../components/ArtworkCard';
-import CollectionHighlight from '../components/CollectionHighlight';
-import ArtworkPreview from '../components/ArtworkPreview';
-import { featuredArt } from '../data/sampleData';
-//import { Artwork, Collection } from '../types';
-import './FeaturedArtwork.css';
-
-
-
+import ArtworkCard from '../ArtworkCard';
+import CollectionHighlight from '../CollectionHighlight';
+import ArtworkPreview from '../ArtworkPreview';
+import '../../layout/FeaturedArtwork.css';
 
 type Artwork = {
   id: number;
@@ -147,7 +141,5 @@ const FeaturedArtwork: React.FC<FeaturedArtworkProps> = ({ artworks = [] }) => {
     </div>
   );
 };
-
-
 
 export default FeaturedArtwork;
