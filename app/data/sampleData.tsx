@@ -1,47 +1,37 @@
-// data/sampleData.ts
-
+// Define and export ArtworkItem interface
 export interface ArtworkItem {
   id: string;
   title: string;
+  image: string;
   artist: string;
-  imageUrl: string;
-  category: string;
-  gameReady?: boolean;
   price: string;
-}
-
-export interface GameItem {
-  id: string;
-  title: string;
-  developer: string;
-  imageUrl: string;
   category: string;
-  price?: string;
-  // Add other game properties as needed
 }
 
+// Export sample artwork data
 export const featuredArt: ArtworkItem[] = [
   {
     id: '1',
-    title: 'Neo Ronin',
-    artist: 'PixelMaster',
-    imageUrl: '/path/to/image1.jpg',
-    category: 'cyberpunk',
-    gameReady: true,
-    price: '0.05 ETH'
+    title: 'Ariza',
+    image: '/Ariza.png', // ✅ Image from public folder
+    artist: 'John Doe',
+    price: '$200',
+    category: 'Cyberpunk',
   },
   {
     id: '2',
     title: 'Cyber Samurai',
-    artist: 'RetroArtist',
-    imageUrl: '/path/to/image2.jpg',
-    category: 'cyberpunk',
-    gameReady: true,
-    price: '0.08 ETH'
+    image: '/Cyber Samurai.png',
+    artist: 'Jane Doe',
+    price: '$250',
+    category: 'Samurai',
   },
-  // Add the rest of your artwork items here
-];
-
-export const featuredGames: GameItem[] = [
-  // Your game data here
+  {
+    id: '3',
+    title: 'Digital Creator',
+    image: '/Digital Creator.png',
+    artist: 'Alex Smith',
+    price: '$300',
+    category: 'Futuristic',
+  }
 ];
