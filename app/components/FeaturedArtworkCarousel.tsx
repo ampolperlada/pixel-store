@@ -3,8 +3,11 @@ import React, { useState, useEffect } from 'react';
 import ArtworkCard from '../components/ArtworkCard';
 import CollectionHighlight from '../components/CollectionHighlight';
 import ArtworkPreview from '../components/ArtworkPreview';
+import { featuredArt } from '../data/sampleData';
 //import { Artwork, Collection } from '../types';
 import './FeaturedArtwork.css';
+
+
 
 type Artwork = {
   id: number;
