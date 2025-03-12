@@ -1,8 +1,9 @@
 // FeaturedArtwork.tsx - Main component
 import React, { useState, useEffect } from 'react';
-import ArtworkCard from './ArtworkCard';
-import CollectionHighlight from './CollectionHighlight';
-import ArtworkPreview from './ArtworkPreview';
+import ArtworkCard from '../components/ArtworkCard';
+import CollectionHighlight from '../components/CollectionHighlight';
+import ArtworkPreview from '../components/ArtworkPreview';
+//import { Artwork, Collection } from '../types';
 import './FeaturedArtwork.css';
 
 type Artwork = {
