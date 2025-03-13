@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import HeroSection from './components/HeroSection';
-import FeaturedArtwork from './components/layout/FeaturedArtwork'; // ✅ Ensure the correct path
+import FeaturedArtwork from './components/FeaturedArtwork'; // ✅ Updated import path
 import FeaturesTabs from './components/FeaturesTabs';
 import StatisticsSection from './components/StatisticsSection';
 import CallToAction from './components/CallToAction';
@@ -12,7 +12,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
       <HeroSection />
-      <FeaturedArtwork featuredArt={featuredArt} />
+      <FeaturedArtwork featuredArt={featuredArt} /> {/* ✅ Pass the correct prop */}
       <FeaturesTabs featuredGames={featuredGames} />
       <StatisticsSection />
       <CallToAction />

@@ -1,16 +1,12 @@
 import React from 'react';
-import { ArtworkItem } from '../data/sampleData';
 import ArtworkCard from '../components/ArtworkCard';
+import { ArtworkItem } from '../data/sampleData'; // ✅ Ensure the correct import
 
-interface FeaturedArtworkCarouselProps {
-  featuredArt: ArtworkItem[];
+interface FeaturedArtworkProps {
+  featuredArt: ArtworkItem[]; // ✅ Define the expected prop
 }
 
-const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({ featuredArt }) => {
-  const handlePreview = (artwork: ArtworkItem) => {
-    console.log('Previewing:', artwork); // Replace this with your preview function
-  };
-
+const FeaturedArtwork: React.FC<FeaturedArtworkProps> = ({ featuredArt }) => {
   return (
     <section className="py-16 bg-black relative">
       <div className="container mx-auto px-4">
@@ -18,11 +14,7 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({ featu
 
         <div className="artwork-grid mt-6">
           {featuredArt.map(artwork => (
-            <ArtworkCard
-              key={artwork.id}
-              artwork={{ ...artwork, image: artwork.image || `/public/${artwork.title}.png` }}
-              onPreview={() => handlePreview(artwork)} // ✅ Pass onPreview function
-            />
+            <ArtworkCard key={artwork.id} artwork={artwork} />
           ))}
         </div>
       </div>
@@ -30,4 +22,4 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({ featu
   );
 };
 
-export default FeaturedArtworkCarousel;
+export default FeaturedArtwork;
