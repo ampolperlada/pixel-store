@@ -1,31 +1,34 @@
-import React, { useState } from "react";
-import ArtworkCard from "../components/ArtworkCard";
-import ArtworkDetailModal from "../components/ArtworkDetailModal"; // ✅ Use this instead of ArtworkPreview
-import { ArtworkItem } from "../data/sampleData";
+import React from "react";
 
-interface FeaturedArtworkProps {
-  featuredArt: ArtworkItem[];
+interface ArtworkItem {
+  title: string;
+  imageUrl: string;
+  description: string;
+  artist: string;
 }
 
-const FeaturedArtwork: React.FC<FeaturedArtworkProps> = ({ featuredArt }) => {
-  const [previewArtwork, setPreviewArtwork] = useState<ArtworkItem | null>(null);
+interface ArtworkDetailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  artwork: ArtworkItem | null;
+}
+
+const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ isOpen, onClose, artwork }) => {
+  if (!isOpen || !artwork) return null;
 
   return (
-    <section className="py-16 bg-black relative">
-      <div className="container mx-auto px-4">
-        <h2 className="text-2xl md:text-3xl font-bold text-cyan-300">FEATURED ARTWORK</h2>
-
-        <div className="artwork-grid mt-6">
-          {featuredArt.map((artwork) => (
-            <ArtworkCard key={artwork.id} artwork={artwork} onPreview={() => setPreviewArtwork(artwork)} />
-          ))}
-        </div>
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
+        <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-800" onClick={onClose}>
+          ✖
+        </button>
+        <h2 className="text-2xl font-bold">{artwork.title}</h2>
+        <img src={artwork.imageUrl} alt={artwork.title} className="mt-4 w-full h-auto rounded" />
+        <p className="mt-2 text-gray-600">{artwork.description}</p>
+        <p className="mt-2 text-gray-800 font-semibold">Artist: {artwork.artist}</p>
       </div>
-
-      {/* ✅ Use ArtworkDetailModal for previews */}
-      {previewArtwork && <ArtworkDetailModal artwork={previewArtwork} onClose={() => setPreviewArtwork(null)} />}
-    </section>
+    </div>
   );
 };
 
-export default FeaturedArtwork;
+export default ArtworkDetailModal;
