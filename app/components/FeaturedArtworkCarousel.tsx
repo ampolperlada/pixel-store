@@ -1,15 +1,70 @@
+// FeaturedArtworkCarousel.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, EffectCoverflow, Keyboard } from "swiper/modules";
+import Image from 'next/image';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-coverflow';
-import { ArtworkItem } from "../data/sampleData";
-import ArtworkCard from "../components/ArtworkCard";
 
+// Enhanced ArtworkItem interface
+interface ArtworkItem {
+  id: string;
+  title: string;
+  image: string;
+  artist: string;
+  price: string;
+  description?: string;
+  dimensions?: string;
+  medium?: string;
+  year?: string;
+  inStock?: boolean;
+}
+
+// ArtworkCard Component
+interface ArtworkCardProps {
+  artwork: ArtworkItem;
+  onPreview: () => void;
+  isActive?: boolean;
+}
+
+const ArtworkCard: React.FC<ArtworkCardProps> = ({ artwork, onPreview, isActive = false }) => {
+  return (
+    <div 
+      className={`
+        artwork-card cursor-pointer transition-all duration-300
+        ${isActive ? 'ring-2 ring-cyan-400 shadow-lg shadow-cyan-900/30' : ''}
+      `} 
+      onClick={onPreview}
+    >
+      <div className="relative w-full aspect-square overflow-hidden rounded-lg">
+        <Image 
+          src={artwork.image} 
+          alt={artwork.title} 
+          fill
+          className="object-cover hover:scale-105 transition-transform duration-300" 
+        />
+        
+        {isActive && (
+          <div className="absolute top-2 right-2 bg-cyan-500 text-xs text-white px-2 py-1 rounded-full">
+            Featured
+          </div>
+        )}
+      </div>
+      
+      <div className="p-3">
+        <h3 className="text-white font-medium text-lg truncate">{artwork.title}</h3>
+        <p className="text-gray-400 text-sm">{artwork.artist}</p>
+        <p className="text-cyan-300 font-bold mt-1">{artwork.price}</p>
+      </div>
+    </div>
+  );
+};
+
+// Main Carousel Component
 interface FeaturedArtworkCarouselProps {
   featuredArt: ArtworkItem[];
   title?: string;
@@ -24,6 +79,8 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [selectedArtwork, setSelectedArtwork] = useState<ArtworkItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Check for mobile screen size
   useEffect(() => {
@@ -43,6 +100,22 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
   const handleMouseEnter = () => setIsHovering(true);
   const handleMouseLeave = () => setIsHovering(false);
   
+  // Handle artwork preview
+  const handlePreview = (artwork: ArtworkItem) => {
+    setSelectedArtwork(artwork);
+    setIsModalOpen(true);
+    // Prevent body scrolling when modal is open
+    document.body.style.overflow = 'hidden';
+  };
+  
+  // Close modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedArtwork(null);
+    // Re-enable body scrolling
+    document.body.style.overflow = 'auto';
+  };
+  
   // Accessibility announcement for screen readers
   useEffect(() => {
     if (featuredArt[activeIndex]) {
@@ -53,6 +126,18 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
       }
     }
   }, [activeIndex, featuredArt]);
+
+  // Close modal on escape key
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isModalOpen) {
+        closeModal();
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscKey);
+    return () => window.removeEventListener('keydown', handleEscKey);
+  }, [isModalOpen]);
 
   return (
     <section className="py-16 bg-black relative overflow-hidden">
@@ -68,11 +153,9 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
       <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-cyan-900/10 to-black/0 pointer-events-none"></div>
       
       <div className="container mx-auto px-4">
-        <div
-          className="opacity-0 translate-y-5 animate-[fadeInUp_0.5s_ease-out_forwards]"
-        >
+        <div className="mb-8">
           <h2 className="text-2xl md:text-3xl font-bold text-cyan-300 mb-2">{title}</h2>
-          <p className="text-gray-300 mb-6">Explore our curated collection of digital masterpieces</p>
+          <p className="text-gray-300">Explore our curated collection of digital masterpieces</p>
         </div>
 
         {/* Carousel Controls - Custom Navigation */}
@@ -120,10 +203,7 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
             }}
             pagination={{ 
               clickable: true,
-              dynamicBullets: true,
-              renderBullet: function (index, className) {
-                return `<span class="${className} w-3 h-3 bg-cyan-500"></span>`;
-              }
+              dynamicBullets: true
             }}
             autoplay={isHovering ? false : { delay: autoplayDelay, disableOnInteraction: false }}
             loop={true}
@@ -137,14 +217,14 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
             className="mt-6 !pb-12"
           >
             {featuredArt.map((artwork, index) => (
-              <SwiperSlide key={artwork.id}>
+              <SwiperSlide key={artwork.id} className="h-auto">
                 {({ isActive }) => (
                   <div
                     className={`transition-all duration-300 h-full ${isActive ? 'opacity-100 scale-100 -translate-y-2' : 'opacity-70 scale-95 translate-y-0'}`}
                   >
                     <ArtworkCard 
                       artwork={artwork} 
-                      onPreview={() => console.log("Previewing:", artwork)}
+                      onPreview={() => handlePreview(artwork)}
                       isActive={isActive}
                     />
                   </div>
@@ -155,9 +235,7 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
           
           {/* Current artwork info overlay */}
           {featuredArt[activeIndex] && (
-            <div 
-              className="absolute bottom-16 left-0 right-0 text-center z-10 pointer-events-none opacity-0 translate-y-5 animate-[fadeInUp_0.3s_0.2s_ease-out_forwards]"
-            >
+            <div className="absolute bottom-16 left-0 right-0 text-center z-10 pointer-events-none">
               <div className="inline-block bg-black/70 backdrop-blur-sm px-4 py-2 rounded-lg">
                 <p className="text-cyan-300 font-medium">
                   {activeIndex + 1}/{featuredArt.length}: {featuredArt[activeIndex].title}
@@ -174,6 +252,99 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Artwork Detail Modal */}
+      {isModalOpen && selectedArtwork && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={closeModal}
+        >
+          <div 
+            className="bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button 
+              onClick={closeModal}
+              className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 rounded-full p-2 text-white z-10"
+              aria-label="Close details"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            
+            <div className="flex flex-col md:flex-row">
+              {/* Artwork Image */}
+              <div className="md:w-1/2 relative">
+                <div className="aspect-square relative">
+                  <Image 
+                    src={selectedArtwork.image} 
+                    alt={selectedArtwork.title}
+                    fill
+                    className="object-cover rounded-t-xl md:rounded-l-xl md:rounded-tr-none"
+                  />
+                </div>
+              </div>
+              
+              {/* Artwork Details */}
+              <div className="md:w-1/2 p-6 flex flex-col">
+                <h2 className="text-2xl font-bold text-white mb-2">{selectedArtwork.title}</h2>
+                <p className="text-cyan-400 text-lg mb-4">by {selectedArtwork.artist}</p>
+                
+                <div className="bg-black/30 p-4 rounded-lg mb-6">
+                  <p className="text-3xl font-bold text-cyan-300 mb-1">{selectedArtwork.price}</p>
+                  <p className="text-green-400 text-sm">
+                    {selectedArtwork.inStock !== false ? "In Stock" : "Out of Stock"}
+                  </p>
+                </div>
+                
+                <div className="space-y-4 mb-6 flex-grow">
+                  {selectedArtwork.description && (
+                    <div>
+                      <h3 className="text-gray-400 text-sm uppercase mb-1">Description</h3>
+                      <p className="text-white">{selectedArtwork.description}</p>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedArtwork.year && (
+                      <div>
+                        <h3 className="text-gray-400 text-sm uppercase mb-1">Year</h3>
+                        <p className="text-white">{selectedArtwork.year}</p>
+                      </div>
+                    )}
+                    
+                    {selectedArtwork.medium && (
+                      <div>
+                        <h3 className="text-gray-400 text-sm uppercase mb-1">Medium</h3>
+                        <p className="text-white">{selectedArtwork.medium}</p>
+                      </div>
+                    )}
+                    
+                    {selectedArtwork.dimensions && (
+                      <div>
+                        <h3 className="text-gray-400 text-sm uppercase mb-1">Dimensions</h3>
+                        <p className="text-white">{selectedArtwork.dimensions}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white py-3 px-6 rounded-lg font-medium transition-colors">
+                    Add to Cart
+                  </button>
+                  <button className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-medium transition-colors">
+                    Contact Gallery
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
