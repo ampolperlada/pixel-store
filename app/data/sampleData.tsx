@@ -8,6 +8,7 @@ export interface ArtworkItem {
   category: string;
 }
 
+
 export const featuredArt: ArtworkItem[] = [
   {
     id: '1',
