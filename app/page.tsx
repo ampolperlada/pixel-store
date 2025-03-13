@@ -11,7 +11,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
       <HeroSection />
-      <FeaturedArtworkCarousel featuredArt={featuredArt} /> {/* ✅ Use Carousel Component */}
+      <FeaturedArtworkCarousel featuredArt={featuredArt}   /> {/* ✅ Use Carousel Component */}
       <FeaturesTabs featuredGames={featuredGames} />
       <StatisticsSection />
       <CallToAction />
