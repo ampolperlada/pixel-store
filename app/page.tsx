@@ -1,18 +1,17 @@
-'use client';
-import React from 'react';
-import HeroSection from './components/HeroSection';
-import FeaturedArtwork from './components/FeaturedArtwork'; // ✅ Updated import path
-import FeaturesTabs from './components/FeaturesTabs';
-import StatisticsSection from './components/StatisticsSection';
-import CallToAction from './components/CallToAction';
-import { featuredArt, featuredGames } from './data/sampleData'; // ✅ Ensure relative path is correct
-import Link from 'next/link';
+import React from "react";
+import HeroSection from "./components/HeroSection";
+import FeaturedArtworkCarousel from "./components/FeaturedArtworkCarousel"; // ✅ Import the carousel version
+import FeaturesTabs from "./components/FeaturesTabs";
+import StatisticsSection from "./components/StatisticsSection";
+import CallToAction from "./components/CallToAction";
+import { featuredArt, featuredGames } from "./data/sampleData"; // ✅ Ensure correct path
+import Link from "next/link";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
       <HeroSection />
-      <FeaturedArtwork featuredArt={featuredArt} /> {/* ✅ Pass the correct prop */}
+      <FeaturedArtworkCarousel featuredArt={featuredArt} /> {/* ✅ Use Carousel Component */}
       <FeaturesTabs featuredGames={featuredGames} />
       <StatisticsSection />
       <CallToAction />
