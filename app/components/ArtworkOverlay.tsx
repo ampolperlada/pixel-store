@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Dialog } from "@headlessui/react";
-import { Button } from "@/components/ui/button";
+import Button from "../components/ui/button";
 import { X } from "lucide-react";
 
 export default function ArtworkOverlay() {
