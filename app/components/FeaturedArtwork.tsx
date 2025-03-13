@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import ArtworkCard from '../components/ArtworkCard';
-import ArtworkPreview from '../components/ArtworkPreview'; // ✅ Import the missing component
-import { ArtworkItem } from '../data/sampleData';
+import React, { useState } from "react";
+import ArtworkCard from "../components/ArtworkCard";
+import ArtworkDetailModal from "../components/ArtworkDetailModal"; // ✅ Use this instead of ArtworkPreview
+import { ArtworkItem } from "../data/sampleData";
 
 interface FeaturedArtworkProps {
   featuredArt: ArtworkItem[];
@@ -10,9 +10,6 @@ interface FeaturedArtworkProps {
 const FeaturedArtwork: React.FC<FeaturedArtworkProps> = ({ featuredArt }) => {
   const [previewArtwork, setPreviewArtwork] = useState<ArtworkItem | null>(null);
 
-  const openPreview = (artwork: ArtworkItem) => setPreviewArtwork(artwork);
-  const closePreview = () => setPreviewArtwork(null);
-
   return (
     <section className="py-16 bg-black relative">
       <div className="container mx-auto px-4">
@@ -20,13 +17,13 @@ const FeaturedArtwork: React.FC<FeaturedArtworkProps> = ({ featuredArt }) => {
 
         <div className="artwork-grid mt-6">
           {featuredArt.map((artwork) => (
-            <ArtworkCard key={artwork.id} artwork={artwork} onPreview={() => openPreview(artwork)} />
+            <ArtworkCard key={artwork.id} artwork={artwork} onPreview={() => setPreviewArtwork(artwork)} />
           ))}
         </div>
       </div>
 
-      {/* ✅ Ensure `ArtworkPreview` is correctly used */}
-      {previewArtwork && <ArtworkPreview artwork={previewArtwork} onClose={closePreview} />}
+      {/* ✅ Use ArtworkDetailModal for previews */}
+      {previewArtwork && <ArtworkDetailModal artwork={previewArtwork} onClose={() => setPreviewArtwork(null)} />}
     </section>
   );
 };

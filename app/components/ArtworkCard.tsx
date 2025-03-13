@@ -1,48 +1,20 @@
-// ArtworkCard.tsx
-"use client";
-
-import React from 'react';
-import Image from 'next/image';
+import React from "react";
+import Image from "next/image";
+import { ArtworkItem } from "../data/sampleData";
 
 interface ArtworkCardProps {
-  artwork: {
-    id?: string;
-    title: string;
-    image: string;
-    artist: string;
-    price: string;
-  };
-  onPreview: () => void;
-  isActive?: boolean;
+  artwork: ArtworkItem;
+  onPreview: () => void; // ✅ Add this
 }
 
-const ArtworkCard: React.FC<ArtworkCardProps> = ({ artwork, onPreview, isActive = false }) => {
+const ArtworkCard: React.FC<ArtworkCardProps> = ({ artwork, onPreview }) => {
   return (
-    <div 
-      className={`
-        artwork-card cursor-pointer transition-all duration-300
-        ${isActive ? 'ring-2 ring-cyan-400 shadow-lg shadow-cyan-900/30' : ''}
-      `} 
-      onClick={onPreview}
-    >
-      <div className="relative overflow-hidden rounded-lg">
-        <Image 
-          src={artwork.image} 
-          alt={artwork.title} 
-          width={300} 
-          height={300} 
-          className="rounded-lg hover:scale-105 transition-transform duration-300" 
-        />
-        
-        {isActive && (
-          <div className="absolute top-2 right-2 bg-cyan-500 text-xs text-white px-2 py-1 rounded-full">
-            Featured
-          </div>
-        )}
+    <div className="artwork-card" onClick={onPreview}>
+      <div className="relative w-full h-48">
+        <Image src={artwork.image} alt={artwork.title} layout="fill" className="object-cover rounded-lg" />
       </div>
-      
-      <h3 className="text-white mt-2 font-medium">{artwork.title}</h3>
-      <p className="text-gray-400">{artwork.artist}</p>
+      <h3 className="text-lg font-bold text-white mt-2">{artwork.title}</h3>
+      <p className="text-sm text-gray-400">By {artwork.artist}</p>
       <p className="text-cyan-300 font-bold">{artwork.price}</p>
     </div>
   );
