@@ -9,7 +9,6 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-coverflow';
-import Button from "../components/ui/button"; // Adjust path if necessary
 
 
 // Enhanced ArtworkItem interface
