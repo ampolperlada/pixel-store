@@ -9,61 +9,11 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-coverflow';
+import ArtworkCard from './ArtworkCard'; // Make sure to import your new ArtworkCard component
+import ArtworkDetailModal from './ArtworkDetailModal'; // Import the new modal component
 
-
-// Enhanced ArtworkItem interface
-interface ArtworkItem {
-  id: string;
-  title: string;
-  image: string;
-  artist: string;
-  price: string;
-  description?: string;
-  dimensions?: string;
-  medium?: string;
-  year?: string;
-  inStock?: boolean;
-}
-
-// ArtworkCard Component
-interface ArtworkCardProps {
-  artwork: ArtworkItem;
-  onPreview: () => void;
-  isActive?: boolean;
-}
-
-const ArtworkCard: React.FC<ArtworkCardProps> = ({ artwork, onPreview, isActive = false }) => {
-  return (
-    <div 
-      className={`
-        artwork-card cursor-pointer transition-all duration-300
-        ${isActive ? 'ring-2 ring-cyan-400 shadow-lg shadow-cyan-900/30' : ''}
-      `} 
-      onClick={onPreview}
-    >
-      <div className="relative w-full aspect-square overflow-hidden rounded-lg">
-        <Image 
-          src={artwork.image} 
-          alt={artwork.title} 
-          fill
-          className="object-cover hover:scale-105 transition-transform duration-300" 
-        />
-        
-        {isActive && (
-          <div className="absolute top-2 right-2 bg-cyan-500 text-xs text-white px-2 py-1 rounded-full">
-            Featured
-          </div>
-        )}
-      </div>
-      
-      <div className="p-3">
-        <h3 className="text-white font-medium text-lg truncate">{artwork.title}</h3>
-        <p className="text-gray-400 text-sm">{artwork.artist}</p>
-        <p className="text-cyan-300 font-bold mt-1">{artwork.price}</p>
-      </div>
-    </div>
-  );
-};
+// Use the enhanced ArtworkItem interface
+import type { ArtworkItem } from "../data/sampleData";
 
 // Main Carousel Component
 interface FeaturedArtworkCarouselProps {
@@ -254,97 +204,13 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
         </div>
       </div>
 
-      {/* Artwork Detail Modal */}
-      {isModalOpen && selectedArtwork && (
-        <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={closeModal}
-        >
-          <div 
-            className="bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button 
-              onClick={closeModal}
-              className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 rounded-full p-2 text-white z-10"
-              aria-label="Close details"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-            
-            <div className="flex flex-col md:flex-row">
-              {/* Artwork Image */}
-              <div className="md:w-1/2 relative">
-                <div className="aspect-square relative">
-                  <Image 
-                    src={selectedArtwork.image} 
-                    alt={selectedArtwork.title}
-                    fill
-                    className="object-cover rounded-t-xl md:rounded-l-xl md:rounded-tr-none"
-                  />
-                </div>
-              </div>
-              
-              {/* Artwork Details */}
-              <div className="md:w-1/2 p-6 flex flex-col">
-                <h2 className="text-2xl font-bold text-white mb-2">{selectedArtwork.title}</h2>
-                <p className="text-cyan-400 text-lg mb-4">by {selectedArtwork.artist}</p>
-                
-                <div className="bg-black/30 p-4 rounded-lg mb-6">
-                  <p className="text-3xl font-bold text-cyan-300 mb-1">{selectedArtwork.price}</p>
-                  <p className="text-green-400 text-sm">
-                    {selectedArtwork.inStock !== false ? "In Stock" : "Out of Stock"}
-                  </p>
-                </div>
-                
-                <div className="space-y-4 mb-6 flex-grow">
-                  {selectedArtwork.description && (
-                    <div>
-                      <h3 className="text-gray-400 text-sm uppercase mb-1">Description</h3>
-                      <p className="text-white">{selectedArtwork.description}</p>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedArtwork.year && (
-                      <div>
-                        <h3 className="text-gray-400 text-sm uppercase mb-1">Year</h3>
-                        <p className="text-white">{selectedArtwork.year}</p>
-                      </div>
-                    )}
-                    
-                    {selectedArtwork.medium && (
-                      <div>
-                        <h3 className="text-gray-400 text-sm uppercase mb-1">Medium</h3>
-                        <p className="text-white">{selectedArtwork.medium}</p>
-                      </div>
-                    )}
-                    
-                    {selectedArtwork.dimensions && (
-                      <div>
-                        <h3 className="text-gray-400 text-sm uppercase mb-1">Dimensions</h3>
-                        <p className="text-white">{selectedArtwork.dimensions}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white py-3 px-6 rounded-lg font-medium transition-colors">
-                    Add to Cart
-                  </button>
-                  <button className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-medium transition-colors">
-                    Contact Gallery
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Artwork Detail Modal - Using the new enhanced modal */}
+      {selectedArtwork && (
+        <ArtworkDetailModal
+          artwork={selectedArtwork}
+          isOpen={isModalOpen}
+          onClose={closeModal}
+        />
       )}
     </section>
   );
