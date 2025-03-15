@@ -124,3 +124,22 @@
     opacity: 0.8;
   }
 }
+
+.artwork-card {
+  position: relative;
+  overflow: hidden; /* Ensures elements don't exceed the card */
+}
+
+.card-text {
+  position: absolute;
+  bottom: 10px;  /* Moves the text just above the bottom */
+  left: 50%;
+  transform: translateX(-50%); /* Centers the text */
+  background: rgba(0, 0, 0, 0.7); /* Adds a background for readability */
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 14px;
+  color: white;
+  z-index: 2; /* Ensures it stays above other elements */
+  width: fit-content;
+}
