@@ -1,3 +1,4 @@
+// balikan to pag may artist nako for them to create the missing artwork and the featured categories
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';

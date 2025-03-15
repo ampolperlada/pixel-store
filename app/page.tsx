@@ -1,20 +1,33 @@
 import React from "react";
 import HeroSection from "./components/HeroSection";
-import FeaturedArtworkCarousel from "./components/FeaturedArtworkCarousel"; // ✅ Import the carousel version
+import FeaturedArtworkCarousel from "./components/FeaturedArtworkCarousel";
 import FeaturesTabs from "./components/FeaturesTabs";
 import StatisticsSection from "./components/StatisticsSection";
 import CallToAction from "./components/CallToAction";
-import { featuredArt, featuredGames } from "./data/sampleData"; // ✅ Ensure correct path
+import { featuredArt, featuredGames } from "./data/sampleData";
 import Link from "next/link";
+// Import new components
+import NotificationBar from "./components/NotificationBar";
+import TutorialSection from "./components/TutorialSection";
+import ArtistSpotlight from "./components/ArtistSpotlight";
+import CommissionSection from "./components/CommissionSection";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
+      {/* New notification component at top */}
+      <NotificationBar />
       <HeroSection />
-      <FeaturedArtworkCarousel featuredArt={featuredArt}   /> {/* ✅ Use Carousel Component */}
+      <FeaturedArtworkCarousel featuredArt={featuredArt} />
+      {/* New Tutorial Section after featured artwork */}
+      <TutorialSection />
       <FeaturesTabs featuredGames={featuredGames} />
       <StatisticsSection />
+      {/* New Artist Spotlight before CTA */}
+      <ArtistSpotlight />
       <CallToAction />
+      {/* New Commission Section before the creator studio section */}
+      <CommissionSection />
 
       <div className="text-center py-12 bg-gray-900">
         <h2 className="text-3xl font-bold mb-4 text-cyan-300">Ready to Create?</h2>
