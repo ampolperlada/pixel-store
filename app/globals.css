@@ -1,145 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@layer base {
-  /* Import pixel font (you'll need to download or link an actual pixel font) */
-  @font-face {
-    font-family: 'PixelFont';
-    src: url('/fonts/pixel.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
-  }
-  /* Add to your globals.css */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-  
-  body {
-    @apply bg-black text-white;
-  }
-  
-  .pixel-font {
-    font-family: 'PixelFont', monospace;
-    letter-spacing: 1px;
-    /* Fallback if pixel font doesn't load */
-    font-variant-numeric: tabular-nums;
-    font-weight: bold;
-  }
-}
-
+/* Custom Styles */
 @layer components {
-  /* Pixel border effect */
-  .pixel-border {
-    box-shadow: 
-      0 0 0 2px #fff,
-      0 0 0 4px #000;
-    image-rendering: pixelated;
+  /* Artwork Card Container */
+  .artwork-card {
+    position: relative; /* Ensures absolute elements inside are positioned relative to this */
+    overflow: hidden; /* Prevents child elements from exceeding the card */
+    min-height: 200px; /* Adjust based on your design */
   }
-  
-  /* Glitch effect for text - can be applied to important headings */
-  .glitch-text {
-    position: relative;
-    animation: glitch 3s infinite;
-  }
-  
-  .glitch-text::before,
-  .glitch-text::after {
-    content: attr(data-text);
+
+  /* Card Text (Prevents Overlapping & Expanding Issues) */
+  .card-text {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    bottom: 10px; /* Moves the text just above the bottom */
+    left: 50%;
+    transform: translateX(-50%); /* Centers the text */
+    background: rgba(0, 0, 0, 0.7); /* Adds a background for readability */
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    color: white;
+    z-index: 10; /* Ensures text stays on top */
+    max-width: 90%; /* Prevents text from overflowing */
+    text-align: center;
+    white-space: nowrap; /* Prevents line breaks */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Adds "..." if text is too long */
   }
-  
-  .glitch-text::before {
-    animation: glitch-effect 3s infinite;
-    clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
-    transform: translate(-3px, -3px);
-    opacity: 0.8;
-    @apply text-pink-500;
-  }
-  
-  .glitch-text::after {
-    animation: glitch-effect 2s infinite reverse;
-    clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
-    transform: translate(3px, 3px);
-    opacity: 0.8;
-    @apply text-cyan-400;
-  }
-}
-
-@keyframes glitch-effect {
-  0% {
-    transform: translate(0);
-  }
-  10%, 30%, 50%, 70%, 90% {
-    transform: translate(-3px, 3px);
-  }
-  20%, 40%, 60%, 80% {
-    transform: translate(3px, -3px);
-  }
-  100% {
-    transform: translate(0);
-  }
-}
-
-/* Scanline effect for containers */
-.scanline::before {
-  content: "";
-  position: absolute;
-  width: 100%;
-  height: 2px;
-  background-color: rgba(255, 255, 255, 0.1);
-  animation: scanline 6s linear infinite;
-}
-
-@keyframes scanline {
-  0% {
-    top: 0%;
-  }
-  100% {
-    top: 100%;
-  }
-}
-
-/* Retro CRT animation for important elements */
-.crt-flicker {
-  animation: flicker 0.3s infinite alternate;
-}
-
-@keyframes flicker {
-  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
-    opacity: 1;
-  }
-  20%, 24%, 55% {
-    opacity: 0.8;
-  }
-}
-
-.artwork-card {
-  position: relative;
-  overflow: hidden; /* Ensures elements don't exceed the card */
-}
-
-.card-text {
-  position: absolute;
-  bottom: 10px;  /* Moves the text just above the bottom */
-  left: 50%;
-  transform: translateX(-50%); /* Centers the text */
-  background: rgba(0, 0, 0, 0.7); /* Adds a background for readability */
-  padding: 5px 10px;
-  border-radius: 5px;
-  font-size: 14px;
-  color: white;
-  z-index: 2; /* Ensures it stays above other elements */
-  width: fit-content;
 }
