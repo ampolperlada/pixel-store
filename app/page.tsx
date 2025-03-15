@@ -7,10 +7,8 @@ import CallToAction from "./components/CallToAction";
 import { featuredArt, featuredGames } from "./data/sampleData";
 import Link from "next/link";
 // Import new components
-import NotificationBar from "./components/NotificationBar";
-import TutorialSection from "./components/TutorialSection";
-import ArtistSpotlight from "./components/ArtistSpotlight";
-import CommissionSection from "./components/CommissionSection";
+import NotificationBar from "../app/components/NotificationBar";
+
 
 export default function Home() {
   return (
@@ -20,14 +18,11 @@ export default function Home() {
       <HeroSection />
       <FeaturedArtworkCarousel featuredArt={featuredArt} />
       {/* New Tutorial Section after featured artwork */}
-      <TutorialSection />
       <FeaturesTabs featuredGames={featuredGames} />
       <StatisticsSection />
       {/* New Artist Spotlight before CTA */}
-      <ArtistSpotlight />
       <CallToAction />
       {/* New Commission Section before the creator studio section */}
-      <CommissionSection />
 
       <div className="text-center py-12 bg-gray-900">
         <h2 className="text-3xl font-bold mb-4 text-cyan-300">Ready to Create?</h2>
