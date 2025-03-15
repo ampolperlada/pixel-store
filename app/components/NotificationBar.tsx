@@ -1,7 +1,9 @@
-import React from 'react';
+"use client"; // Add this line at the top
+
+import React, { useState } from 'react';
 import Link from 'next/link';
 
-const NotificationBar: React.FC = () => {
+const NotificationBar = () => {
   return (
     <>
       {/* Limited Time Events Banner */}
@@ -11,7 +13,7 @@ const NotificationBar: React.FC = () => {
           🔥 LIMITED EVENT: Cyberpunk Collection Drop - Ends in <span className="font-bold">12:24:45</span>
         </p>
       </div>
-      
+
       {/* Notification & User Profile */}
       <div className="absolute top-4 right-4 flex items-center space-x-4 z-10">
         <div className="relative">

@@ -6,24 +6,30 @@ import StatisticsSection from "./components/StatisticsSection";
 import CallToAction from "./components/CallToAction";
 import { featuredArt, featuredGames } from "./data/sampleData";
 import Link from "next/link";
-// Import new components
-import NotificationBar from "../app/components/NotificationBar";
-
+import NotificationBar from "./components/NotificationBar"; // Correct import path
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* New notification component at top */}
+      {/* Notification Bar */}
       <NotificationBar />
-      <HeroSection />
-      <FeaturedArtworkCarousel featuredArt={featuredArt} />
-      {/* New Tutorial Section after featured artwork */}
-      <FeaturesTabs featuredGames={featuredGames} />
-      <StatisticsSection />
-      {/* New Artist Spotlight before CTA */}
-      <CallToAction />
-      {/* New Commission Section before the creator studio section */}
 
+      {/* Hero Section */}
+      <HeroSection />
+
+      {/* Featured Artwork Carousel */}
+      <FeaturedArtworkCarousel featuredArt={featuredArt} />
+
+      {/* Features Tabs */}
+      <FeaturesTabs featuredGames={featuredGames} />
+
+      {/* Statistics Section */}
+      <StatisticsSection />
+
+      {/* Call to Action */}
+      <CallToAction />
+
+      {/* Creator Studio Section */}
       <div className="text-center py-12 bg-gray-900">
         <h2 className="text-3xl font-bold mb-4 text-cyan-300">Ready to Create?</h2>
         <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
