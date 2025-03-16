@@ -28,7 +28,7 @@ export default function HeroSection() {
           <Link href="/shop" className="px-6 py-3 bg-pink-600 text-white font-bold hover:bg-pink-700 transition-all border-2 border-pink-400 shadow-lg shadow-pink-500/50">
             EXPLORE ART
           </Link>
-          <Link href="/creator-studio" className="px-6 py-3 bg-purple-600 text-white font-bold hover:bg-purple-700 transition-all border-2 border-purple-400 shadow-lg shadow-purple-500/50">
+          <Link href="/create" className="px-6 py-3 bg-purple-600 text-white font-bold hover:bg-purple-700 transition-all border-2 border-purple-400 shadow-lg shadow-purple-500/50">
             CREATE PIXEL ART
           </Link>
           <Link href="/games" className="px-6 py-3 bg-transparent text-cyan-300 font-bold hover:text-cyan-100 transition-all border-2 border-cyan-500 shadow-lg shadow-cyan-500/30">
