@@ -1,6 +1,6 @@
-"use client"; // Add this line at the top
+"use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 
 const NotificationBar = () => {
@@ -24,7 +24,10 @@ const NotificationBar = () => {
             <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-cyan-400"></span>
           </button>
         </div>
-        <Link href="/profile" className="px-4 py-1 bg-gradient-to-r from-pink-600 to-cyan-500 rounded text-sm font-bold hover:from-pink-500 hover:to-cyan-400 transition duration-300">
+        <Link
+          href="/profile"
+          className="px-6 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold rounded-lg shadow-lg hover:from-pink-500 hover:to-purple-500 transition-all duration-300 transform hover:scale-105"
+        >
           My Profile
         </Link>
       </div>
