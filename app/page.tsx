@@ -4,9 +4,9 @@ import FeaturedArtworkCarousel from "./components/FeaturedArtworkCarousel";
 import FeaturesTabs from "./components/FeaturesTabs";
 import StatisticsSection from "./components/StatisticsSection";
 import CallToAction from "./components/CallToAction";
-import { featuredArt, featuredGames } from "./data/sampleData";
+import { featuredArt, featuredGames } from "./data/sampleData"; // Ensure featuredGames is imported
 import Link from "next/link";
-import NotificationBar from "./components/NotificationBar"; // Correct import path
+import NotificationBar from "./components/NotificationBar";
 
 export default function Home() {
   return (
@@ -21,7 +21,7 @@ export default function Home() {
       <FeaturedArtworkCarousel featuredArt={featuredArt} />
 
       {/* Features Tabs */}
-      <FeaturesTabs featuredGames={featuredGames} />
+      <FeaturesTabs featuredGames={featuredGames} /> {/* Pass featuredGames here */}
 
       {/* Statistics Section */}
       <StatisticsSection />
