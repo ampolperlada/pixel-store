@@ -4,7 +4,8 @@ import FeaturedArtworkCarousel from "./components/FeaturedArtworkCarousel";
 import FeaturesTabs from "./components/FeaturesTabs";
 import StatisticsSection from "./components/StatisticsSection";
 import CallToAction from "./components/CallToAction";
-import { featuredArt, featuredGames } from "./data/sampleData"; // Ensure featuredGames is imported
+// can be used if i have games to  integrate in my site import { featuredArt, featuredGames } from "./data/sampleData"; // Ensure featuredGames is imported
+import { featuredArt } from "./data/sampleData";
 import Link from "next/link";
 import NotificationBar from "./components/NotificationBar";
 
@@ -20,8 +21,8 @@ export default function Home() {
       {/* Featured Artwork Carousel */}
       <FeaturedArtworkCarousel featuredArt={featuredArt} />
 
-      {/* Features Tabs */}
-      <FeaturesTabs featuredGames={featuredGames} /> {/* Pass featuredGames here */}
+      {/* Features Tabs (Games if i do have games i will import it here*/}
+      {/*<FeaturesTabs featuredGames={featuredGames} /> /* Pass featuredGames here */}
 
       {/* Statistics Section */}
       <StatisticsSection />

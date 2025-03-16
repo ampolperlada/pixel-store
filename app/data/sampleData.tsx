@@ -1,5 +1,5 @@
 // data/sampleData.ts
-
+"use client"; 
 
 export interface ArtworkItem {
   id: string;
@@ -617,18 +617,16 @@ export const featuredArt: ArtworkItem[] = [
   },
 ];
 
-export const featuredGames: GameItem[] = [
-  {
-    id: "3",
-    title: "Pixel Quest",
-    description: "An epic adventure through a beautifully crafted pixel world.",
-    image: "/images/game1.jpg",
-    genre: "RPG",
-    platform: ["PC", "Mac", "Mobile"],
-    rating: 4.8,
-    releaseDate: "2023-06-15",
-    publisher: "PixelStudio Games",
-    price: "$19.99"
-  },
-  // Add more game items...
-];
+export interface GameItem {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  genre: string;
+  platform: string[];
+  rating: number;
+  releaseDate: string;
+  publisher: string;
+  price: string;
+  assetTypes?: string[]; // ✅ Add this line
+}
