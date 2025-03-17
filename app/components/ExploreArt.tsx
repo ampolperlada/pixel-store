@@ -14,7 +14,7 @@ const ExploreArt = () => {
       image: '/art1.jpg',
       likes: 120,
       views: 450,
-      comments: [],
+      comments: [] as string[],
       isOnSale: true,
       isAuction: false,
       category: 'New Arrivals',
