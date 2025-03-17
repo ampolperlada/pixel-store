@@ -1,4 +1,3 @@
-// app/src/components/ExploreArt.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -20,6 +19,7 @@ const ExploreArt = () => {
       isAuction: false,
       category: 'New Arrivals',
       collection: 'Cyberpunk Collection',
+      origin: 'Cyber City', // Added origin field
     },
     {
       id: 2,
@@ -35,6 +35,39 @@ const ExploreArt = () => {
       isAuction: true,
       category: 'Top Sellers',
       collection: 'Fantasy Heroes',
+      origin: 'Eldoria', // Added origin field
+    },
+    {
+      id: 3,
+      title: 'Digital Wasteland',
+      artist: 'PixelMaster',
+      price: '0.75 ETH',
+      rarity: 'Rare',
+      image: '/art3.jpg',
+      likes: 85,
+      views: 290,
+      comments: [],
+      isOnSale: true,
+      isAuction: false,
+      category: 'On Sale',
+      collection: 'Cyberpunk Collection',
+      origin: 'Pixel Wasteland', // Added origin field
+    },
+    {
+      id: 4,
+      title: 'Mystic Islands',
+      artist: 'ArtWizard',
+      price: '0.9 ETH',
+      rarity: 'Epic',
+      image: '/art4.jpg',
+      likes: 110,
+      views: 380,
+      comments: [],
+      isOnSale: false,
+      isAuction: true,
+      category: 'New Arrivals',
+      collection: 'Fantasy Heroes',
+      origin: 'Mystic Pixel Isles', // Added origin field
     },
     // Add more artworks
   ]);
@@ -43,6 +76,7 @@ const ExploreArt = () => {
     category: 'All',
     priceRange: 'All',
     collection: 'All',
+    origin: 'All', // Added origin filter
   });
 
   const [commentInput, setCommentInput] = useState('');
@@ -97,9 +131,13 @@ const ExploreArt = () => {
     return (
       (filters.category === 'All' || artwork.category === filters.category) &&
       (filters.priceRange === 'All' || artwork.price === filters.priceRange) &&
-      (filters.collection === 'All' || artwork.collection === filters.collection)
+      (filters.collection === 'All' || artwork.collection === filters.collection) &&
+      (filters.origin === 'All' || artwork.origin === filters.origin) // Added origin filter
     );
   });
+
+  // Get unique origin values for the filter
+  const originOptions = ['All', ...new Set(artworks.map(artwork => artwork.origin))];
 
   const artists = [
     {
@@ -175,6 +213,50 @@ const ExploreArt = () => {
                 <option value="Space Explorers">Space Explorers</option>
               </select>
             </div>
+
+            {/* Added Origin Filter */}
+            <div className="w-full md:w-auto">
+              <label className="block text-sm font-medium mb-1 text-gray-400">Origin</label>
+              <select
+                name="origin"
+                value={filters.origin}
+                onChange={handleFilterChange}
+                className="w-full bg-gray-700 border border-gray-600 text-white p-2 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                {originOptions.map(origin => (
+                  <option key={origin} value={origin}>{origin}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Origin Categories Section */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold mb-6">Browse by Origin</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {['Cyber City', 'Pixel Wasteland', 'Eldoria', 'Mystic Pixel Isles'].map((origin) => (
+              <div 
+                key={origin}
+                onClick={() => setFilters({ ...filters, origin })}
+                className="bg-gray-800 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 border border-gray-700 hover:border-purple-500/50"
+              >
+                <div className="h-32 relative">
+                  <img 
+                    src={`/${origin.toLowerCase().replace(' ', '-')}.jpg`} 
+                    alt={origin}
+                    className="w-full h-full object-cover opacity-70"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h3 className="text-xl font-bold text-white">{origin}</h3>
+                    <p className="text-sm text-gray-300">
+                      {artworks.filter(art => art.origin === origin).length} artworks
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -204,7 +286,7 @@ const ExploreArt = () => {
                 <div className="col-span-full text-center py-12">
                   <p className="text-xl text-gray-400">No artworks match your current filters</p>
                   <button
-                    onClick={() => setFilters({ category: 'All', priceRange: 'All', collection: 'All' })}
+                    onClick={() => setFilters({ category: 'All', priceRange: 'All', collection: 'All', origin: 'All' })}
                     className="mt-4 bg-purple-600 px-4 py-2 rounded hover:bg-purple-700 transition-colors"
                   >
                     Clear Filters
@@ -231,6 +313,10 @@ const ExploreArt = () => {
                           On Sale
                         </div>
                       )}
+                      {/* Added Origin Badge */}
+                      <div className="absolute bottom-2 left-2 bg-indigo-600 px-2 py-1 rounded text-sm font-medium">
+                        {artwork.origin}
+                      </div>
                       <div className="absolute bottom-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <button
                           onClick={() => handleLike(artwork.id)}
@@ -350,6 +436,10 @@ const ExploreArt = () => {
                       />
                       <div className="absolute bottom-2 left-2 bg-darkBg/80 px-2 py-1 rounded text-sm">
                         Ends in: 2h 30m
+                      </div>
+                      {/* Added Origin Badge */}
+                      <div className="absolute top-2 left-2 bg-indigo-600 px-2 py-1 rounded text-sm font-medium">
+                        {artwork.origin}
                       </div>
                     </div>
                     <div className="p-4">
