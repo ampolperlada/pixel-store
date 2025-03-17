@@ -3,11 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 
-// Inside your component JSX:
-<Link href="/create" className="px-4 py-2 bg-purple-700 text-white rounded hover:bg-purple-600 transition">
-  Create Pixel Art
-</Link>
-
 export default function HeroSection() {
   return (
     <section className="relative h-96 overflow-hidden border-b-4 border-pink-500 border-dotted">
@@ -25,7 +20,7 @@ export default function HeroSection() {
         </h1>
         <p className="text-xl md:text-2xl mb-8 text-cyan-300 font-mono">Create • Collect • Play</p>
         <div className="flex flex-wrap justify-center gap-4">
-          <Link href="/shop" className="px-6 py-3 bg-pink-600 text-white font-bold hover:bg-pink-700 transition-all border-2 border-pink-400 shadow-lg shadow-pink-500/50">
+          <Link href="/explore" className="px-6 py-3 bg-pink-600 text-white font-bold hover:bg-pink-700 transition-all border-2 border-pink-400 shadow-lg shadow-pink-500/50">
             EXPLORE ART
           </Link>
           <Link href="/create" className="px-6 py-3 bg-purple-600 text-white font-bold hover:bg-purple-700 transition-all border-2 border-purple-400 shadow-lg shadow-purple-500/50">
