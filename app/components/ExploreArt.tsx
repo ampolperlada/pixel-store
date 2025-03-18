@@ -11,7 +11,7 @@ const ExploreArt = () => {
       artist: 'PixelMaster',
       price: '0.5 ETH',
       rarity: 'Epic',
-      image: '/art1.jpg',
+      image: '',
       likes: 120,
       views: 450,
       comments: [] as string[],
