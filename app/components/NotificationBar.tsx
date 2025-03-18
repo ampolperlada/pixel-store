@@ -49,14 +49,15 @@ const StickyNavbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/images/coin.png">
+          <Link href="/">
             <div className="flex items-center cursor-pointer">
               <div className="w-8 h-8 mr-2">
                 <Image 
-                  src="/images/logo.png" 
+                  src="/images/coin.png" 
                   alt="Pixel Marketplace" 
                   width={32} 
                   height={32}
+                
                 />
               </div>
               <span className="font-bold text-lg text-white">PIXEL MARKETPLACE</span>
