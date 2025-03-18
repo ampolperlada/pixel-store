@@ -12,6 +12,8 @@ import Link from "next/link";
 import NotificationBar from "./components/NotificationBar";
 import GamificationElements from "./components/GamificationElements";
 import EducationHub from "./components/EducationHub";
+import ArtistShowcase from "./components/ArtistShowcase";
+import HowItWorks from "./components/HowItWorks";
 
 export default function Home() {
   return (
@@ -24,6 +26,12 @@ export default function Home() {
 
       {/* Featured Artwork Carousel */}
       <FeaturedArtworkCarousel featuredArt={featuredArt} />
+
+   
+
+      <ArtistShowcase />
+
+      <HowItWorks />
 
       {/* Features Tabs (Games if i do have games i will import it here*/}
       {/*<FeaturesTabs featuredGames={featuredGames} /> /* Pass featuredGames here */}
