@@ -7,11 +7,11 @@ const ExploreArt = () => {
   const [artworks, setArtworks] = useState([
     {
       id: 1,
-      title: 'Cyber City',
+      title: 'Soqzal',
       artist: 'PixelMaster',
       price: '0.5 ETH',
       rarity: 'Epic',
-      image: '',
+      image: 'images/Bug Ninja.png',
       likes: 120,
       views: 450,
       comments: [] as string[],
@@ -23,11 +23,11 @@ const ExploreArt = () => {
     },
     {
       id: 2,
-      title: 'Fantasy Castle',
+      title: 'Chiu',
       artist: 'ArtWizard',
       price: '1.2 ETH',
       rarity: 'Legendary',
-      image: '/art2.jpg',
+      image: '/images/Chiu.png',
       likes: 95,
       views: 320,
       comments: [],
@@ -35,15 +35,15 @@ const ExploreArt = () => {
       isAuction: true,
       category: 'Top Sellers',
       collection: 'Fantasy Heroes',
-      origin: 'Eldoria', // Added origin field
+      origin: 'Pixel Wasteland', // Added origin field
     },
     {
       id: 3,
-      title: 'Digital Wasteland',
+      title: 'Ryuski',
       artist: 'PixelMaster',
       price: '0.75 ETH',
       rarity: 'Rare',
-      image: '/art3.jpg',
+      image: '/images/Ryuski.png',
       likes: 85,
       views: 290,
       comments: [],
@@ -51,15 +51,15 @@ const ExploreArt = () => {
       isAuction: false,
       category: 'On Sale',
       collection: 'Cyberpunk Collection',
-      origin: 'Pixel Wasteland', // Added origin field
+      origin: 'Mystic Pixel Isles', // Added origin field
     },
     {
       id: 4,
-      title: 'Mystic Islands',
+      title: 'Rian',
       artist: 'ArtWizard',
       price: '0.9 ETH',
       rarity: 'Epic',
-      image: '/art4.jpg',
+      image: '/images/CubeHead Girl.png',
       likes: 110,
       views: 380,
       comments: [],
@@ -67,8 +67,10 @@ const ExploreArt = () => {
       isAuction: true,
       category: 'New Arrivals',
       collection: 'Fantasy Heroes',
-      origin: 'Mystic Pixel Isles', // Added origin field
+      origin: 'Eldoria', // Added origin field
     },
+    
+  
     // Add more artworks
   ]);
 
@@ -230,35 +232,50 @@ const ExploreArt = () => {
             </div>
           </div>
         </div>
-
-        {/* Origin Categories Section */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Browse by Origin</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {['Cyber City', 'Pixel Wasteland', 'Eldoria', 'Mystic Pixel Isles'].map((origin) => (
-              <div 
-                key={origin}
-                onClick={() => setFilters({ ...filters, origin })}
-                className="bg-gray-800 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 border border-gray-700 hover:border-purple-500/50"
-              >
-                <div className="h-32 relative">
-                  <img 
-                    src={`/${origin.toLowerCase().replace(' ', '-')}.jpg`} 
-                    alt={origin}
-                    className="w-full h-full object-cover opacity-70"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <h3 className="text-xl font-bold text-white">{origin}</h3>
-                    <p className="text-sm text-gray-300">
-                      {artworks.filter(art => art.origin === origin).length} artworks
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
+{/* Origin Categories Section */}
+<div className="mb-12">
+  <h2 className="text-2xl font-bold mb-6 text-purple-400">Browse by Origin</h2>
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    {[
+      { name: 'Cyber City', image: '/images/Cyber City.png', color: 'from-blue-500 to-purple-600' },
+      { name: 'Pixel Wasteland', image: '/images/Eldoria.png', color: 'from-red-500 to-orange-600' },
+      { name: 'Eldoria', image: '/images/Eldoria.png', color: 'from-green-500 to-teal-600' },
+      { name: 'Mystic Pixel Isles', image: '/placeholder-mystic.jpg', color: 'from-indigo-500 to-purple-600' }
+    ].map(({ name, image, color }) => (
+      <div 
+        key={name}
+        onClick={() => setFilters({ ...filters, origin: name })}
+        className="bg-gray-800 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 border border-gray-700 hover:border-purple-500/50"
+      >
+        <div className="h-32 relative">
+          {/* Gradient Background as Fallback */}
+          <div className={`absolute inset-0 bg-gradient-to-br ${color}`}></div>
+          
+          {/* Image Section (with error handling) */}
+          <img 
+            src={image} 
+            alt={name}
+            className="w-full h-full object-cover opacity-70"
+            onError={(e) => {
+              // Hide the broken image
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+          
+          {/* Overlay Effect */}
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <h3 className="text-xl font-bold text-white">{name}</h3>
+            <p className="text-sm text-gray-300">
+              {artworks.filter(art => art.origin === name).length} artworks
+            </p>
           </div>
         </div>
+      </div>
+    ))}
+  </div>
+</div>
+
 
         {/* Artwork Grid with loading state */}
         <div className="mb-12">
@@ -456,37 +473,40 @@ const ExploreArt = () => {
           )}
         </div>
 
-        {/* Artist Spotlight */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold mb-6">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
-              Artist Spotlights
-            </span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {artists.map((artist) => (
-              <div key={artist.id} className="bg-gray-800 rounded-lg p-4">
-                <div className="flex items-center gap-4">
-                  <img
-                    src={artist.avatar}
-                    alt={artist.name}
-                    className="w-16 h-16 rounded-full"
-                  />
-                  <div>
-                    <h3 className="text-xl font-semibold">{artist.name}</h3>
-                    <p className="text-gray-400">{artist.bio}</p>
-                  </div>
-                </div>
-                <Link
-                  href={artist.portfolioLink}
-                  className="text-cyan-500 hover:text-cyan-400 mt-2 block"
-                >
-                  View Portfolio
-                </Link>
-              </div>
-            ))}
+      {/* Artist Spotlight */}
+<div className="mb-12">
+  <h2 className="text-3xl font-bold mb-6">
+    <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
+      Artist Spotlights
+    </span>
+  </h2>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {artists.map((artist) => (
+      <div key={artist.id} className="bg-gray-800 rounded-lg p-4">
+        <div className="flex items-center gap-4">
+          {/* Artist Image */}
+          <img
+            src={artist.avatar}
+            alt={artist.name}
+            className="w-16 h-16 rounded-full"
+            onError={(e) => { (e.target as HTMLImageElement).src = "/images/Killua.png"; }} // Fallback
+          />
+          <div>
+            <h3 className="text-xl font-semibold">{artist.name}</h3>
+            <p className="text-gray-400">{artist.bio}</p>
           </div>
         </div>
+        <Link
+          href={artist.portfolioLink}
+          className="text-cyan-500 hover:text-cyan-400 mt-2 block"
+        >
+          View Portfolio
+        </Link>
+      </div>
+    ))}
+  </div>
+</div>
+
       </div>
     </div>
   );
