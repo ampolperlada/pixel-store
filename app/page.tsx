@@ -11,6 +11,7 @@ import { featuredArt } from "./data/sampleData";
 import Link from "next/link";
 import NotificationBar from "./components/NotificationBar";
 import GamificationElements from "./components/GamificationElements";
+import EducationHub from "./components/EducationHub";
 
 export default function Home() {
   return (
@@ -30,8 +31,7 @@ export default function Home() {
       {/* Statistics Section */}
       <StatisticsSection />
 
-      {/* Call to Action */}
-      <CallToAction />
+
 
         {/* User Success Stories Section */}
         <UserSuccessStories />
@@ -43,6 +43,11 @@ export default function Home() {
          {/* ComunnityHighlights*/}
          <GamificationElements />
 
+         
+         {/* ComunnityHighlights*/}
+         <EducationHub />
+
+         
       {/* Creator Studio Section */}
       <div className="text-center py-12 bg-gray-900">
         <h2 className="text-3xl font-bold mb-4 text-cyan-300">Ready to Create?</h2>
@@ -54,6 +59,10 @@ export default function Home() {
           Open Pixel Creator Studio
         </Link>
       </div>
+      {/* Call to Action */}
+      <CallToAction />
     </main>
   );
+
+  
 }
