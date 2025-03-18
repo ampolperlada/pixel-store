@@ -14,6 +14,7 @@ import GamificationElements from "./components/GamificationElements";
 import EducationHub from "./components/EducationHub";
 import ArtistShowcase from "./components/ArtistShowcase";
 import HowItWorks from "./components/HowItWorks";
+import RoyaltySystem from "./components/Royalty";
 
 export default function Home() {
   return (
@@ -32,6 +33,9 @@ export default function Home() {
       <ArtistShowcase />
 
       <HowItWorks />
+      
+      <RoyaltySystem />
+
 
       {/* Features Tabs (Games if i do have games i will import it here*/}
       {/*<FeaturesTabs featuredGames={featuredGames} /> /* Pass featuredGames here */}
