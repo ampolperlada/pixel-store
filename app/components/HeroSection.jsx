@@ -16,7 +16,7 @@ export default function HeroSection() {
       
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-4 text-center">
         <h1 className="text-4xl md:text-6xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 pixel-font">
-          PIXEL MARKETPLACE
+          PIXEL FORGE
         </h1>
         <p className="text-xl md:text-2xl mb-8 text-cyan-300 font-mono">Create • Collect • Play</p>
         <div className="flex flex-wrap justify-center gap-4">
