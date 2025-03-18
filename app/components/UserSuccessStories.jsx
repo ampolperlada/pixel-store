@@ -1,5 +1,5 @@
-// components/UserSuccessStories.jsx
 "use client"; // Add this directive at the top of the file
+
 import React, { useState } from 'react';
 import Image from 'next/image';
 
