@@ -1,4 +1,5 @@
 import React from "react";
+import UserSuccessStories from "./components/UserSuccessStories"; // Import the UserSuccessStories component
 import HeroSection from "./components/HeroSection";
 import FeaturedArtworkCarousel from "./components/FeaturedArtworkCarousel";
 import FeaturesTabs from "./components/FeaturesTabs";
@@ -29,6 +30,9 @@ export default function Home() {
 
       {/* Call to Action */}
       <CallToAction />
+
+        {/* User Success Stories Section */}
+        <UserSuccessStories />
 
       {/* Creator Studio Section */}
       <div className="text-center py-12 bg-gray-900">
