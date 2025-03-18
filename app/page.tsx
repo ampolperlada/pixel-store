@@ -2,6 +2,7 @@ import React from "react";
 import UserSuccessStories from "./components/UserSuccessStories"; // Import the UserSuccessStories component
 import HeroSection from "./components/HeroSection";
 import FeaturedArtworkCarousel from "./components/FeaturedArtworkCarousel";
+import CommunityHighlights from "./components/CommunityHighlights";
 import FeaturesTabs from "./components/FeaturesTabs";
 import StatisticsSection from "./components/StatisticsSection";
 import CallToAction from "./components/CallToAction";
@@ -33,6 +34,10 @@ export default function Home() {
 
         {/* User Success Stories Section */}
         <UserSuccessStories />
+
+    
+        {/* ComunnityHighlights*/}
+        <CommunityHighlights />
 
       {/* Creator Studio Section */}
       <div className="text-center py-12 bg-gray-900">
