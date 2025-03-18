@@ -10,6 +10,7 @@ import CallToAction from "./components/CallToAction";
 import { featuredArt } from "./data/sampleData";
 import Link from "next/link";
 import NotificationBar from "./components/NotificationBar";
+import GamificationElements from "./components/GamificationElements";
 
 export default function Home() {
   return (
@@ -38,6 +39,9 @@ export default function Home() {
     
         {/* ComunnityHighlights*/}
         <CommunityHighlights />
+
+         {/* ComunnityHighlights*/}
+         <GamificationElements />
 
       {/* Creator Studio Section */}
       <div className="text-center py-12 bg-gray-900">
