@@ -1,5 +1,5 @@
-import NftQuickStart from '../components/NFTQuickStart';
+import Login from '../components/Login';
 
-export default function LearnPage() {
-  return <NftQuickStart />;
+export default function LoginPage() {
+  return <Login />;
 }
