@@ -3,40 +3,42 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 
-const testimonials = [
-  {
-    id: 1,
-    artist: "PixelMaster",
-    avatar: "/avatars/pixelmaster.png",
-    testimonial: "Since joining Pixel Marketplace, my artwork has been featured in 3 indie games. I've earned over $12,000 in just 6 months!",
-    artworkBefore: "/testimonials/artwork-before-1.png",
-    artworkAfter: "/testimonials/artwork-after-1.png",
-    game: "Cyber Quest 2099",
-    earnings: "$12,450"
-  },
-  {
-    id: 2,
-    artist: "8BitQueen",
-    avatar: "/avatars/8bitqueen.png",
-    testimonial: "The game integration feature helped my pixel characters come to life. Now they're in a popular mobile game with over 500k downloads!",
-    artworkBefore: "/testimonials/artwork-before-2.png",
-    artworkAfter: "/testimonials/artwork-after-2.png",
-    game: "Pixel Warriors",
-    earnings: "$8,320"
-  },
-  {
-    id: 3,
-    artist: "VoxelViking",
-    avatar: "/avatars/voxelviking.png",
-    testimonial: "From hobbyist to professional in 3 months. The marketplace connected me with game developers I never would have met otherwise.",
-    artworkBefore: "/testimonials/artwork-before-3.png",
-    artworkAfter: "/testimonials/artwork-after-3.png",
-    game: "Dungeon Crawlers",
-    earnings: "$15,780"
-  }
-];
-
 const UserSuccessStories = () => {
+  // Define the testimonials array
+  const testimonials = [
+    {
+      id: 1,
+      artist: "Zumi",
+      avatar: "/images/pfp/pfp1.png",
+      testimonial: "Since joining Pixel Marketplace, my artwork has been featured in 3 indie games. I've earned over $12,000 in just 6 months!",
+      artworkBefore: "/testimonials/artwork-before-1.png",
+      artworkAfter: "/testimonials/artwork-after-1.png",
+      game: "Cyber Quest 2099",
+      earnings: "$12,450"
+    },
+    {
+      id: 2,
+      artist: "Shard",
+      avatar: "/images/pfp/pfp2.png",
+      testimonial: "The game integration feature helped my pixel characters come to life. Now they're in a popular mobile game with over 500k downloads!",
+      artworkBefore: "/testimonials/artwork-before-2.png",
+      artworkAfter: "/testimonials/artwork-after-2.png",
+      game: "Pixel Warriors",
+      earnings: "$8,320"
+    },
+    {
+      id: 3,
+      artist: "VoxelViking",
+      avatar: "/images/pfp/pfp3.png",
+      testimonial: "From hobbyist to professional in 3 months. The marketplace connected me with game developers I never would have met otherwise.",
+      artworkBefore: "/testimonials/artwork-before-3.png",
+      artworkAfter: "/testimonials/artwork-after-3.png",
+      game: "Dungeon Crawlers",
+      earnings: "$15,780"
+    }
+  ];
+
+  // State to track the active story
   const [activeStory, setActiveStory] = useState(testimonials[0]);
 
   return (
@@ -60,10 +62,14 @@ const UserSuccessStories = () => {
                   }`}
                 >
                   <div className="relative w-12 h-12 rounded-full overflow-hidden">
-                    {/* Replace with next/image when you have actual images */}
-                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white">
-                      {story.artist.charAt(0)}
-                    </div>
+                    {/* Display the artist's avatar */}
+                    <Image
+                      src={story.avatar}
+                      alt={story.artist}
+                      width={48}
+                      height={48}
+                      className="object-cover"
+                    />
                   </div>
                   <div className="ml-3">
                     <h4 className="font-medium text-white">{story.artist}</h4>
@@ -82,9 +88,14 @@ const UserSuccessStories = () => {
               </div>
               <div className="flex items-center mt-auto">
                 <div className="relative w-12 h-12 rounded-full overflow-hidden">
-                  <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white">
-                    {activeStory.artist.charAt(0)}
-                  </div>
+                  {/* Display the active artist's avatar */}
+                  <Image
+                    src={activeStory.avatar}
+                    alt={activeStory.artist}
+                    width={48}
+                    height={48}
+                    className="object-cover"
+                  />
                 </div>
                 <div className="ml-3">
                   <h4 className="font-medium text-white">{activeStory.artist}</h4>
