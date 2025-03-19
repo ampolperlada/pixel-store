@@ -1,3 +1,5 @@
+'use client'; // Add this directive at the top
+
 import React, { useState, useEffect } from 'react';
 
 interface AuthModalsProps {
@@ -200,41 +202,6 @@ const AuthModals: React.FC<AuthModalsProps> = ({ isOpen, onClose, initialMode = 
         <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-purple-400"></div>
         <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-400"></div>
       </div>
-    </div>
-  );
-};
-
-// Example of how to use this component
-const App = () => {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  
-  const openLoginModal = () => {
-    setAuthMode('login');
-    setIsAuthModalOpen(true);
-  };
-  
-  const openSignupModal = () => {
-    setAuthMode('signup');
-    setIsAuthModalOpen(true);
-  };
-  
-  return (
-    <div>
-      {/* Your existing website content */}
-      
-      {/* This is just for example - you already have buttons */}
-      <div className="hidden">
-        <button onClick={openLoginModal}>Sign In</button>
-        <button onClick={openSignupModal}>Sign Up</button>
-      </div>
-      
-      {/* Auth Modal */}
-      <AuthModals 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-        initialMode={authMode}
-      />
     </div>
   );
 };
