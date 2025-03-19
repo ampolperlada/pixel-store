@@ -9,9 +9,9 @@ import PixelPlatformer from '../components/PixelPlatformer'; // Import PixelPlat
 import PixelClicker from '../components/PixelClicker'; // Import PixelClicker
 
 export default function GamesIntegration() {
-  const [hoveredGame, setHoveredGame] = useState<string | null>(null);
+  const [hoveredGame, setHoveredGame] = useState(null);
   const [activeTutorialTab, setActiveTutorialTab] = useState('unity');
-  const [activeGame, setActiveGame] = useState<string | null>(null);
+  const [activeGame, setActiveGame] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   // Slider settings for game assets
@@ -219,214 +219,413 @@ export default function GamesIntegration() {
             </div>
           )}
         </div>
+{/* Game Engine Integration Guides */}
+<div className="bg-gray-800 p-6 rounded-lg border-2 border-purple-500 shadow-lg shadow-purple-500/30 mb-12">
+  <h2 className="text-2xl font-bold mb-4 text-purple-400">🛠️ Engine Integration Guides</h2>
+  <p className="text-gray-300 mb-4">
+    Follow these technical guides to seamlessly integrate Pixel-Forge assets into your favorite game engines.
+  </p>
+  
+  {/* Engine Tab Navigation */}
+  <div className="flex flex-wrap border-b border-gray-700 mb-6">
+    {Object.keys(engineGuides).map((engine) => (
+      <button
+        key={engine}
+        className={`px-4 py-2 font-medium rounded-t-lg mr-2 transition-colors ${
+          activeTutorialTab === engine
+            ? 'bg-purple-700 text-white'
+            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+        }`}
+        onClick={() => setActiveTutorialTab(engine)}
+      >
+        {engineGuides[engine].title}
+      </button>
+    ))}
+  </div>
+  
+  {/* Engine Content */}
+  <div className="bg-gray-700 rounded-lg p-6">
+    <h3 className="text-xl font-bold text-cyan-300 mb-4">
+      {engineGuides[activeTutorialTab].title}
+    </h3>
+    <p className="text-gray-300 mb-4">
+      {engineGuides[activeTutorialTab].content}
+    </p>
+    
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Step-by-step guide */}
+      <div>
+        <h4 className="text-lg font-bold text-purple-300 mb-3">Implementation Steps:</h4>
+        <ol className="list-decimal pl-5 space-y-2 text-gray-300">
+          {engineGuides[activeTutorialTab].steps.map((step, index) => (
+            <li key={index}>{step}</li>
+          ))}
+        </ol>
+      </div>
+      
+      {/* Code example */}
+      <div className="bg-gray-900 p-4 rounded-lg">
+        <h4 className="text-lg font-bold text-purple-300 mb-3">Code Example:</h4>
+        <pre className="text-cyan-300 font-mono text-sm overflow-x-auto">
+          {engineGuides[activeTutorialTab].codeExample}
+        </pre>
+      </div>
+    </div>
+  </div>
+</div>
 
-        {/* Engine Integration Guides */}
-        <div className="bg-gray-800 p-6 rounded-lg border-2 border-cyan-500 shadow-lg shadow-cyan-500/30 mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-cyan-400">⚙️ Engine Integration Guides</h2>
-          <p className="text-gray-300 mb-6">
-            Learn how to integrate our pixel art assets into popular game engines with these comprehensive guides.
-          </p>
-
-          {/* Tabs for different engines */}
-          <div className="flex flex-wrap mb-6">
-            {Object.keys(engineGuides).map((engine) => (
-              <button
-                key={engine}
-                className={`px-4 py-2 mr-2 mb-2 rounded-t-lg font-medium ${
-                  activeTutorialTab === engine
-                    ? 'bg-cyan-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-                onClick={() => setActiveTutorialTab(engine)}
-              >
-                {engineGuides[engine].title}
+{/* Asset Marketplace */}
+<div className="bg-gray-800 p-6 rounded-lg border-2 border-purple-500 shadow-lg shadow-purple-500/30 mb-12">
+  <h2 className="text-2xl font-bold mb-4 text-purple-400">🎨 Pixel Art Marketplace</h2>
+  <p className="text-gray-300 mb-4">
+    Browse our collection of high-quality pixel art assets ready for integration into your games.
+  </p>
+  
+  {/* Category filters */}
+  <div className="flex flex-wrap gap-2 mb-6">
+    {categories.map((category) => (
+      <button
+        key={category}
+        className={`px-4 py-2 rounded-full font-medium ${
+          selectedCategory === category
+            ? 'bg-purple-600 text-white'
+            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+        }`}
+        onClick={() => setSelectedCategory(category)}
+      >
+        {category}
+      </button>
+    ))}
+  </div>
+  
+  {/* Asset grid */}
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    {filteredAssets.map((asset) => (
+      <div key={asset.id} className="bg-gray-700 rounded-lg overflow-hidden hover:shadow-lg hover:shadow-purple-500/20 transition-all hover:-translate-y-1">
+        <img src={asset.image} alt={asset.name} className="w-full h-40 object-cover" />
+        <div className="p-4">
+          <h3 className="font-bold text-white">{asset.name}</h3>
+          <p className="text-cyan-300 text-sm">{asset.category}</p>
+          <button className="w-full mt-3 px-4 py-2 bg-cyan-600 text-white font-bold rounded hover:bg-cyan-700">
+            View Details
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
+  
+  {/* Asset packs slider */}
+  <h3 className="text-xl font-bold text-purple-300 mb-4">Premium Asset Bundles</h3>
+  <Slider {...sliderSettings}>
+    {assetBundles.map((bundle) => (
+      <div key={bundle.id} className="px-2">
+        <div className="bg-gray-700 rounded-lg overflow-hidden">
+          <img src={bundle.image} alt={bundle.name} className="w-full h-48 object-cover" />
+          <div className="p-4">
+            <h3 className="font-bold text-white">{bundle.name}</h3>
+            <p className="text-cyan-300 text-sm">{bundle.items} assets</p>
+            <div className="flex justify-between items-center mt-3">
+              <span className="text-white font-bold">{bundle.price}</span>
+              <button className="px-3 py-1 bg-purple-600 text-white font-bold rounded hover:bg-purple-700">
+                Buy Now
               </button>
-            ))}
-          </div>
-
-          {/* Active tab content */}
-          <div className="bg-gray-700 p-6 rounded-lg">
-            <h3 className="text-xl font-bold mb-3 text-white">
-              {engineGuides[activeTutorialTab].title}
-            </h3>
-            <p className="text-gray-300 mb-4">{engineGuides[activeTutorialTab].content}</p>
-
-            <h4 className="text-lg font-semibold mb-2 text-cyan-300">Integration Steps:</h4>
-            <ul className="list-disc list-inside mb-6 text-gray-300">
-              {engineGuides[activeTutorialTab].steps.map((step, index) => (
-                <li key={index} className="mb-1">{step}</li>
-              ))}
-            </ul>
-
-            <h4 className="text-lg font-semibold mb-2 text-cyan-300">Code Example:</h4>
-            <div className="bg-gray-900 p-4 rounded-lg mb-4">
-              <pre className="text-gray-300 font-mono text-sm overflow-x-auto">
-                {engineGuides[activeTutorialTab].codeExample}
-              </pre>
-            </div>
-
-            <div className="mt-4">
-              <Link href="/tutorials" className="inline-flex items-center text-cyan-400 hover:text-cyan-300">
-                View full tutorial <span className="ml-1">→</span>
-              </Link>
             </div>
           </div>
         </div>
+      </div>
+    ))}
+  </Slider>
+</div>
 
-        {/* Game Asset Packs */}
-        <div className="bg-gray-800 p-6 rounded-lg border-2 border-pink-500 shadow-lg shadow-pink-500/30 mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-pink-400">🎨 Game-Ready Asset Packs</h2>
-          <p className="text-gray-300 mb-6">
-            Browse our curated collection of game-ready asset packs, perfect for indie developers and game jammers.
-          </p>
+{/* Technical Integration Best Practices */}
+<div className="bg-gray-800 p-6 rounded-lg border-2 border-purple-500 shadow-lg shadow-purple-500/30 mb-12">
+  <h2 className="text-2xl font-bold mb-4 text-purple-400">⚙️ Technical Best Practices</h2>
+  <p className="text-gray-300 mb-4">
+    Follow these technical guidelines to get the most out of your Pixel-Forge assets in game development.
+  </p>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* Left column - Sprite Animation */}
+    <div className="bg-gray-700 p-5 rounded-lg">
+      <h3 className="text-xl font-bold text-cyan-300 mb-3">Sprite Animation</h3>
+      <p className="text-gray-300 mb-3">
+        Optimize your animation workflow by implementing sprite sheets correctly:
+      </p>
+      <ul className="list-disc pl-5 space-y-2 text-gray-300">
+        <li>Use sprite sheet dimensions that are powers of two (e.g., 512×512, 1024×1024)</li>
+        <li>Group similar animations together on the same sprite sheet</li>
+        <li>Maintain consistent frame dimensions for smoother transitions</li>
+        <li>Use appropriate frame rates (8-12 FPS for most pixel art animations)</li>
+      </ul>
+      <div className="mt-4 bg-gray-800 p-3 rounded-lg">
+        <h4 className="text-md font-bold text-purple-300 mb-2">Sample Animation Controller:</h4>
+        <pre className="text-cyan-300 font-mono text-sm overflow-x-auto">
+{`class PixelAnimator {
+  constructor(spriteSheet, frameWidth, frameHeight, fps) {
+    this.spriteSheet = spriteSheet;
+    this.frameWidth = frameWidth;
+    this.frameHeight = frameHeight;
+    this.frameTime = 1000 / fps;
+    this.animations = {};
+  }
 
-          {/* Asset category filter */}
-          <div className="flex flex-wrap mb-6">
-            {categories.map((category) => (
-              <button
-                key={category}
-                className={`px-4 py-2 mr-2 mb-2 rounded-lg font-medium ${
-                  selectedCategory === category
-                    ? 'bg-pink-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
+  addAnimation(name, startFrame, endFrame) {
+    this.animations[name] = {
+      startFrame,
+      endFrame,
+      currentFrame: startFrame
+    };
+  }
 
-          {/* Individual Assets Grid */}
-          <h3 className="text-xl font-bold mb-3 text-white">Individual Assets</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-            {filteredAssets.map((asset) => (
-              <div key={asset.id} className="bg-gray-700 rounded-lg overflow-hidden hover:shadow-md hover:shadow-pink-500/50 transition-shadow">
-                <div className="h-40 overflow-hidden">
-                  <img src={asset.image} alt={asset.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="p-3">
-                  <h4 className="font-bold text-white">{asset.name}</h4>
-                  <p className="text-gray-400 text-sm">{asset.category}</p>
-                  <div className="mt-2 flex justify-between items-center">
-                    <span className="text-pink-400 font-bold">$4.99</span>
-                    <button className="px-3 py-1 bg-pink-600 text-white text-sm rounded hover:bg-pink-700">
-                      Add to Cart
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+  update(dt, currentAnim) {
+    // Animation update logic
+  }
+}`}
+        </pre>
+      </div>
+    </div>
+    
+    {/* Right column - Pixel Perfect Rendering */}
+    <div className="bg-gray-700 p-5 rounded-lg">
+      <h3 className="text-xl font-bold text-cyan-300 mb-3">Pixel-Perfect Rendering</h3>
+      <p className="text-gray-300 mb-3">
+        Maintain crispness and prevent visual artifacts with these techniques:
+      </p>
+      <ul className="list-disc pl-5 space-y-2 text-gray-300">
+        <li>Disable texture filtering/anti-aliasing for pixel art assets</li>
+        <li>Align sprites to the pixel grid (avoid fractional positions)</li>
+        <li>Use integer scaling values to prevent pixel distortion</li>
+        <li>Implement a dedicated pixel-perfect camera system</li>
+      </ul>
+      <div className="mt-4 bg-gray-800 p-3 rounded-lg">
+        <h4 className="text-md font-bold text-purple-300 mb-2">Pixel-Perfect Camera Implementation:</h4>
+        <pre className="text-cyan-300 font-mono text-sm overflow-x-auto">
+{`// JavaScript/TypeScript implementation
+function createPixelPerfectCamera(pixelsPerUnit = 16, zoom = 1) {
+  // Calculate orthographic size based on screen height
+  const height = window.innerHeight;
+  const orthographicSize = Math.floor(height / (pixelsPerUnit * zoom * 2));
+  
+  // Set camera properties
+  camera.orthographicSize = orthographicSize;
+  
+  // Round position values to prevent subpixel rendering
+  function updatePosition(position) {
+    return {
+      x: Math.round(position.x * pixelsPerUnit) / pixelsPerUnit,
+      y: Math.round(position.y * pixelsPerUnit) / pixelsPerUnit
+    };
+  }
+  
+  return {
+    updatePosition,
+    setZoom(newZoom) {
+      zoom = newZoom;
+      camera.orthographicSize = Math.floor(height / (pixelsPerUnit * zoom * 2));
+    }
+  };
+}`}
+        </pre>
+      </div>
+    </div>
+  </div>
+</div>
 
-          {/* Asset Bundles Slider */}
-          <h3 className="text-xl font-bold mb-3 text-white">Complete Asset Bundles</h3>
-          <div className="mb-6">
-            <Slider {...sliderSettings}>
-              {assetBundles.map((bundle) => (
-                <div key={bundle.id} className="px-2">
-                  <div className="bg-gray-700 rounded-lg overflow-hidden hover:shadow-md hover:shadow-pink-500/50 transition-shadow">
-                    <div className="h-48 overflow-hidden">
-                      <img src={bundle.image} alt={bundle.name} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="p-4">
-                      <h4 className="font-bold text-white">{bundle.name}</h4>
-                      <p className="text-gray-400 text-sm">{bundle.items} items included</p>
-                      <div className="mt-3 flex justify-between items-center">
-                        <span className="text-pink-400 font-bold">{bundle.price}</span>
-                        <button className="px-3 py-1 bg-pink-600 text-white text-sm rounded hover:bg-pink-700">
-                          View Bundle
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </Slider>
-          </div>
+{/* NFT Integration Section */}
+<div className="bg-gray-800 p-6 rounded-lg border-2 border-purple-500 shadow-lg shadow-purple-500/30 mb-12">
+  <h2 className="text-2xl font-bold mb-4 text-purple-400">🔗 NFT Integration</h2>
+  <p className="text-gray-300 mb-4">
+    Pixel-Forge makes it easy to connect your in-game assets to blockchain technology.
+  </p>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* Left column - NFT Implementation */}
+    <div className="bg-gray-700 p-5 rounded-lg">
+      <h3 className="text-xl font-bold text-cyan-300 mb-3">Game-to-NFT Implementation</h3>
+      <p className="text-gray-300 mb-3">
+        Learn how to make your in-game assets tradable as NFTs:
+      </p>
+      <ol className="list-decimal pl-5 space-y-2 text-gray-300">
+        <li>Create unique identifiers for each game asset</li>
+        <li>Implement the Pixel-Forge NFT SDK in your game</li>
+        <li>Configure metadata to reflect in-game properties</li>
+        <li>Allow players to mint their earned/created assets</li>
+      </ol>
+      <div className="mt-4 bg-gray-800 p-3 rounded-lg">
+        <h4 className="text-md font-bold text-purple-300 mb-2">NFT Integration Code:</h4>
+        <pre className="text-cyan-300 font-mono text-sm overflow-x-auto">
+{`// Initialize the Pixel-Forge NFT SDK
+import { PixelForgeNFT } from 'pixel-forge-nft';
 
-          <div className="text-center mt-6">
-            <Link href="/assets" className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded-lg hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30">
-              Browse All Assets
-            </Link>
-          </div>
+const nftClient = new PixelForgeNFT({
+  apiKey: 'YOUR_API_KEY',
+  network: 'ethereum' // or 'polygon', 'solana', etc.
+});
+
+// Create NFT from game asset
+async function mintGameAsset(assetId, playerAddress) {
+  // Get asset metadata from your game
+  const assetData = gameAssets.getAssetById(assetId);
+  
+  // Create NFT metadata
+  const metadata = {
+    name: assetData.name,
+    description: assetData.description,
+    image: assetData.imageUrl,
+    attributes: [
+      { trait_type: 'Rarity', value: assetData.rarity },
+      { trait_type: 'Level', value: assetData.level },
+      // More game-specific attributes
+    ]
+  };
+  
+  // Mint the NFT
+  const result = await nftClient.mintNFT({
+    recipient: playerAddress,
+    metadata,
+    royalty: 5 // 5% royalty to Pixel-Forge
+  });
+  
+  return result.tokenId;
+}`}
+        </pre>
+      </div>
+    </div>
+    
+    {/* Right column - NFT Benefits */}
+    <div className="bg-gray-700 p-5 rounded-lg">
+      <h3 className="text-xl font-bold text-cyan-300 mb-3">Benefits for Developers</h3>
+      <ul className="list-disc pl-5 space-y-2 text-gray-300">
+        <li><span className="text-purple-300 font-bold">Monetization:</span> Create new revenue streams through NFT sales and royalties</li>
+        <li><span className="text-purple-300 font-bold">Player Retention:</span> Increase engagement by giving real ownership of in-game items</li>
+        <li><span className="text-purple-300 font-bold">Cross-Game Assets:</span> Enable players to use assets across multiple compatible games</li>
+        <li><span className="text-purple-300 font-bold">Community Building:</span> Foster dedicated collectors and traders around your game</li>
+        <li><span className="text-purple-300 font-bold">Secondary Markets:</span> Generate ongoing royalties from secondary sales</li>
+      </ul>
+      
+      <div className="mt-6 p-4 bg-purple-900/30 border border-purple-500 rounded-lg">
+        <h4 className="text-lg font-bold text-purple-300 mb-2">Pixel-Forge NFT Requirements</h4>
+        <p className="text-gray-300">
+          When integrating with our NFT marketplace, please ensure:
+        </p>
+        <ul className="list-disc pl-5 mt-2 space-y-1 text-gray-300">
+          <li>Include attribution in metadata (e.g., "Created with Pixel-Forge assets")</li>
+          <li>Set a minimum 5% royalty for Pixel-Forge</li>
+          <li>Maintain asset quality standards when tokenizing</li>
+          <li>Respect the terms of the asset license</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* Featured Games */}
+<div className="bg-gray-800 p-6 rounded-lg border-2 border-purple-500 shadow-lg shadow-purple-500/30 mb-12">
+  <h2 className="text-2xl font-bold mb-4 text-purple-400">🏆 Success Stories</h2>
+  <p className="text-gray-300 mb-4">
+    Check out these amazing games created with Pixel-Forge assets:
+  </p>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {featuredGames.map((game) => (
+      <div key={game.id} className="bg-gray-700 rounded-lg overflow-hidden hover:shadow-lg hover:shadow-purple-500/20 transition-all hover:-translate-y-1">
+        <img src={game.image} alt={game.name} className="w-full h-48 object-cover" />
+        <div className="p-4">
+          <h3 className="font-bold text-xl text-white">{game.name}</h3>
+          <p className="text-cyan-300 text-sm">By {game.developer}</p>
+          <p className="text-gray-300 mt-2">{game.description}</p>
+          
+          <a
+            href={game.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full mt-4 px-4 py-2 bg-purple-600 text-white font-bold rounded hover:bg-purple-700 text-center"
+          >
+            View Game
+          </a>
         </div>
+      </div>
+    ))}
+  </div>
+</div>
 
-        {/* Featured Games */}
-        <div className="bg-gray-800 p-6 rounded-lg border-2 border-purple-500 shadow-lg shadow-purple-500/30 mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-purple-400">🏆 Games Featuring Our Assets</h2>
-          <p className="text-gray-300 mb-6">
-            Check out these amazing games created by our community using Pixel Forge assets.
-          </p>
+{/* Creator Resources */}
+<div className="bg-gray-800 p-6 rounded-lg border-2 border-purple-500 shadow-lg shadow-purple-500/30 mb-12">
+  <h2 className="text-2xl font-bold mb-4 text-purple-400">🔧 Creator Resources</h2>
+  <p className="text-gray-300 mb-4">
+    Whether you're using our assets or creating your own to sell on Pixel-Forge, these resources will help you succeed:
+  </p>
+  
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="bg-gray-700 p-5 rounded-lg">
+      <h3 className="text-xl font-bold text-cyan-300 mb-3">Developer Documentation</h3>
+      <p className="text-gray-300 mb-3">
+        Comprehensive guides for integrating Pixel-Forge assets into your games.
+      </p>
+      <ul className="list-disc pl-5 space-y-2 text-gray-300">
+        <li>Technical integration guides</li>
+        <li>API documentation</li>
+        <li>SDK implementation examples</li>
+        <li>Performance optimization tips</li>
+      </ul>
+      <button className="w-full mt-4 px-4 py-2 bg-cyan-600 text-white font-bold rounded hover:bg-cyan-700">
+        View Documentation
+      </button>
+    </div>
+    
+    <div className="bg-gray-700 p-5 rounded-lg">
+      <h3 className="text-xl font-bold text-cyan-300 mb-3">Asset Creator Guides</h3>
+      <p className="text-gray-300 mb-3">
+        Learn how to create, package, and sell your pixel art on our marketplace.
+      </p>
+      <ul className="list-disc pl-5 space-y-2 text-gray-300">
+        <li>Asset creation guidelines</li>
+        <li>Marketplace submission process</li>
+        <li>Pricing and licensing tips</li>
+        <li>Marketing your pixel art assets</li>
+      </ul>
+      <button className="w-full mt-4 px-4 py-2 bg-cyan-600 text-white font-bold rounded hover:bg-cyan-700">
+        Start Creating
+      </button>
+    </div>
+    
+    <div className="bg-gray-700 p-5 rounded-lg">
+      <h3 className="text-xl font-bold text-cyan-300 mb-3">Community & Support</h3>
+      <p className="text-gray-300 mb-3">
+        Join our community of game developers and pixel artists.
+      </p>
+      <ul className="list-disc pl-5 space-y-2 text-gray-300">
+        <li>Discord community</li>
+        <li>Technical support forums</li>
+        <li>Asset request board</li>
+        <li>Showcase your games</li>
+      </ul>
+      <button className="w-full mt-4 px-4 py-2 bg-cyan-600 text-white font-bold rounded hover:bg-cyan-700">
+        Join Community
+      </button>
+    </div>
+  </div>
+</div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {featuredGames.map((game) => (
-              <div key={game.id} className="bg-gray-700 rounded-lg overflow-hidden hover:shadow-md hover:shadow-purple-500/50 transition-shadow">
-                <div className="h-64 overflow-hidden">
-                  <img src={game.image} alt={game.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="p-4">
-                  <h3 className="text-xl font-bold text-white">{game.name}</h3>
-                  <p className="text-purple-300 text-sm mb-2">by {game.developer}</p>
-                  <p className="text-gray-300 mb-4">{game.description}</p>
-                  <Link href={game.link} className="inline-block px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
-                    Play Game
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-gray-700 rounded-lg p-6 mt-8 text-center">
-            <h3 className="text-xl font-bold text-white mb-3">Showcase Your Game</h3>
-            <p className="text-gray-300 mb-4">
-              Have you created a game using our assets? Submit it to be featured on our site!
-            </p>
-            <Link href="/submit-game" className="inline-block px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-lg hover:from-purple-600 hover:to-pink-600">
-              Submit Your Game
-            </Link>
-          </div>
-        </div>
-
-        {/* Community & Support */}
-        <div className="bg-gray-800 p-6 rounded-lg border-2 border-cyan-500 shadow-lg shadow-cyan-500/30">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-4 text-cyan-400">👥 Developer Community</h2>
-              <p className="text-gray-300 mb-4">
-                Join our thriving community of pixel game developers. Share tips, get feedback, and collaborate on projects.
-              </p>
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Link href="/discord" className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                  <span className="mr-2">Discord</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 8h6m-6 4h6m-3-8v12m-3 4h6l2-2v-4" />
-                  </svg>
-                </Link>
-                <Link href="/forum" className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                  <span className="mr-2">Forums</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                </Link>
-              </div>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold mb-4 text-cyan-400">💡 Technical Support</h2>
-              <p className="text-gray-300 mb-4">
-                Need help integrating our assets? Our technical team is ready to assist with any questions.
-              </p>
-              <Link href="/support" className="inline-flex items-center px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700">
-                <span className="mr-2">Get Support</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-              </Link>
-            </div>
-          </div>
-        </div>
+{/* Attribution Requirements */}
+<div className="bg-gray-900 p-6 rounded-lg border border-purple-500 mb-12">
+  <h2 className="text-xl font-bold mb-4 text-purple-400">📝 Attribution Requirements</h2>
+  <p className="text-gray-300 mb-4">
+    When using Pixel-Forge assets in your games, please include the following attribution:
+  </p>
+  
+  <div className="bg-gray-800 p-4 rounded-lg font-mono text-sm text-white">
+    <p>Asset(s): [Asset Name]</p>
+    <p>Created by: [Original Artist] via Pixel-Forge</p>
+    <p>Website: www.pixel-forge.com</p>
+  </div>
+  
+  <p className="text-gray-300 mt-4">
+    Attribution helps support our artists and allows us to continue providing high-quality pixel art assets.
+    For commercial games, please review our licensing terms for specific requirements.
+  </p>
+</div>
+        
       </div>
     </section>
   );
