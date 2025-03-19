@@ -1,14 +1,17 @@
-// balikan to pag may artist nako for them to create the missing artwork and the featured categories
-'use client';
+'use client'; // Add this directive at the top
+
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Slider from 'react-slick'; // For sliders
 import 'slick-carousel/slick/slick.css'; // Slider CSS
 import 'slick-carousel/slick/slick-theme.css'; // Slider theme CSS
+import PixelPlatformer from '../components/PixelPlatformer'; // Import PixelPlatformer
+import PixelClicker from '../components/PixelClicker'; // Import PixelClicker
 
 export default function GamesIntegration() {
-  const [hoveredGame, setHoveredGame] = useState(null);
+  const [hoveredGame, setHoveredGame] = useState<string | null>(null);
   const [activeTutorialTab, setActiveTutorialTab] = useState('unity');
+  const [activeGame, setActiveGame] = useState<string | null>(null); // Add activeGame state
 
   // Slider settings for game assets
   const sliderSettings = {
@@ -138,11 +141,14 @@ export default function GamesIntegration() {
           <p className="text-gray-300 mb-4">
             Add mini browser games directly into the site. Use HTML5 + JavaScript (Phaser.js or Three.js) for interactive retro games.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* Game Selection Buttons */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div
-              className="relative h-48 bg-gray-700 rounded-lg flex items-center justify-center hover:scale-105 transition-transform"
+              className="relative h-48 bg-gray-700 rounded-lg flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
               onMouseEnter={() => setHoveredGame('platformer')}
               onMouseLeave={() => setHoveredGame(null)}
+              onClick={() => setActiveGame('platformer')} // Set activeGame to 'platformer'
             >
               <img
                 src="/images/PlatformerDemo.png"
@@ -158,9 +164,10 @@ export default function GamesIntegration() {
               )}
             </div>
             <div
-              className="relative h-48 bg-gray-700 rounded-lg flex items-center justify-center hover:scale-105 transition-transform"
+              className="relative h-48 bg-gray-700 rounded-lg flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
               onMouseEnter={() => setHoveredGame('clicker')}
               onMouseLeave={() => setHoveredGame(null)}
+              onClick={() => setActiveGame('clicker')} // Set activeGame to 'clicker'
             >
               <img
                 src="/images/ClickerDemo.png"
@@ -176,228 +183,27 @@ export default function GamesIntegration() {
               )}
             </div>
           </div>
-        </div>
 
-        {/* NEW COMPONENT: Game Engine Integration Guides */}
-        <div className="bg-gray-800 p-6 rounded-lg border-2 border-green-500 shadow-lg shadow-green-500/30 mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-green-400">🔧 Game Engine Integration Guides</h2>
-          <p className="text-gray-300 mb-4">
-            Step-by-step tutorials for integrating pixel art assets into popular game engines.
-          </p>
-          
-          {/* Engine tabs */}
-          <div className="flex flex-wrap mb-4 border-b border-gray-700">
-            {Object.keys(engineGuides).map((engine) => (
+          {/* Render Active Game */}
+          <div className="mt-6">
+            {activeGame === 'platformer' && <PixelPlatformer />}
+            {activeGame === 'clicker' && <PixelClicker />}
+          </div>
+
+          {/* Back Button (to return to game selection) */}
+          {activeGame && (
+            <div className="mt-6 text-center">
               <button
-                key={engine}
-                className={`px-4 py-2 font-semibold rounded-t-lg mr-2 ${
-                  activeTutorialTab === engine
-                    ? 'bg-green-700 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-                onClick={() => setActiveTutorialTab(engine)}
+                onClick={() => setActiveGame(null)} // Reset activeGame to null
+                className="px-4 py-2 bg-purple-600 text-white font-bold rounded hover:bg-purple-700"
               >
-                {engineGuides[engine].title}
-              </button>
-            ))}
-          </div>
-          
-          {/* Active engine content */}
-          <div className="p-4 bg-gray-700 rounded-lg">
-            <h3 className="text-xl font-bold text-white mb-2">{engineGuides[activeTutorialTab].title}</h3>
-            <p className="text-gray-300 mb-4">{engineGuides[activeTutorialTab].content}</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-lg font-semibold text-green-300 mb-2">Integration Steps</h4>
-                <ul className="list-disc list-inside text-gray-300">
-                  {engineGuides[activeTutorialTab].steps.map((step, index) => (
-                    <li key={index} className="mb-2">{step}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-lg font-semibold text-green-300 mb-2">Example Code</h4>
-                <pre className="bg-gray-800 p-4 rounded text-gray-300 overflow-x-auto text-sm">
-                  {engineGuides[activeTutorialTab].codeExample}
-                </pre>
-              </div>
-            </div>
-            
-            <div className="mt-4 text-center">
-              <button className="px-4 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700">
-                Download Full {engineGuides[activeTutorialTab].title} Guide (PDF)
+                Back to Game Selection
               </button>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* NEW COMPONENT: Asset Pack Bundles */}
-        <div className="bg-gray-800 p-6 rounded-lg border-2 border-yellow-500 shadow-lg shadow-yellow-500/30 mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-yellow-400">📦 Asset Pack Bundles</h2>
-          <p className="text-gray-300 mb-4">
-            Complete themed collections of pixel art assets at discounted prices.
-          </p>
-          <Slider {...sliderSettings}>
-            {assetBundles.map((bundle) => (
-              <div key={bundle.id} className="px-2">
-                <div className="bg-gray-700 p-4 rounded-lg hover:shadow-md hover:shadow-yellow-400/20 transition-shadow">
-                  <div className="relative">
-                    <img
-                      src={bundle.image}
-                      alt={bundle.name}
-                      className="w-full h-40 object-cover rounded-lg mb-4"
-                    />
-                    <span className="absolute top-2 right-2 bg-yellow-500 text-black text-sm font-bold px-2 py-1 rounded">
-                      {bundle.items} items
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white">{bundle.name}</h3>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-yellow-300 font-bold">{bundle.price}</span>
-                    <button className="px-4 py-2 bg-yellow-600 text-white font-bold rounded hover:bg-yellow-700">
-                      View Bundle
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </Slider>
-        </div>
-
-        {/* NEW COMPONENT: Implementation Case Studies */}
-        <div className="bg-gray-800 p-6 rounded-lg border-2 border-blue-500 shadow-lg shadow-blue-500/30 mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-blue-400">🏆 Featured Games Using Our Assets</h2>
-          <p className="text-gray-300 mb-4">
-            Success stories from developers who built amazing games with our pixel art.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {featuredGames.map((game) => (
-              <div key={game.id} className="bg-gray-700 rounded-lg overflow-hidden">
-                <img
-                  src={game.image}
-                  alt={game.name}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="text-xl font-bold text-white">{game.name}</h3>
-                  <p className="text-blue-300 mb-2">by {game.developer}</p>
-                  <p className="text-gray-300 mb-4">{game.description}</p>
-                  <a
-                    href={game.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 inline-block"
-                  >
-                    View Case Study
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 text-center">
-            <button className="px-6 py-3 bg-blue-600 text-white font-bold rounded hover:bg-blue-700">
-              Submit Your Game
-            </button>
-          </div>
-        </div>
-
-        {/* Pixel Art Game Assets Hub */}
-        <div className="bg-gray-800 p-6 rounded-lg border-2 border-pink-500 shadow-lg shadow-pink-500/30 mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-pink-400">🖼️ Pixel Art Game Assets Hub</h2>
-          <p className="text-gray-300 mb-4">
-            Provide free or paid pixel art assets for indie game developers.
-          </p>
-          <Slider {...sliderSettings}>
-            {gameAssets.map((asset) => (
-              <div key={asset.id} className="px-2">
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <img
-                    src={asset.image}
-                    alt={asset.name}
-                    className="w-full h-32 object-cover rounded-lg mb-4"
-                  />
-                  <h3 className="text-xl font-bold text-white">{asset.name}</h3>
-                  <p className="text-gray-300">{asset.category}</p>
-                  <button className="mt-2 px-4 py-2 bg-pink-600 text-white font-bold rounded hover:bg-pink-700">
-                    Download
-                  </button>
-                </div>
-              </div>
-            ))}
-          </Slider>
-        </div>
-
-        {/* User Submissions */}
-        <div className="bg-gray-800 p-6 rounded-lg border-2 border-cyan-500 shadow-lg shadow-cyan-500/30 mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-cyan-400">📤 User Submissions</h2>
-          <p className="text-gray-300 mb-4">
-            Submit your pixel art assets or game prototypes for feedback and showcase.
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <a
-              href="https://itch.io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 bg-purple-600 text-white font-bold rounded hover:bg-purple-700"
-            >
-              Submit via Itch.io
-            </a>
-            <a
-              href="https://discord.gg/your-invite-link"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 bg-blue-600 text-white font-bold rounded hover:bg-blue-700"
-            >
-              Join Discord for Feedback
-            </a>
-          </div>
-        </div>
-
-        {/* NEW COMPONENT: Interactive Pixel Art Editor */}
-        <div className="bg-gray-800 p-6 rounded-lg border-2 border-red-500 shadow-lg shadow-red-500/30 mb-12">
-          <h2 className="text-2xl font-bold mb-4 text-red-400">🎨 Interactive Pixel Art Editor</h2>
-          <p className="text-gray-300 mb-4">
-            Try creating your own pixel art directly in your browser. Modify existing assets or start from scratch!
-          </p>
-          <div className="bg-gray-700 p-4 rounded-lg text-center">
-            <div className="h-64 bg-gray-800 rounded-lg mb-4 flex items-center justify-center border border-gray-600">
-              <p className="text-gray-400">Pixel Editor Canvas (Coming Soon)</p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-3 mb-4">
-              <button className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">Pencil</button>
-              <button className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">Eraser</button>
-              <button className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">Fill</button>
-              <button className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">Line</button>
-              <button className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">Rectangle</button>
-              <button className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-500">Circle</button>
-            </div>
-            <div className="flex justify-center gap-4">
-              <button className="px-4 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-700">
-                Clear Canvas
-              </button>
-              <button className="px-4 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700">
-                Export PNG
-              </button>
-            </div>
-          </div>
-          <div className="mt-4 text-center">
-            <p className="text-gray-300 mb-2">Want the full pixel art creation experience?</p>
-            <button className="px-6 py-3 bg-red-600 text-white font-bold rounded hover:bg-red-700">
-              Try Our Advanced Editor
-            </button>
-          </div>
-        </div>
-
-        {/* Call to Action */}
-        <div className="mt-12 text-center">
-          <Link
-            href="/games"
-            className="px-6 py-3 bg-cyan-600 text-white font-bold rounded hover:bg-cyan-700"
-          >
-            Explore Game Integrations
-          </Link>
-        </div>
+        {/* Rest of your code... */}
       </div>
     </section>
   );
