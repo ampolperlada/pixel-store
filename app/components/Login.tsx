@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 
-const AuthModals = ({ isOpen, onClose, initialMode = 'login' }) => {
+interface AuthModalsProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialMode?: 'login' | 'signup';
+}
+
+const AuthModals: React.FC<AuthModalsProps> = ({ isOpen, onClose, initialMode = 'login' }) => {
   const [mode, setMode] = useState(initialMode);
   const [glitchEffect, setGlitchEffect] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -201,7 +207,7 @@ const AuthModals = ({ isOpen, onClose, initialMode = 'login' }) => {
 // Example of how to use this component
 const App = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   
   const openLoginModal = () => {
     setAuthMode('login');
