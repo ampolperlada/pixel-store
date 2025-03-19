@@ -238,9 +238,9 @@ const ExploreArt = () => {
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     {[
       { name: 'Cyber City', image: '/images/Cyber City.png', color: 'from-blue-500 to-purple-600' },
-      { name: 'Pixel Wasteland', image: '/images/Eldoria.png', color: 'from-red-500 to-orange-600' },
+      { name: 'Pixel Wasteland', image: '/images/Wasteland.png', color: 'from-red-500 to-orange-600' },
       { name: 'Eldoria', image: '/images/Eldoria.png', color: 'from-green-500 to-teal-600' },
-      { name: 'Mystic Pixel Isles', image: '/placeholder-mystic.jpg', color: 'from-indigo-500 to-purple-600' }
+      { name: 'Mystic Pixel Isles', image: '/images/Mystic Island.png', color: 'from-indigo-500 to-purple-600' }
     ].map(({ name, image, color }) => (
       <div 
         key={name}
