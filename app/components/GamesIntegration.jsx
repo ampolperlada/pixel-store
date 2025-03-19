@@ -159,7 +159,7 @@ export default function GamesIntegration() {
                 onClick={() => setActiveGame('platformer')}
               >
                 <img
-                  src="/images/PlatformerDemo.png"
+                  src="/images/games/Game1.png"
                   alt="Platformer Demo"
                   className="w-full h-full object-cover rounded-lg"
                 />
@@ -182,7 +182,7 @@ export default function GamesIntegration() {
                 onClick={() => setActiveGame('clicker')}
               >
                 <img
-                  src="/images/ClickerDemo.png"
+                  src="/images/games/Game2.png"
                   alt="Clicker Demo"
                   className="w-full h-full object-cover rounded-lg"
                 />
@@ -274,68 +274,7 @@ export default function GamesIntegration() {
   </div>
 </div>
 
-{/* Asset Marketplace */}
-<div className="bg-gray-800 p-6 rounded-lg border-2 border-purple-500 shadow-lg shadow-purple-500/30 mb-12">
-  <h2 className="text-2xl font-bold mb-4 text-purple-400">🎨 Pixel Art Marketplace</h2>
-  <p className="text-gray-300 mb-4">
-    Browse our collection of high-quality pixel art assets ready for integration into your games.
-  </p>
-  
-  {/* Category filters */}
-  <div className="flex flex-wrap gap-2 mb-6">
-    {categories.map((category) => (
-      <button
-        key={category}
-        className={`px-4 py-2 rounded-full font-medium ${
-          selectedCategory === category
-            ? 'bg-purple-600 text-white'
-            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-        }`}
-        onClick={() => setSelectedCategory(category)}
-      >
-        {category}
-      </button>
-    ))}
-  </div>
-  
-  {/* Asset grid */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    {filteredAssets.map((asset) => (
-      <div key={asset.id} className="bg-gray-700 rounded-lg overflow-hidden hover:shadow-lg hover:shadow-purple-500/20 transition-all hover:-translate-y-1">
-        <img src={asset.image} alt={asset.name} className="w-full h-40 object-cover" />
-        <div className="p-4">
-          <h3 className="font-bold text-white">{asset.name}</h3>
-          <p className="text-cyan-300 text-sm">{asset.category}</p>
-          <button className="w-full mt-3 px-4 py-2 bg-cyan-600 text-white font-bold rounded hover:bg-cyan-700">
-            View Details
-          </button>
-        </div>
-      </div>
-    ))}
-  </div>
-  
-  {/* Asset packs slider */}
-  <h3 className="text-xl font-bold text-purple-300 mb-4">Premium Asset Bundles</h3>
-  <Slider {...sliderSettings}>
-    {assetBundles.map((bundle) => (
-      <div key={bundle.id} className="px-2">
-        <div className="bg-gray-700 rounded-lg overflow-hidden">
-          <img src={bundle.image} alt={bundle.name} className="w-full h-48 object-cover" />
-          <div className="p-4">
-            <h3 className="font-bold text-white">{bundle.name}</h3>
-            <p className="text-cyan-300 text-sm">{bundle.items} assets</p>
-            <div className="flex justify-between items-center mt-3">
-              <span className="text-white font-bold">{bundle.price}</span>
-              <button className="px-3 py-1 bg-purple-600 text-white font-bold rounded hover:bg-purple-700">
-                Buy Now
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    ))}
-  </Slider>
-</div>
+
 
 {/* Technical Integration Best Practices */}
 <div className="bg-gray-800 p-6 rounded-lg border-2 border-purple-500 shadow-lg shadow-purple-500/30 mb-12">
