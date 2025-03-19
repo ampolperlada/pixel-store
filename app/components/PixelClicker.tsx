@@ -46,8 +46,24 @@ const PixelClicker = () => {
   
   // Refs for animation elements
   const clickerRef = useRef(null);
-  const [particles, setParticles] = useState([]);
-  const [clickIndicators, setClickIndicators] = useState([]);
+  interface Particle {
+    id: number;
+    x: number;
+    y: number;
+    xDest: number;
+    yDest: number;
+    color: string;
+  }
+
+  const [particles, setParticles] = useState<Particle[]>([]);
+  interface ClickIndicator {
+    id: number;
+    value: number;
+    x: number;
+    y: number;
+  }
+  
+  const [clickIndicators, setClickIndicators] = useState<ClickIndicator[]>([]);
   const [rainbowMode, setRainbowMode] = useState(false);
   
   // Auto-clicker effect
@@ -82,7 +98,7 @@ const PixelClicker = () => {
     }, 1000);
     
     // Create particles
-    const newParticles = [];
+    const newParticles: Particle[] = [];
     for (let i = 0; i < 5; i++) {
       const xPos = Math.random() * 100;
       const yPos = Math.random() * 100;
@@ -108,7 +124,17 @@ const PixelClicker = () => {
   };
   
   // Buy upgrade handler
-  const buyUpgrade = (item) => {
+  interface ShopItem {
+    id: string;
+    name: string;
+    baseCost: number;
+    cost: number;
+    description: string;
+    count: number;
+    maxCount: number;
+  }
+
+  const buyUpgrade = (item: ShopItem) => {
     if (pixels >= item.cost && item.count < item.maxCount) {
       // Deduct cost
       setPixels(prev => prev - item.cost);
@@ -277,7 +303,7 @@ const PixelClicker = () => {
             opacity: 1;
           }
           100% {
-            transform: translate(${props => props.x}px, ${props => props.y}px);
+            transform: translate(${(props: { x: number; y: number }) => props.x}px, ${(props: { x: number; y: number }) => props.y}px);
             opacity: 0;
           }
         }
