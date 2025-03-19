@@ -9,9 +9,14 @@ interface AuthModalsProps {
 }
 
 const AuthModals: React.FC<AuthModalsProps> = ({ isOpen, onClose, initialMode = 'login' }) => {
-  const [mode, setMode] = useState(initialMode);
+  const [mode, setMode] = useState(initialMode); // Use initialMode to set the initial state
   const [glitchEffect, setGlitchEffect] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+
+  // Update mode when initialMode changes
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
 
   // Animation for modal appearance
   useEffect(() => {
