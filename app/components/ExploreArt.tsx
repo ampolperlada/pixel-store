@@ -144,16 +144,16 @@ const ExploreArt = () => {
   const artists = [
     {
       id: 1,
-      name: 'PixelMaster',
+      name: 'Zumi',
       bio: 'Digital artist specializing in cyberpunk themes.',
-      avatar: '/artist1.jpg',
+      avatar: '/images/Killua.png',
       portfolioLink: '/artists/pixelmaster',
     },
     {
       id: 2,
-      name: 'ArtWizard',
+      name: 'Ampoloppa',
       bio: 'Master of fantasy and surreal art.',
-      avatar: '/artist2.jpg',
+      avatar: '/images/Sunraku.png',
       portfolioLink: '/artists/artwizard',
     },
     // Add more artists
@@ -489,7 +489,7 @@ const ExploreArt = () => {
             src={artist.avatar}
             alt={artist.name}
             className="w-16 h-16 rounded-full"
-            onError={(e) => { (e.target as HTMLImageElement).src = "/images/Killua.png"; }} // Fallback
+            onError={(e) => { (e.target as HTMLImageElement).src = ""; }} // Fallback
           />
           <div>
             <h3 className="text-xl font-semibold">{artist.name}</h3>
