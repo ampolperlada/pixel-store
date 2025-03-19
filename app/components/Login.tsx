@@ -1,30 +1,42 @@
-'use client';
 import React, { useState, useEffect } from 'react';
 
-const AuthModals = () => {
-  const [isLoginOpen, setIsLoginOpen] = useState(true);
-  const [isSignupOpen, setIsSignupOpen] = useState(false);
+const AuthModals = ({ isOpen, onClose, initialMode = 'login' }) => {
+  const [mode, setMode] = useState(initialMode);
   const [glitchEffect, setGlitchEffect] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Animation for modal appearance
+  useEffect(() => {
+    if (isOpen) {
+      // Short delay before showing to allow for animation
+      setTimeout(() => setIsVisible(true), 50);
+    } else {
+      setIsVisible(false);
+    }
+  }, [isOpen]);
 
   // Toggle between login and signup
-  const toggleAuth = () => {
+  const toggleMode = () => {
     setGlitchEffect(true);
     setTimeout(() => {
-      setIsLoginOpen(!isLoginOpen);
-      setIsSignupOpen(!isSignupOpen);
+      setMode(mode === 'login' ? 'signup' : 'login');
       setGlitchEffect(false);
     }, 500);
   };
 
   // Random glitch effect interval
   useEffect(() => {
+    if (!isOpen) return;
+    
     const glitchInterval = setInterval(() => {
       setGlitchEffect(true);
       setTimeout(() => setGlitchEffect(false), 150);
     }, Math.random() * 5000 + 3000);
     
     return () => clearInterval(glitchInterval);
-  }, []);
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   // CRT scanline effect
   const ScanLines = () => (
@@ -33,19 +45,29 @@ const AuthModals = () => {
   );
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50">
-      <div className={`relative w-full max-w-md ${glitchEffect ? 'animate-pulse' : ''}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop with blur effect */}
+      <div 
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300"
+        style={{ opacity: isVisible ? 1 : 0 }}
+        onClick={onClose}
+      ></div>
+      
+      {/* Modal container */}
+      <div 
+        className={`relative w-full max-w-md transform transition-all duration-300 ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'} ${glitchEffect ? 'translate-x-1 -translate-y-1' : ''}`}
+      >
         {/* Login Form */}
-        {isLoginOpen && (
+        {mode === 'login' && (
           <div className="bg-gradient-to-br from-purple-900 to-blue-900 p-8 rounded-lg border-2 border-cyan-400 shadow-lg shadow-cyan-500/50 relative overflow-hidden">
             <ScanLines />
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/10 to-transparent opacity-50"></div>
             
-            <h2 className="text-3xl font-bold text-center mb-6 text-cyan-300 tracking-wide glitch-text">
-              <span className="relative">
+            <h2 className="text-3xl font-bold text-center mb-6 text-cyan-300 tracking-wide">
+              <span className="relative inline-block">
                 <span className="absolute -top-1 -left-1 text-red-500 opacity-70">LOGIN</span>
                 <span className="absolute -bottom-1 -right-1 text-blue-500 opacity-70">LOGIN</span>
-                LOGIN
+                <span className="relative z-10">LOGIN</span>
               </span>
             </h2>
             
@@ -83,7 +105,7 @@ const AuthModals = () => {
             </form>
             
             <div className="mt-6 text-center text-cyan-300">
-              <p>Don't have an account? <button onClick={toggleAuth} className="text-pink-400 hover:text-pink-300">Sign Up</button></p>
+              <p>Don't have an account? <button onClick={toggleMode} className="text-pink-400 hover:text-pink-300">Sign Up</button></p>
             </div>
             
             <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500"></div>
@@ -91,16 +113,16 @@ const AuthModals = () => {
         )}
         
         {/* Signup Form */}
-        {isSignupOpen && (
+        {mode === 'signup' && (
           <div className="bg-gradient-to-br from-purple-900 to-blue-900 p-8 rounded-lg border-2 border-pink-400 shadow-lg shadow-pink-500/50 relative overflow-hidden">
             <ScanLines />
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/10 to-transparent opacity-50"></div>
             
-            <h2 className="text-3xl font-bold text-center mb-6 text-pink-300 tracking-wide glitch-text">
-              <span className="relative">
+            <h2 className="text-3xl font-bold text-center mb-6 text-pink-300 tracking-wide">
+              <span className="relative inline-block">
                 <span className="absolute -top-1 -left-1 text-cyan-500 opacity-70">SIGN UP</span>
                 <span className="absolute -bottom-1 -right-1 text-purple-500 opacity-70">SIGN UP</span>
-                SIGN UP
+                <span className="relative z-10">SIGN UP</span>
               </span>
             </h2>
             
@@ -151,7 +173,7 @@ const AuthModals = () => {
             </form>
             
             <div className="mt-6 text-center text-pink-300">
-              <p>Already have an account? <button onClick={toggleAuth} className="text-cyan-400 hover:text-cyan-300">Login</button></p>
+              <p>Already have an account? <button onClick={toggleMode} className="text-cyan-400 hover:text-cyan-300">Login</button></p>
             </div>
             
             <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500"></div>
@@ -159,7 +181,10 @@ const AuthModals = () => {
         )}
         
         {/* Close button */}
-        <button className="absolute -top-4 -right-4 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-300 shadow-lg z-20">
+        <button 
+          onClick={onClose}
+          className="absolute -top-4 -right-4 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-300 shadow-lg z-20"
+        >
           ✕
         </button>
         
@@ -169,6 +194,41 @@ const AuthModals = () => {
         <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-purple-400"></div>
         <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-400"></div>
       </div>
+    </div>
+  );
+};
+
+// Example of how to use this component
+const App = () => {
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+  
+  const openLoginModal = () => {
+    setAuthMode('login');
+    setIsAuthModalOpen(true);
+  };
+  
+  const openSignupModal = () => {
+    setAuthMode('signup');
+    setIsAuthModalOpen(true);
+  };
+  
+  return (
+    <div>
+      {/* Your existing website content */}
+      
+      {/* This is just for example - you already have buttons */}
+      <div className="hidden">
+        <button onClick={openLoginModal}>Sign In</button>
+        <button onClick={openSignupModal}>Sign Up</button>
+      </div>
+      
+      {/* Auth Modal */}
+      <AuthModals 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        initialMode={authMode}
+      />
     </div>
   );
 };
