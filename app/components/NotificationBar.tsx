@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import AuthModals from './AuthModals'; // Import the AuthModals component
@@ -22,6 +22,7 @@ const NotificationBar = () => {
 const StickyNavbar = () => {
   const [isSticky, setIsSticky] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false); // State for AuthModal
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login'); // State for modal mode
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,6 +40,12 @@ const StickyNavbar = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  // Function to open the modal in a specific mode
+  const openAuthModal = (mode: 'login' | 'signup') => {
+    setAuthModalMode(mode); // Set the mode (login or signup)
+    setIsAuthModalOpen(true); // Open the modal
+  };
 
   return (
     <>
@@ -104,13 +111,13 @@ const StickyNavbar = () => {
 
               {/* Sign In and Sign Up Buttons */}
               <button
-                onClick={() => setIsAuthModalOpen(true)} // Open the AuthModal
+                onClick={() => openAuthModal('login')} // Open modal in Login mode
                 className="text-white hover:text-pink-400 transition-colors"
               >
                 Sign In
               </button>
               <button
-                onClick={() => setIsAuthModalOpen(true)} // Open the AuthModal
+                onClick={() => openAuthModal('signup')} // Open modal in Sign Up mode
                 className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 Sign Up
@@ -131,6 +138,7 @@ const StickyNavbar = () => {
       <AuthModals
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)} // Close the AuthModal
+        initialMode={authModalMode} // Pass the initial mode (login or signup)
       />
     </>
   );
