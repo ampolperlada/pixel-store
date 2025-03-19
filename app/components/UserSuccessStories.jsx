@@ -103,7 +103,7 @@ const UserSuccessStories = () => {
                 <div className="relative w-full h-full flex items-center justify-center">
                   {/* First image - Original pixel art */}
                   <Image 
-                    src="/api/placeholder/540/540" 
+                    src="/images/Vampire.png" 
                     alt="Original Pixel Art" 
                     width={240} 
                     height={240}
@@ -124,7 +124,7 @@ const UserSuccessStories = () => {
                 <div className="relative w-full h-full flex items-center justify-center">
                   {/* Second image - In-game integration */}
                   <Image 
-                    src="/api/placeholder/540/540" 
+                    src="/images/Game Int 2.png" 
                     alt="In-Game Character Integration" 
                     width={240} 
                     height={240}
