@@ -108,7 +108,7 @@ export default function GamesIntegration() {
     { 
       id: 1, 
       name: 'Dungeon Delver', 
-      image: '/images/DungeonDelver.png', 
+      image: '/images/games/Dungeon.png', 
       developer: 'PixelForge Studios', 
       description: 'A roguelike dungeon crawler featuring assets from our Fantasy Pack',
       link: 'https://example.com/dungeon-delver'
@@ -116,7 +116,7 @@ export default function GamesIntegration() {
     { 
       id: 2, 
       name: 'Neon Nights', 
-      image: '/images/NeonNights.png', 
+      image: '/images/games/Neon Nights.png', 
       developer: 'SynthWave Games', 
       description: 'A cyberpunk adventure using our Neon City tileset and character assets',
       link: 'https://example.com/neon-nights'
