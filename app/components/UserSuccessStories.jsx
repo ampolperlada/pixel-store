@@ -94,13 +94,23 @@ const UserSuccessStories = () => {
             </div>
           </div>
           
-          {/* Before/After Showcase */}
+          {/* Before/After Showcase with actual pixel art images */}
           <div className="bg-gray-900 bg-opacity-70 rounded-lg p-4">
             <h3 className="text-xl text-pink-500 font-semibold mb-4">From Art to Game</h3>
             <div className="space-y-4">
-              <div className="relative h-40 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
-                <p className="absolute top-2 left-2 bg-gray-900 px-2 py-1 rounded text-xs font-medium text-white">ORIGINAL ART</p>
-                <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-blue-500 rounded"></div>
+              <div className="relative h-64 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
+                <p className="absolute top-2 left-2 bg-gray-900 px-2 py-1 rounded text-xs font-medium text-white z-10">ORIGINAL ART</p>
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {/* First image - Original pixel art */}
+                  <Image 
+                    src="/api/placeholder/540/540" 
+                    alt="Original Pixel Art" 
+                    width={240} 
+                    height={240}
+                    className="object-contain"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                </div>
               </div>
               
               <div className="flex justify-center">
@@ -109,9 +119,19 @@ const UserSuccessStories = () => {
                 </svg>
               </div>
               
-              <div className="relative h-40 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
-                <p className="absolute top-2 left-2 bg-gray-900 px-2 py-1 rounded text-xs font-medium text-white">IN-GAME INTEGRATION</p>
-                <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-blue-500 rounded animate-pulse"></div>
+              <div className="relative h-64 rounded-lg overflow-hidden bg-gray-800 flex items-center justify-center">
+                <p className="absolute top-2 left-2 bg-gray-900 px-2 py-1 rounded text-xs font-medium text-white z-10">IN-GAME INTEGRATION</p>
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {/* Second image - In-game integration */}
+                  <Image 
+                    src="/api/placeholder/540/540" 
+                    alt="In-Game Character Integration" 
+                    width={240} 
+                    height={240}
+                    className="object-contain"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                </div>
               </div>
             </div>
           </div>
