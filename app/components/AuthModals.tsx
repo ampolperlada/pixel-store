@@ -44,6 +44,13 @@ const AuthModals: React.FC<AuthModalsProps> = ({ isOpen, onClose, initialMode = 
     return () => clearInterval(glitchInterval);
   }, [isOpen]);
 
+  // Handle form submission
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); // Prevent the default form submission behavior
+    // Add your login or signup logic here
+    console.log(`${mode} form submitted`);
+  };
+
   if (!isOpen) return null;
 
   // CRT scanline effect
@@ -79,7 +86,7 @@ const AuthModals: React.FC<AuthModalsProps> = ({ isOpen, onClose, initialMode = 
               </span>
             </h2>
             
-            <form className="space-y-4 relative z-10">
+            <form className="space-y-4 relative z-10" onSubmit={handleSubmit}>
               <div>
                 <label className="block text-cyan-300 text-sm font-medium mb-1">USERNAME</label>
                 <input 
@@ -134,7 +141,7 @@ const AuthModals: React.FC<AuthModalsProps> = ({ isOpen, onClose, initialMode = 
               </span>
             </h2>
             
-            <form className="space-y-4 relative z-10">
+            <form className="space-y-4 relative z-10" onSubmit={handleSubmit}>
               <div>
                 <label className="block text-pink-300 text-sm font-medium mb-1">USERNAME</label>
                 <input 
