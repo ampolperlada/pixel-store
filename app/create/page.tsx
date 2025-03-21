@@ -36,7 +36,9 @@ const NFT_ASSETS = [
     ],
     colors: {
       '0': 'transparent',
-      '1': '#FFD700'  // Gold color
+      '1': '#FFD700',  // Gold color
+      '2': '',
+      '3': ''
     },
     owner: '0x1234...5678',
     price: 0.05
@@ -78,13 +80,13 @@ const NFT_ASSETS = [
       [0,0,0,1,0,0,0],
       [0,0,0,1,0,0,0],
       [0,0,0,1,0,0,0],
-      [0,0,0,1,0,0,0],
       [0,0,0,1,0,0,0]
     ],
     colors: {
       '0': 'transparent',
       '1': '#8A2BE2',  // Purple
-      '2': '#FFFFFF'   // White
+      '2': '#FFFFFF',  // White
+      '3': ''
     },
     owner: '0xABCD...EFGH',
     price: 0.12
@@ -98,14 +100,13 @@ const NFT_ASSETS = [
     thumbnail: 'visor-thumb.png', 
     pixels: [
       [1,1,1,1,1,1,1,1],
-      [1,0,0,0,0,0,0,1],
-      [1,0,2,2,2,2,0,1],
-      [1,1,1,1,1,1,1,1]
+      [1,0,0,0,0,0,0,1]
     ],
     colors: {
       '0': 'transparent',
       '1': '#222222',  // Black
       '2': '#FF00FF',  // Magenta
+      '3': ''
     },
     owner: '0x1234...5678',
     price: 0.07
