@@ -6,7 +6,7 @@ const communityData = {
     {
       id: 1,
       title: "Cyberpunk Characters",
-      image: "/challenges/cyberpunk.png",
+      image: "/images/active-chal/CyberPunk Char.png",
       entries: 124,
       daysLeft: 3,
       currentWinner: "NeonPixel"
@@ -14,7 +14,7 @@ const communityData = {
     {
       id: 2,
       title: "Fantasy Landscapes",
-      image: "/challenges/fantasy.png",
+      image: "/images/active-chal/Fantasy Landscape.png",
       entries: 96,
       daysLeft: 5,
       currentWinner: "PixelWorld"
