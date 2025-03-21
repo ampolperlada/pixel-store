@@ -43,12 +43,10 @@ const communityData = {
       curator: "VintageGamer",
       items: 46,
       images: [
-        "/collections/retro1.png",
-        "/collections/retro2.png",
-        "/collections/retro3.png",
-        "/collections/retro4.png",
-        "/collections/retro5.png",
-        "/collections/retro6.png"
+        "/images/active-chal/Retro Icons.png",
+        "/images/active-chal/Retro Icons 2.png",
+
+
       ]
     },
     {
@@ -84,8 +82,13 @@ const CommunityHighlights = () => {
               {communityData.challenges.map(challenge => (
                 <div key={challenge.id} className="bg-gray-900 rounded-lg p-3 hover:bg-gray-700 transition-colors">
                   <div className="aspect-w-16 aspect-h-9 mb-3">
-                    <div className="w-full h-32 bg-gradient-to-br from-purple-400 to-indigo-600 rounded flex items-center justify-center">
-                      <p className="text-white font-bold">{challenge.title}</p>
+                    <div className="w-full h-32 relative rounded overflow-hidden">
+                      <Image
+                        src={challenge.image}
+                        alt={challenge.title}
+                        fill
+                        className="object-cover"
+                      />
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
@@ -145,8 +148,8 @@ const CommunityHighlights = () => {
             <div className="p-4 space-y-4">
               {communityData.collections.map(collection => (
                 <div key={collection.id} className="bg-gray-900 rounded-lg p-3 hover:bg-gray-700 transition-colors">
-                  <div className="grid grid-cols-3 gap-1 mb-2">
-                    {collection.images.map((image, i) => (
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    {collection.images.slice(0, 2).map((image, i) => (
                       <div key={i} className="aspect-square relative rounded-sm overflow-hidden">
                         <Image
                           src={image}
