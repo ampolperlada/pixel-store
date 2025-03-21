@@ -422,7 +422,7 @@ export default function CreatorStudio() {
         for (let y = 0; y < nftAsset.pixels.length; y++) {
           for (let x = 0; x < nftAsset.pixels[y].length; x++) {
             const colorKey = nftAsset.pixels[y][x].toString();
-            const color = nftAsset.colors[colorKey];
+            const color = nftAsset.colors[colorKey as keyof typeof nftAsset.colors];
             
             if (color !== 'transparent') {
               const targetX = asset.x + x;
@@ -430,8 +430,10 @@ export default function CreatorStudio() {
               
               // Check bounds
               if (targetX >= 0 && targetX < canvasSize && targetY >= 0 && targetY < canvasSize) {
-                ctx.fillStyle = color;
-                ctx.fillRect(targetX, targetY, 1, 1);
+                if (color) {
+                  ctx.fillStyle = color;
+                  ctx.fillRect(targetX, targetY, 1, 1);
+                }
               }
             }
           }
