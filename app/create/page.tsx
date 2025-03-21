@@ -726,50 +726,57 @@ export default function CreatorStudio() {
               onClick={() => setShowAssetLibrary(!showAssetLibrary)}
             >
               {showAssetLibrary ? 'Close Asset Library' : 'Open NFT Asset Library'}
-              </button>
-              
-              <div className="mt-4">
-                <h3 className="text-md font-semibold mb-2 text-gray-300">Color Palette</h3>
-                <div className="grid grid-cols-5 gap-1">
-                  {COLORS.map((color, index) => (
-                    <div
-                      key={index}
-                      className={`w-full aspect-square cursor-pointer ${selectedColor === color ? 'ring-2 ring-white' : ''}`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => setSelectedColor(color)}
-                    />
-                  ))}
-                </div>
-              </div>
-              
-              <div className="mt-4">
-                <h3 className="text-md font-semibold mb-2 text-gray-300">Canvas Controls</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    className="p-2 bg-gray-800 hover:bg-gray-700 transition"
-                    onClick={undo}
-                    disabled={historyIndex === 0}
-                  >
-                    Undo
-                  </button>
-                  <button 
-                    className="p-2 bg-gray-800 hover:bg-gray-700 transition"
-                    onClick={redo}
-                    disabled={historyIndex === history.length - 1}
-                  >
-                    Redo
-                  </button>
-                  <button 
-                    className="p-2 bg-gray-800 hover:bg-gray-700 transition"
-                    onClick={resetCanvas}
-                  >
-                    Reset
-                  </button>
-                  <button 
-                    className="p-2 bg-gray-800 hover:bg-gray-700 transition"
-                    onClick={exportAsPNG}
-                  >
-                    Export PNG
-                  </button>
-                </div>
-              </div>
+                            </button>
+                          </div>
+                          
+                          <div className="mt-4">
+                            <h3 className="text-md font-semibold mb-2 text-gray-300">Color Palette</h3>
+                            <div className="grid grid-cols-5 gap-1">
+                              {COLORS.map((color, index) => (
+                                <div
+                                  key={index}
+                                  className={`w-full aspect-square cursor-pointer ${selectedColor === color ? 'ring-2 ring-white' : ''}`}
+                                  style={{ backgroundColor: color }}
+                                  onClick={() => setSelectedColor(color)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4">
+                            <h3 className="text-md font-semibold mb-2 text-gray-300">Canvas Controls</h3>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button 
+                                className="p-2 bg-gray-800 hover:bg-gray-700 transition"
+                                onClick={undo}
+                                disabled={historyIndex === 0}
+                              >
+                                Undo
+                              </button>
+                              <button 
+                                className="p-2 bg-gray-800 hover:bg-gray-700 transition"
+                                onClick={redo}
+                                disabled={historyIndex === history.length - 1}
+                              >
+                                Redo
+                              </button>
+                              <button 
+                                className="p-2 bg-gray-800 hover:bg-gray-700 transition"
+                                onClick={resetCanvas}
+                              >
+                                Reset
+                              </button>
+                              <button 
+                                className="p-2 bg-gray-800 hover:bg-gray-700 transition"
+                                onClick={exportAsPNG}
+                              >
+                                Export PNG
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </main>
+                );
+              }
