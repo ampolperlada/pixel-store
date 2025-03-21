@@ -91,7 +91,6 @@ const NFT_ASSETS = [
     owner: '0xABCD...EFGH',
     price: 0.12
   },
-  // Additional assets
   { 
     id: 'asset4', 
     name: 'Cyberpunk Visor', 
@@ -196,6 +195,8 @@ interface PlacedAsset {
 }
 
 export default function CreatorStudio() {
+  const [draggingAssetId, setDraggingAssetId] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState<{x: number, y: number} | null>(null);
   const [canvasSize, setCanvasSize] = useState(DEFAULT_CANVAS_SIZE);
   const [pixelSize, setPixelSize] = useState(DEFAULT_PIXEL_SIZE);
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
@@ -209,8 +210,6 @@ export default function CreatorStudio() {
   const [artworkPrice, setArtworkPrice] = useState('0.05');
   const [artworkTags, setArtworkTags] = useState('');
   const [showPreview, setShowPreview] = useState(false);
-  
-  // New state for NFT Asset Integration feature
   const [showAssetLibrary, setShowAssetLibrary] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [assetSearchTerm, setAssetSearchTerm] = useState('');
@@ -233,22 +232,56 @@ export default function CreatorStudio() {
   const [showCollaborators, setShowCollaborators] = useState(false);
   const [collaborators, setCollaborators] = useState<string[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
-  
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const assetLibraryRef = useRef<HTMLDivElement>(null);
-  
+
+  // Function to handle asset dragging
+  const handleAssetDrag = (e: MouseEvent) => {
+    if (!draggingAssetId || !dragOffset) return;
+
+    const dx = (e.clientX - dragOffset.x) / pixelSize;
+    const dy = (e.clientY - dragOffset.y) / pixelSize;
+
+    setPlacedAssets(prev => prev.map(asset => 
+      asset.id === draggingAssetId
+        ? { ...asset, x: asset.x + dx, y: asset.y + dy }
+        : asset
+    ));
+
+    setDragOffset({
+      x: e.clientX,
+      y: e.clientY
+    });
+  };
+
+  // Function to handle finishing dragging an asset
+  const handleAssetDragEnd = () => {
+    setDraggingAssetId(null);
+    setDragOffset(null);
+  };
+
+  // Set up event listeners for drag operations
+  useEffect(() => {
+    if (draggingAssetId) {
+      window.addEventListener('mousemove', handleAssetDrag);
+      window.addEventListener('mouseup', handleAssetDragEnd);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleAssetDrag);
+      window.removeEventListener('mouseup', handleAssetDragEnd);
+    };
+  }, [draggingAssetId, dragOffset]);
+
   useEffect(() => {
     // Initialize empty canvas
     resetCanvas();
   }, [canvasSize]);
-  
+
   // New effect for AI suggestions
   useEffect(() => {
-    // In a real implementation, this would use image recognition or ML
-    // to detect what the user is drawing and suggest relevant assets
     const analyzeCanvas = () => {
-      // Simple mock implementation - in reality this would be much more sophisticated
-      // Counting colors to make simple suggestions
       const colorCounts: {[key: string]: number} = {};
       pixels.forEach(color => {
         if (color !== '#FFFFFF') {
@@ -261,19 +294,13 @@ export default function CreatorStudio() {
         .slice(0, 3)
         .map(entry => entry[0]);
       
-      // Mock AI logic for suggestions based on colors
       let suggestedCategory = '';
       
-      // Red/brown tones might suggest medieval
       if (dominantColors.some(c => c.match(/#(8B4513|A52A2A|CD853F|D2691E|8B0000|800000)/i))) {
         suggestedCategory = 'Medieval';
-      }
-      // Blue/cyan might suggest sci-fi
-      else if (dominantColors.some(c => c.match(/#(00FFFF|00CED1|1E90FF|4169E1|0000FF)/i))) {
+      } else if (dominantColors.some(c => c.match(/#(00FFFF|00CED1|1E90FF|4169E1|0000FF)/i))) {
         suggestedCategory = 'Cyberpunk';
-      }
-      // Purple/pink might suggest fantasy
-      else if (dominantColors.some(c => c.match(/#(FF00FF|DA70D6|9370DB|8A2BE2|9400D3)/i))) {
+      } else if (dominantColors.some(c => c.match(/#(FF00FF|DA70D6|9370DB|8A2BE2|9400D3)/i))) {
         suggestedCategory = 'Fantasy';
       }
       
@@ -287,13 +314,12 @@ export default function CreatorStudio() {
       }
     };
     
-    // Only run analysis if there are a significant number of colored pixels
     const coloredPixels = pixels.filter(p => p !== '#FFFFFF').length;
     if (coloredPixels > canvasSize * 2) {
       analyzeCanvas();
     }
   }, [pixels, canvasSize]);
-  
+
   const resetCanvas = () => {
     const newPixels = Array(canvasSize * canvasSize).fill('#FFFFFF');
     setPixels(newPixels);
@@ -301,7 +327,7 @@ export default function CreatorStudio() {
     setHistoryIndex(0);
     setPlacedAssets([]);
   };
-  
+
   const handlePixelClick = (index: number) => {
     if (currentTool === 'pencil') {
       const newPixels = [...pixels];
@@ -320,28 +346,26 @@ export default function CreatorStudio() {
       handleFill(index);
     }
   };
-  
+
   const handleMouseDown = (index: number) => {
     setIsDrawing(true);
     handlePixelClick(index);
   };
-  
+
   const handleMouseOver = (index: number) => {
     if (isDrawing) {
       handlePixelClick(index);
     }
   };
-  
+
   const handleMouseUp = () => {
     setIsDrawing(false);
   };
-  
+
   const addToHistory = (newPixels: string[]) => {
-    // Remove any future history if we're in the middle of the history array
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newPixels);
     
-    // Limit history to 50 states to prevent memory issues
     if (newHistory.length > 50) {
       newHistory.shift();
     }
@@ -349,21 +373,21 @@ export default function CreatorStudio() {
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
   };
-  
+
   const undo = () => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1);
       setPixels(history[historyIndex - 1]);
     }
   };
-  
+
   const redo = () => {
     if (historyIndex < history.length - 1) {
       setHistoryIndex(historyIndex + 1);
       setPixels(history[historyIndex + 1]);
     }
   };
-  
+
   const fillBucket = (startIndex: number, targetColor: string, newColor: string) => {
     if (targetColor === newColor) return;
     
@@ -381,7 +405,6 @@ export default function CreatorStudio() {
       const row = Math.floor(currentIndex / width);
       const col = currentIndex % width;
       
-      // Check neighbors (up, down, left, right)
       if (row > 0) stack.push(currentIndex - width); // up
       if (row < width - 1) stack.push(currentIndex + width); // down
       if (col > 0) stack.push(currentIndex - 1); // left
@@ -391,24 +414,22 @@ export default function CreatorStudio() {
     setPixels(newPixels);
     addToHistory(newPixels);
   };
-  
+
   const handleFill = (index: number) => {
     fillBucket(index, pixels[index], selectedColor);
   };
-  
+
   const exportAsPNG = () => {
     const canvas = document.createElement('canvas');
     canvas.width = canvasSize;
     canvas.height = canvasSize;
     const ctx = canvas.getContext('2d');
     
-    // Fix for 'ctx' is possibly 'null'
     if (!ctx) {
       alert('Your browser does not support canvas operations');
       return;
     }
     
-    // Draw pixels to canvas
     for (let i = 0; i < pixels.length; i++) {
       const row = Math.floor(i / canvasSize);
       const col = i % canvasSize;
@@ -416,7 +437,6 @@ export default function CreatorStudio() {
       ctx.fillRect(col, row, 1, 1);
     }
     
-    // Add placed NFT assets
     placedAssets.forEach(asset => {
       const nftAsset = NFT_ASSETS.find(a => a.id === asset.assetId);
       if (nftAsset) {
@@ -429,7 +449,6 @@ export default function CreatorStudio() {
               const targetX = asset.x + x;
               const targetY = asset.y + y;
               
-              // Check bounds
               if (targetX >= 0 && targetX < canvasSize && targetY >= 0 && targetY < canvasSize) {
                 if (color) {
                   ctx.fillStyle = color;
@@ -442,39 +461,33 @@ export default function CreatorStudio() {
       }
     });
     
-    // Convert to data URL and download
     const dataURL = canvas.toDataURL('image/png');
     const link = document.createElement('a');
     link.download = `${artworkName.replace(/\s+/g, '-').toLowerCase()}.png`;
     link.href = dataURL;
     link.click();
   };
-  
+
   const exportAsSpriteSheet = () => {
-    // Simplified for demo - in production this would create a proper sprite sheet
     exportAsPNG();
   };
-  
+
   const saveArtwork = () => {
-    // In a real implementation, this would save to your backend/database
     alert(`Artwork "${artworkName}" saved successfully! In a real implementation, this would connect to your backend.`);
     setShowPreview(false);
   };
-  
+
   const publishToMarketplace = () => {
-    // In a real implementation, this would publish to your marketplace
     alert(`Artwork "${artworkName}" published to marketplace for ${artworkPrice} ETH! In a real implementation, this would connect to your backend and blockchain.`);
     setShowPreview(false);
   };
-  
-  // NFT Asset handling methods
+
   const selectAsset = (asset: NFTAsset) => {
     setSelectedAsset(asset);
   };
-  
+
   const placeSelectedAsset = () => {
     if (selectedAsset) {
-      // Place in center by default
       const centerX = Math.floor(canvasSize / 2) - Math.floor(selectedAsset.pixels[0].length / 2);
       const centerY = Math.floor(canvasSize / 2) - Math.floor(selectedAsset.pixels.length / 2);
       
@@ -491,16 +504,14 @@ export default function CreatorStudio() {
       setSelectedAsset(null);
     }
   };
-  
+
   const handleAssetDragStart = (e: React.MouseEvent, assetId: string) => {
-    // Get asset position and dimensions
     const asset = placedAssets.find(a => a.id === assetId);
     if (!asset) return;
     
     const canvasRect = canvasRef.current?.getBoundingClientRect();
     if (!canvasRect) return;
     
-    // Calculate relative position in canvas
     const canvasX = (e.clientX - canvasRect.left) / pixelSize;
     const canvasY = (e.clientY - canvasRect.top) / pixelSize;
     
@@ -515,20 +526,18 @@ export default function CreatorStudio() {
     
     setIsEditingAsset(assetId);
   };
-  
+
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
     if (dragState.isDragging && dragState.assetId) {
       const canvasRect = canvasRef.current?.getBoundingClientRect();
       if (!canvasRect) return;
       
-      // Calculate new position
       const canvasX = (e.clientX - canvasRect.left) / pixelSize;
       const canvasY = (e.clientY - canvasRect.top) / pixelSize;
       
       const newX = Math.floor(canvasX - dragState.offsetX);
       const newY = Math.floor(canvasY - dragState.offsetY);
       
-      // Update position
       setPlacedAssets(placedAssets.map(asset => 
         asset.id === dragState.assetId 
           ? { ...asset, x: newX, y: newY } 
@@ -542,7 +551,7 @@ export default function CreatorStudio() {
       });
     }
   };
-  
+
   const handleCanvasMouseUp = () => {
     setDragState({
       isDragging: false,
@@ -553,11 +562,10 @@ export default function CreatorStudio() {
       currentY: 0
     });
   };
-  
+
   const rotateAsset = (assetId: string, direction: 'cw' | 'ccw') => {
     setPlacedAssets(placedAssets.map(asset => {
       if (asset.id === assetId) {
-        // Add/subtract 90 degrees, ensure value stays between 0-360
         const newRotation = (asset.rotation + (direction === 'cw' ? 90 : -90)) % 360;
         return { 
           ...asset, 
@@ -567,35 +575,30 @@ export default function CreatorStudio() {
       return asset;
     }));
   };
-  
+
   const scaleAsset = (assetId: string, factor: number) => {
     setPlacedAssets(placedAssets.map(asset => {
       if (asset.id === assetId) {
-        // Limit scale between 0.5 and 3
         const newScale = Math.max(0.5, Math.min(3, asset.scale * factor));
         return { ...asset, scale: newScale };
       }
       return asset;
     }));
   };
-  
+
   const removeAsset = (assetId: string) => {
     setPlacedAssets(placedAssets.filter(asset => asset.id !== assetId));
     if (isEditingAsset === assetId) {
       setIsEditingAsset(null);
     }
   };
-  
+
   const commitAssetsToCanvas = () => {
-    // Create a copy of the current pixels
     const newPixels = [...pixels];
     
-    // Draw each asset onto the canvas
     placedAssets.forEach(placedAsset => {
       const asset = NFT_ASSETS.find(a => a.id === placedAsset.assetId);
       if (asset) {
-        // For simplicity in this implementation, we're ignoring rotation and scale
-        // In a real implementation you would apply these transformations
         for (let y = 0; y < asset.pixels.length; y++) {
           for (let x = 0; x < asset.pixels[y].length; x++) {
             const colorKey = asset.pixels[y][x].toString();
@@ -605,7 +608,6 @@ export default function CreatorStudio() {
               const targetX = placedAsset.x + x;
               const targetY = placedAsset.y + y;
               
-              // Check bounds
               if (targetX >= 0 && targetX < canvasSize && targetY >= 0 && targetY < canvasSize) {
                 const index = targetY * canvasSize + targetX;
                 newPixels[index] = color || '#FFFFFF';
@@ -616,31 +618,25 @@ export default function CreatorStudio() {
       }
     });
     
-    // Update canvas
     setPixels(newPixels);
     addToHistory(newPixels);
-    
-    // Clear placed assets
     setPlacedAssets([]);
   };
-  
+
   const purchaseAsset = (asset: NFTAsset) => {
-    // In a real implementation, this would connect to the blockchain
     alert(`Purchasing ${asset.name} for ${asset.price} ETH! In a real implementation, this would open a blockchain transaction.`);
   };
-  
+
   const mintAsNFT = () => {
-    // In a real implementation, this would connect to the blockchain
     alert(`Minting artwork "${artworkName}" as an NFT! In a real implementation, this would connect to your wallet and the blockchain.`);
     setShowPreview(false);
   };
-  
+
   const connectWallet = () => {
-    // In a real implementation, this would use Web3 to connect to a wallet
     setWalletConnected(true);
     alert("Wallet connected! In a real implementation, this would use Web3 to connect to MetaMask or another wallet provider.");
   };
-  
+
   const inviteCollaborator = () => {
     if (inviteEmail && !collaborators.includes(inviteEmail)) {
       setCollaborators([...collaborators, inviteEmail]);
@@ -648,8 +644,7 @@ export default function CreatorStudio() {
       alert(`Invitation sent to ${inviteEmail}! In a real implementation, this would send an email invitation.`);
     }
   };
-  
-  // Filter assets based on category and search
+
   const filteredAssets = NFT_ASSETS.filter(asset => {
     const matchesCategory = selectedCategory === 'All' || asset.category === selectedCategory || asset.subcategory === selectedCategory;
     const matchesSearch = assetSearchTerm === '' || 
@@ -661,126 +656,232 @@ export default function CreatorStudio() {
     
     return matchesCategory && matchesSearch && matchesOwnership;
   });
-  
-  return (
-    <main className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <header className="bg-gray-900 py-4 px-6 border-b border-pink-500 flex justify-between items-center">
-        <Link href="/" className="text-2xl font-bold text-cyan-300">PIXEL MARKETPLACE</Link>
-        <div className="flex items-center space-x-4">
-          {!walletConnected ? (
+
+  const renderAssetPixels = (asset: NFTAsset, scale: number = 1) => {
+    return (
+      <div className="relative">
+        {asset.pixels.map((row, rowIndex) => (
+          <div key={rowIndex} className="flex">
+            {row.map((cell, cellIndex) => {
+              const colorKey = cell.toString();
+              const color = asset.colors[colorKey as keyof typeof asset.colors] || 'transparent';
+              return (
+                <div
+                  key={`${rowIndex}-${cellIndex}`}
+                  className="w-4 h-4"
+                  style={{ 
+                    backgroundColor: color,
+                    transform: `scale(${scale})`,
+                    transformOrigin: 'top left'
+                  }}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderPlacedAsset = (placedAsset: PlacedAsset) => {
+    const asset = NFT_ASSETS.find(a => a.id === placedAsset.assetId);
+    if (!asset) return null;
+
+    const isSelected = isEditingAsset === placedAsset.id;
+
+    return (
+      <div
+        key={placedAsset.id}
+        className={`absolute ${isSelected ? 'ring-2 ring-pink-500' : ''}`}
+        style={{
+          left: `${placedAsset.x * pixelSize}px`,
+          top: `${placedAsset.y * pixelSize}px`,
+          transform: `rotate(${placedAsset.rotation}deg) scale(${placedAsset.scale})`,
+          transformOrigin: 'top left',
+          cursor: 'move',
+          zIndex: isSelected ? 10 : 1
+        }}
+        onMouseDown={(e) => handleAssetDragStart(e, placedAsset.id)}
+        onClick={() => setIsEditingAsset(placedAsset.id)}
+      >
+        {renderAssetPixels(asset, pixelSize / 4)}
+
+        {isSelected && (
+          <div className="absolute -top-10 left-0 flex space-x-1 bg-gray-800 p-1 rounded z-20">
             <button 
-              onClick={connectWallet}
-              className="px-4 py-2 bg-purple-700 text-white rounded hover:bg-purple-600 transition"
+              className="p-1 bg-gray-700 hover:bg-gray-600 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                rotateAsset(placedAsset.id, 'ccw');
+              }}
             >
-              Connect Wallet
+              ↺
             </button>
-          ) : (
-            <div className="text-sm text-gray-300">
-              Wallet: {userWallet}
-            </div>
-          )}
-          <button 
-            className="px-4 py-2 bg-pink-700 text-white rounded hover:bg-pink-600 transition"
-            onClick={() => setShowPreview(true)}
-          >
-            Preview & Publish
-          </button>
-        </div>
-      </header>
-      
-      <main className="flex">
-        {/* Toolbox Sidebar */}
-        <div className="w-64 bg-gray-900 p-4 h-screen border-r border-gray-700 overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4 text-cyan-300">Tools</h2>
-          
-          <div className="mb-6">
-            <h3 className="text-md font-semibold mb-2 text-gray-300">Drawing Tools</h3>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <button 
-                className={`p-2 transition ${currentTool === 'pencil' ? 'bg-pink-600' : 'bg-gray-800 hover:bg-gray-700'}`}
-                onClick={() => setCurrentTool('pencil')}
-              >
-                Pencil
-              </button>
-              <button 
-                className={`p-2 transition ${currentTool === 'eraser' ? 'bg-pink-600' : 'bg-gray-800 hover:bg-gray-700'}`}
-                onClick={() => setCurrentTool('eraser')}
-              >
-                Eraser
-              </button>
-              <button 
-                className={`p-2 transition ${currentTool === 'fill' ? 'bg-pink-600' : 'bg-gray-800 hover:bg-gray-700'}`}
-                onClick={() => setCurrentTool('fill')}
-              >
-                Fill
-              </button>
-              <button 
-                className={`p-2 transition ${currentTool === 'eyedropper' ? 'bg-pink-600' : 'bg-gray-800 hover:bg-gray-700'}`}
-                onClick={() => setCurrentTool('eyedropper')}
-              >
-                Eyedropper
-              </button>
-            </div>
-            
-            {/* NFT asset integration button */}
             <button 
-              className={`p-2 transition w-full mt-2 ${showAssetLibrary ? 'bg-pink-600' : 'bg-gray-800 hover:bg-gray-700'}`}
-              onClick={() => setShowAssetLibrary(!showAssetLibrary)}
+              className="p-1 bg-gray-700 hover:bg-gray-600 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                rotateAsset(placedAsset.id, 'cw');
+              }}
             >
-              {showAssetLibrary ? 'Close Asset Library' : 'Open NFT Asset Library'}
-                            </button>
-                          </div>
-                          
-                          <div className="mt-4">
-                            <h3 className="text-md font-semibold mb-2 text-gray-300">Color Palette</h3>
-                            <div className="grid grid-cols-5 gap-1">
-                              {COLORS.map((color, index) => (
-                                <div
-                                  key={index}
-                                  className={`w-full aspect-square cursor-pointer ${selectedColor === color ? 'ring-2 ring-white' : ''}`}
-                                  style={{ backgroundColor: color }}
-                                  onClick={() => setSelectedColor(color)}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                          
-                          <div className="mt-4">
-                            <h3 className="text-md font-semibold mb-2 text-gray-300">Canvas Controls</h3>
-                            <div className="grid grid-cols-2 gap-2">
-                              <button 
-                                className="p-2 bg-gray-800 hover:bg-gray-700 transition"
-                                onClick={undo}
-                                disabled={historyIndex === 0}
-                              >
-                                Undo
-                              </button>
-                              <button 
-                                className="p-2 bg-gray-800 hover:bg-gray-700 transition"
-                                onClick={redo}
-                                disabled={historyIndex === history.length - 1}
-                              >
-                                Redo
-                              </button>
-                              <button 
-                                className="p-2 bg-gray-800 hover:bg-gray-700 transition"
-                                onClick={resetCanvas}
-                              >
-                                Reset
-                              </button>
-                              <button 
-                                className="p-2 bg-gray-800 hover:bg-gray-700 transition"
-                                onClick={exportAsPNG}
-                              >
-                                Export PNG
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                        </div>
-                      </div>
+              ↻
+            </button>
+            <button 
+              className="p-1 bg-gray-700 hover:bg-gray-600 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                scaleAsset(placedAsset.id, 0.9);
+              }}
+            >
+              -
+            </button>
+            <button 
+              className="p-1 bg-gray-700 hover:bg-gray-600 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                scaleAsset(placedAsset.id, 1.1);
+              }}
+            >
+              +
+            </button>
+            <button 
+              className="p-1 bg-gray-700 hover:bg-gray-600 text-xs text-red-400"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeAsset(placedAsset.id);
+                setIsEditingAsset(null);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="creator-studio-container">
+      <div className="toolbar">
+        <div className="color-picker">
+          {COLORS.map(color => (
+            <div
+              key={color}
+              className="color-swatch"
+              style={{ backgroundColor: color }}
+              onClick={() => setSelectedColor(color)}
+            />
+          ))}
+        </div>
+        <button onClick={undo}>Undo</button>
+        <button onClick={redo}>Redo</button>
+        <button onClick={exportAsPNG}>Export as PNG</button>
+        <button onClick={saveArtwork}>Save Artwork</button>
+        <button onClick={publishToMarketplace}>Publish to Marketplace</button>
+        <button onClick={() => setShowAssetLibrary(true)}>Asset Library</button>
+        <button onClick={connectWallet}>
+          {walletConnected ? 'Wallet Connected' : 'Connect Wallet'}
+        </button>
+      </div>
+
+      <div className="main-content">
+        <div
+          className="canvas-container"
+          ref={canvasRef}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+        >
+          <div className="canvas-grid">
+            {pixels.map((color, index) => (
+              <div
+                key={index}
+                className="pixel"
+                style={{
+                  width: pixelSize,
+                  height: pixelSize,
+                  backgroundColor: color
+                }}
+                onMouseDown={() => handleMouseDown(index)}
+                onMouseOver={() => handleMouseOver(index)}
+                onMouseUp={handleMouseUp}
+              />
+            ))}
+          </div>
+          {placedAssets.map(placedAsset => renderPlacedAsset(placedAsset))}
+        </div>
+
+        {showAssetLibrary && (
+          <div className="asset-library" ref={assetLibraryRef}>
+            <div className="asset-library-header">
+              <h2>Asset Library</h2>
+              <button onClick={() => setShowAssetLibrary(false)}>Close</button>
+            </div>
+            <div className="asset-library-content">
+              <div className="asset-categories">
+                {ASSET_CATEGORIES.map(category => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                placeholder="Search assets..."
+                value={assetSearchTerm}
+                onChange={e => setAssetSearchTerm(e.target.value)}
+              />
+              <div className="asset-grid">
+                {filteredAssets.map(asset => (
+                  <div
+                    key={asset.id}
+                    className="asset-item"
+                    onClick={() => selectAsset(asset)}
+                  >
+                    {renderAssetPixels(asset)}
+                    <div className="asset-info">
+                      <h3>{asset.name}</h3>
+                      <p>{asset.category} - {asset.subcategory}</p>
+                      <p>Price: {asset.price} ETH</p>
                     </div>
-                  </main>
-                );
-              }
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedAsset && (
+          <div className="asset-preview">
+            <h3>Selected Asset: {selectedAsset.name}</h3>
+            {renderAssetPixels(selectedAsset)}
+            <button onClick={placeSelectedAsset}>Place Asset</button>
+            <button onClick={() => setSelectedAsset(null)}>Cancel</button>
+          </div>
+        )}
+
+        {showCollaborators && (
+          <div className="collaboration-panel">
+            <h3>Collaborators</h3>
+            <div className="collaborator-list">
+              {collaborators.map((email, index) => (
+                <div key={index} className="collaborator-item">
+                  {email}
+                </div>
+              ))}
+            </div>
+            <input
+              type="email"
+              placeholder="Enter email to invite"
+              value={inviteEmail}
+              onChange={e => setInviteEmail(e.target.value)}
+            />
+            <button onClick={inviteCollaborator}>Invite</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
