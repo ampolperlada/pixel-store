@@ -596,7 +596,7 @@ export default function CreatorStudio() {
         for (let y = 0; y < asset.pixels.length; y++) {
           for (let x = 0; x < asset.pixels[y].length; x++) {
             const colorKey = asset.pixels[y][x].toString();
-            const color = asset.colors[colorKey];
+            const color = asset.colors[colorKey as keyof typeof asset.colors];
             
             if (color !== 'transparent') {
               const targetX = placedAsset.x + x;
@@ -605,7 +605,7 @@ export default function CreatorStudio() {
               // Check bounds
               if (targetX >= 0 && targetX < canvasSize && targetY >= 0 && targetY < canvasSize) {
                 const index = targetY * canvasSize + targetX;
-                newPixels[index] = color;
+                newPixels[index] = color || '#FFFFFF';
               }
             }
           }
