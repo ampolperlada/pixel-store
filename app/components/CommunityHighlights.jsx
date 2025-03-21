@@ -51,16 +51,13 @@ const communityData = {
     },
     {
       id: 2,
-      title: "Magical Props & Items",
+      title: "Adventure Props & Items",
       curator: "WizardWare",
       items: 32,
       images: [
-        "/collections/magic1.png",
-        "/collections/magic2.png",
-        "/collections/magic3.png",
-        "/collections/magic4.png",
-        "/collections/magic5.png",
-        "/collections/magic6.png"
+        "/images/active-chal/Ass Props.png",
+        "/images/active-chal/Ad Props.png",
+    
       ]
     }
   ]
