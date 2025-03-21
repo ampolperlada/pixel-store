@@ -664,7 +664,6 @@ export default function CreatorStudio() {
   
   return (
     <main className="min-h-screen bg-black text-white">
-    <main className="min-h-screen bg-black text-white">
       {/* Header */}
       <header className="bg-gray-900 py-4 px-6 border-b border-pink-500 flex justify-between items-center">
         <Link href="/" className="text-2xl font-bold text-cyan-300">PIXEL MARKETPLACE</Link>
@@ -690,7 +689,7 @@ export default function CreatorStudio() {
         </div>
       </header>
       
-      <div className="flex">
+      <main className="flex">
         {/* Toolbox Sidebar */}
         <div className="w-64 bg-gray-900 p-4 h-screen border-r border-gray-700 overflow-y-auto">
           <h2 className="text-xl font-bold mb-4 text-cyan-300">Tools</h2>
@@ -778,6 +777,7 @@ export default function CreatorStudio() {
                               </button>
                             </div>
                           </div>
+                        </div>
                         </div>
                       </div>
                     </div>
