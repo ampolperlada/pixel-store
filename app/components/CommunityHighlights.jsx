@@ -25,14 +25,21 @@ const communityData = {
       id: 1,
       title: "Mega Dungeon Tileset",
       contributors: 17,
-      image: "/collabs/dungeon.png",
+      image: "/images/collab/MegaDun.png",
       progress: 85
     },
     {
       id: 2,
       title: "Sci-Fi Character Pack",
       contributors: 12,
-      image: "/collabs/scifi.png",
+      image: "/images/collab/Sci-Fi.png",
+      progress: 60
+    },
+    {
+      id: 3,
+      title: "Adventure Items",
+      contributors: 12,
+      image: "/images/collabs/Armor.png",
       progress: 60
     }
   ],
@@ -45,8 +52,6 @@ const communityData = {
       images: [
         "/images/active-chal/Retro Icons.png",
         "/images/active-chal/Retro Icons 2.png",
-
-
       ]
     },
     {
@@ -57,7 +62,6 @@ const communityData = {
       images: [
         "/images/active-chal/Ass Props.png",
         "/images/active-chal/Ad Props.png",
-    
       ]
     }
   ]
