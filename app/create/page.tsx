@@ -2,20 +2,34 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 
-const PixelMarketplace = () => {
-  const [currentTool, setCurrentTool] = useState('pencil');
-  const [currentColor, setCurrentColor] = useState('#000000');
-  const [canvasSize, setCanvasSize] = useState('32x32');
-  const [pixels, setPixels] = useState([]);
-  const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const canvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hoveredPixel, setHoveredPixel] = useState(null);
-  const [darkMode, setDarkMode] = useState(true);
+interface Pixel {
+  x: number;
+  y: number;
+  color: string;
+}
+
+interface PremadeItem {
+  id: number;
+  name: string;
+  thumbnail: string;
+  category: string;
+  color: string;
+}
+
+const PixelMarketplace: React.FC = () => {
+  const [currentTool, setCurrentTool] = useState<string>('pencil');
+  const [currentColor, setCurrentColor] = useState<string>('#000000');
+  const [canvasSize, setCanvasSize] = useState<string>('32x32');
+  const [pixels, setPixels] = useState<Pixel[]>([]);
+  const [history, setHistory] = useState<Pixel[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [isDrawing, setIsDrawing] = useState<boolean>(false);
+  const [hoveredPixel, setHoveredPixel] = useState<{ x: number; y: number } | null>(null);
+  const [darkMode, setDarkMode] = useState<boolean>(true);
   
   // Pre-made pixel items/weapons for the browser
-  const premadeItems = [
+  const premadeItems: PremadeItem[] = [
     { id: 1, name: 'Pixel Sword', thumbnail: '/sword.png', category: 'weapon', color: '#FF5722' },
     { id: 2, name: 'Pixel Shield', thumbnail: '/shield.png', category: 'weapon', color: '#2196F3' },
     { id: 3, name: 'Gold Coin', thumbnail: '/coin.png', category: 'item', color: '#FFC107' },
@@ -27,15 +41,15 @@ const PixelMarketplace = () => {
     { id: 9, name: 'Treasure Chest', thumbnail: '/chest.png', category: 'item', color: '#FFEB3B' },
   ];
   
-  const [itemFilter, setItemFilter] = useState('all');
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [itemFilter, setItemFilter] = useState<string>('all');
+  const [selectedItem, setSelectedItem] = useState<PremadeItem | null>(null);
   
   const filteredItems = itemFilter === 'all' 
     ? premadeItems 
     : premadeItems.filter(item => item.category === itemFilter);
   
   // Color palettes with unique keys
-  const colorPalettes = {
+  const colorPalettes: { [key: string]: string[] } = {
     basic: [
       '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF',
       '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080',
@@ -54,7 +68,7 @@ const PixelMarketplace = () => {
     ]
   };
   
-  const [currentPalette, setCurrentPalette] = useState('basic');
+  const [currentPalette, setCurrentPalette] = useState<string>('basic');
   const colors = colorPalettes[currentPalette];
   
   // Initialize canvas
@@ -74,19 +88,19 @@ const PixelMarketplace = () => {
 
   const initializeCanvas = () => {
     const pixelCount = parseInt(canvasSize.split('x')[0]);
-    const newPixels = [];
+    const newPixels: Pixel[] = [];
     setPixels(newPixels);
     setHistory([[...newPixels]]);
     setHistoryIndex(0);
   };
 
-  const getPixelSize = () => {
+  const getPixelSize = (): number => {
     const pixelCount = parseInt(canvasSize.split('x')[0]);
     // Increased canvas size
     return 600 / pixelCount;
   };
 
-  const handleCanvasClick = (e) => {
+  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!canvasRef.current) return;
     
     const rect = canvasRef.current.getBoundingClientRect();
@@ -128,12 +142,12 @@ const PixelMarketplace = () => {
     }
   };
 
-  const handleMouseDown = (e) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsDrawing(true);
     handleCanvasClick(e);
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!canvasRef.current) return;
     
     const rect = canvasRef.current.getBoundingClientRect();
@@ -158,12 +172,13 @@ const PixelMarketplace = () => {
     setIsDrawing(false);
   };
 
-  const floodFill = (pixelsArray, x, y, targetColor, replacementColor, pixelCount) => {
+  const floodFill = (pixelsArray: Pixel[], x: number, y: number, targetColor: string | null, replacementColor: string, pixelCount: number) => {
     const stack = [{x, y}];
-    const visited = new Set();
+    const visited = new Set<string>();
     
     while (stack.length > 0) {
       const current = stack.pop();
+      if (!current) continue;
       const cx = current.x;
       const cy = current.y;
       const pixelIndex = cy * pixelCount + cx;
@@ -226,6 +241,7 @@ const PixelMarketplace = () => {
     canvas.width = pixelCount;
     canvas.height = pixelCount;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     
     // Fill with transparent background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -259,7 +275,7 @@ const PixelMarketplace = () => {
     }
   };
 
-  const getToolIcon = (tool) => {
+  const getToolIcon = (tool: string): string => {
     switch(tool) {
       case 'pencil': return '✏️';
       case 'eraser': return '🧹';
