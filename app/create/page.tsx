@@ -1,4 +1,6 @@
 "use client";
+import { withAuth } from '../components/AuthModals';
+
 
 import React, { useState, useRef, useEffect } from 'react';
 
