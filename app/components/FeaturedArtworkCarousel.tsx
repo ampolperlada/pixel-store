@@ -1,8 +1,5 @@
-// FeaturedArtworkCarousel.tsx
 "use client";
 import { withAuth } from '../components/AuthModals';
-
-
 import React, { useState, useEffect } from "react";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, EffectCoverflow, Keyboard } from "swiper/modules";
@@ -11,13 +8,10 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-coverflow';
-import ArtworkCard from './ArtworkCard'; // Make sure to import your new ArtworkCard component
-import ArtworkDetailModal from './ArtworkDetailModal'; // Import the new modal component
-
-// Use the enhanced ArtworkItem interface
+import ArtworkCard from './ArtworkCard';
+import ArtworkDetailModal from './ArtworkDetailModal';
 import type { ArtworkItem } from "../data/sampleData";
 
-// Main Carousel Component
 interface FeaturedArtworkCarouselProps {
   featuredArt: ArtworkItem[];
   title?: string;
@@ -35,7 +29,6 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Check for mobile screen size
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 640);
@@ -49,27 +42,21 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
     };
   }, []);
   
-  // Pause autoplay on hover
   const handleMouseEnter = () => setIsHovering(true);
   const handleMouseLeave = () => setIsHovering(false);
   
-  // Handle artwork preview
   const handlePreview = (artwork: ArtworkItem) => {
     setSelectedArtwork(artwork);
     setIsModalOpen(true);
-    // Prevent body scrolling when modal is open
     document.body.style.overflow = 'hidden';
   };
   
-  // Close modal
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedArtwork(null);
-    // Re-enable body scrolling
     document.body.style.overflow = 'auto';
   };
   
-  // Accessibility announcement for screen readers
   useEffect(() => {
     if (featuredArt[activeIndex]) {
       const title = featuredArt[activeIndex].title;
@@ -80,7 +67,6 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
     }
   }, [activeIndex, featuredArt]);
 
-  // Close modal on escape key
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isModalOpen) {
@@ -94,7 +80,6 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
 
   return (
     <section className="py-16 bg-black relative overflow-hidden">
-      {/* Hidden element for screen readers */}
       <div 
         id="carousel-live-region" 
         className="sr-only" 
@@ -102,7 +87,6 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
         aria-atomic="true"
       ></div>
       
-      {/* Background gradient effect */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-cyan-900/10 to-black/0 pointer-events-none"></div>
       
       <div className="container mx-auto px-4">
@@ -111,7 +95,6 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
           <p className="text-gray-300">Explore our curated collection of digital masterpieces</p>
         </div>
 
-        {/* Carousel Controls - Custom Navigation */}
         <div className="flex justify-end mb-4 gap-2">
           <button 
             className="swiper-button-prev-custom p-2 rounded-full bg-cyan-800/30 hover:bg-cyan-700/50 transition-colors"
@@ -131,7 +114,6 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
           </button>
         </div>
 
-        {/* Swiper Carousel */}
         <div 
           className="relative" 
           onMouseEnter={handleMouseEnter} 
@@ -186,7 +168,6 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
             ))}
           </Swiper>
           
-          {/* Current artwork info overlay */}
           {featuredArt[activeIndex] && (
             <div className="absolute bottom-16 left-0 right-0 text-center z-10 pointer-events-none">
               <div className="inline-block bg-black/70 backdrop-blur-sm px-4 py-2 rounded-lg">
@@ -198,7 +179,6 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
           )}
         </div>
         
-        {/* View All Button */}
         <div className="text-center mt-8">
           <button className="px-6 py-3 bg-cyan-700 hover:bg-cyan-600 text-white rounded-lg transition-colors shadow-lg hover:shadow-cyan-700/30">
             View All Artwork
@@ -206,7 +186,6 @@ const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({
         </div>
       </div>
 
-      {/* Artwork Detail Modal - Using the new enhanced modal */}
       {selectedArtwork && (
         <ArtworkDetailModal
           artwork={selectedArtwork}
