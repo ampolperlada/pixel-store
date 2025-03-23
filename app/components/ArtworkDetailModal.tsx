@@ -1,10 +1,10 @@
-// ArtworkDetailModal.tsx
-
 "use client";
 
 import React, { useState } from 'react';
 import Image from 'next/image';
 import type { ArtworkItem } from "../data/sampleData";
+import withAuth from '../components/AuthModals';
+import AuthModals from '../components/AuthModals'; // Import the AuthModals component
 
 interface ArtworkDetailModalProps {
   artwork: ArtworkItem;
@@ -17,7 +17,30 @@ type TabType = 'details' | 'lore' | 'nft';
 
 const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('details');
-  
+  const [showLoginModal, setShowLoginModal] = useState(false); // State to manage login modal visibility
+
+  // Handle Add to Cart action
+  const handleAddToCart = () => {
+    const isAuthenticated = false; // Replace with actual authentication check
+    if (!isAuthenticated) {
+      setShowLoginModal(true); // Show login modal if not authenticated
+    } else {
+      // Proceed with adding to cart
+      console.log("Adding to cart:", artwork.title);
+    }
+  };
+
+  // Handle Contact Gallery action
+  const handleContactGallery = () => {
+    const isAuthenticated = false; // Replace with actual authentication check
+    if (!isAuthenticated) {
+      setShowLoginModal(true); // Show login modal if not authenticated
+    } else {
+      // Proceed with contacting gallery
+      console.log("Contacting gallery for:", artwork.title);
+    }
+  };
+
   // If modal is not open, don't render anything
   if (!isOpen) return null;
 
@@ -335,7 +358,10 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
             
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <button className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center">
+              <button 
+                onClick={handleAddToCart}
+                className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                   <circle cx="9" cy="21" r="1"></circle>
                   <circle cx="20" cy="21" r="1"></circle>
@@ -343,7 +369,10 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
                 </svg>
                 Add to Cart
               </button>
-              <button className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center">
+              <button 
+                onClick={handleContactGallery}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center"
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                 </svg>
@@ -353,6 +382,15 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
           </div>
         </div>
       </div>
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <AuthModals 
+          isOpen={showLoginModal} 
+          onClose={() => setShowLoginModal(false)}
+          triggerReason="marketplace"
+        />
+      )}
     </div>
   );
 };
