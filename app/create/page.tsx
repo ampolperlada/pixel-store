@@ -616,4 +616,5 @@ const PixelMarketplace: React.FC = () => {
   );
 };
 
-export default PixelMarketplace;
+export default withAuth(PixelMarketplace);
+
