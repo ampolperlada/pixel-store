@@ -1,5 +1,7 @@
 // FeaturedArtworkCarousel.tsx
 "use client";
+import { withAuth } from '../components/AuthModals';
+
 
 import React, { useState, useEffect } from "react";
 import { Swiper, SwiperSlide } from 'swiper/react';
