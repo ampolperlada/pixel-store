@@ -7,12 +7,16 @@ import { connectPostgres, connectMongoDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import nftRoutes from "./routes/nftRoutes.js";
 import gameRoutes from "./routes/gameRoutes.js";
+import { apiLimiter } from "./middleware/rateLimit.js";
+
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security & Middleware
+app.use("/api/", apiLimiter);
+
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
