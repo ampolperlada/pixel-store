@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
 
+//Update db.js to connect to MongoDB:
+
 dotenv.config();
 const prisma = new PrismaClient();
 
