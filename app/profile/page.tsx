@@ -1,25 +1,57 @@
-"use client"; // Mark as a client component
+"use client";
 
 import React from 'react';
-import Link from 'next/link';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/router';
 
 export default function ProfilePage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  // Redirect to login if not authenticated
+  React.useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/login');
+    }
+  }, [status, router]);
+
+  // Show loading state
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-r from-purple-900 to-blue-900 flex items-center justify-center text-white">
+        <div className="text-2xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // If authenticated, show profile
   return (
     <div className="min-h-screen bg-gradient-to-r from-purple-900 to-blue-900 text-white">
       <div className="container mx-auto px-4 py-8">
         {/* Profile Header */}
         <div className="profile-header bg-black bg-opacity-30 rounded-lg p-6 mb-8">
-          <div className="profile-info flex items-center">
-            {/* Avatar */}
-            <div className="avatar w-24 h-24 rounded-full bg-pink-600 flex items-center justify-center text-4xl font-bold">
-              UP
+          <div className="profile-info flex items-center justify-between">
+            <div className="flex items-center">
+              {/* Avatar */}
+              <div className="avatar w-24 h-24 rounded-full bg-pink-600 flex items-center justify-center text-4xl font-bold">
+                {session?.user?.name?.[0].toUpperCase() || 'U'}
+              </div>
+              {/* User Details */}
+              <div className="user-details ml-6">
+                <h1 className="text-3xl font-bold">
+                  {session?.user?.name || 'Username'}
+                </h1>
+                <p className="text-gray-400">Member since January 2025</p>
+                <p className="text-gray-400">Pixel Artist • Collector • Gamer</p>
+              </div>
             </div>
-            {/* User Details */}
-            <div className="user-details ml-6">
-              <h1 className="text-3xl font-bold">Username_Pixel</h1>
-              <p className="text-gray-400">Member since January 2025</p>
-              <p className="text-gray-400">Pixel Artist • Collector • Gamer</p>
-            </div>
+            {/* Logout Button */}
+            <button 
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="action-button outline border-2 border-pink-600 text-pink-600 px-6 py-2 rounded-lg font-bold"
+            >
+              Logout
+            </button>
           </div>
           {/* Stats */}
           <div className="stats flex gap-6 mt-6">
