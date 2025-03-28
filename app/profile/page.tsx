@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation'; // CHANGED from 'next/router'
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -11,7 +11,7 @@ export default function ProfilePage() {
   // Redirect to login if not authenticated
   React.useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace('/login');
+      router.push('/login'); // CHANGED from replace to push
     }
   }, [status, router]);
 
