@@ -139,7 +139,17 @@ const NavBar = ({ transparent = false }) => {
 };
 
 // Placeholder components for missing NavLink and MobileNavLink
-const NavLink = ({ href, children }) => <Link href={href} className="text-gray-300 hover:text-white">{children}</Link>;
-const MobileNavLink = ({ href, children }) => <Link href={href} className="block text-gray-300 hover:text-white">{children}</Link>;
+interface NavLinkProps {
+  href: string;
+  children: React.ReactNode;
+}
+
+const NavLink = ({ href, children }: NavLinkProps) => <Link href={href} className="text-gray-300 hover:text-white">{children}</Link>;
+interface MobileNavLinkProps {
+  href: string;
+  children: React.ReactNode;
+}
+
+const MobileNavLink = ({ href, children }: MobileNavLinkProps) => <Link href={href} className="block text-gray-300 hover:text-white">{children}</Link>;
 
 export default NavBar;
