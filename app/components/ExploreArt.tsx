@@ -131,10 +131,10 @@ const ExploreArt = () => {
 
   const filteredArtworks = artworks.filter((artwork) => {
     return (
-      (filters.category === 'All' || artwork.category === filters.category) &&
+      // Added origin filter
+      ((filters.category === 'All' || artwork.category === filters.category) &&
       (filters.priceRange === 'All' || artwork.price === filters.priceRange) &&
-      (filters.collection === 'All' || artwork.collection === filters.collection) &&
-      (filters.origin === 'All' || artwork.origin === filters.origin) // Added origin filter
+      (filters.collection === 'All' || artwork.collection === filters.collection) && (filters.origin === 'All' || artwork.origin === filters.origin))
     );
   });
 
