@@ -5,16 +5,20 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type User = {
+  id: string;
   email: string;
-  // Add other user properties you need
+  name?: string;
+  avatar?: string;
+  // Add other user properties as needed
 };
 
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  login: (credentials: { email: string; password: string }) => Promise<any>;
-  register: (credentials: { email: string; password: string }) => Promise<any>;
+  login: (credentials: { email: string; password: string }) => Promise<void>;
+  register: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,50 +28,90 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch('/api/auth/check', { credentials: 'include' });
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/auth/check', { 
+        credentials: 'include',
+        cache: 'no-store'
+      });
+      
+      if (res.ok) {
         const data = await res.json();
-        if (res.ok) setUser(data.user);
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      } finally {
-        setLoading(false);
+        setUser(data.user);
+      } else {
+        setUser(null);
       }
-    };
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     checkAuth();
   }, []);
 
   const login = async (credentials: { email: string; password: string }) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials),
-      credentials: 'include',
-    });
-    const data = await res.json();
-    if (res.ok) setUser(data.user);
-    return data;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+        credentials: 'include',
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setUser(data.user);
+        router.push('/profile');
+      }
+      return data;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const register = async (credentials: { email: string; password: string }) => {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials),
-    });
-    return await res.json();
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+      });
+      return await res.json();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = async () => {
-    await fetch('/api/auth/logout', { credentials: 'include' });
+    await fetch('/api/auth/logout', { 
+      method: 'POST',
+      credentials: 'include'
+    });
     setUser(null);
     router.push('/login');
   };
 
+  const refreshAuth = async () => {
+    await checkAuth();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        loading, 
+        login, 
+        register, 
+        logout, 
+        refreshAuth 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
