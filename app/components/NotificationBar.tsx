@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import AuthModals from './AuthModals'; // Import the AuthModals component
+import AuthModals from './AuthModals';
+import { useAuth } from './context/AuthContext'; // Adjust the import path as necessary
+import { useRouter } from 'next/navigation';
 
 const NotificationBar = () => {
   return (
@@ -21,30 +23,22 @@ const NotificationBar = () => {
 
 const StickyNavbar = () => {
   const [isSticky, setIsSticky] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false); // State for AuthModal
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login'); // State for modal mode
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+  const { user, loading, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setIsSticky(true);
-      } else {
-        setIsSticky(false);
-      }
+      setIsSticky(window.scrollY > 50);
     };
 
     window.addEventListener('scroll', handleScroll);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Function to open the modal in a specific mode
   const openAuthModal = (mode: 'login' | 'signup') => {
-    setAuthModalMode(mode); // Set the mode (login or signup)
-    setIsAuthModalOpen(true); // Open the modal
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
   };
 
   return (
@@ -89,7 +83,7 @@ const StickyNavbar = () => {
               </Link>
             </div>
 
-            {/* Call to Action Buttons */}
+            {/* User Actions */}
             <div className="flex items-center space-x-3">
               {/* Notification Bell */}
               <div className="relative">
@@ -101,30 +95,43 @@ const StickyNavbar = () => {
                 </button>
               </div>
 
-              {/* My Profile Button */}
-              <Link
-                href="/profile"
-                className="px-6 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold rounded-lg shadow-lg hover:from-pink-500 hover:to-purple-500 transition-all duration-300 transform hover:scale-105"
-              >
-                My Profile
-              </Link>
-
-              {/* Sign In and Sign Up Buttons */}
-              <button
-                onClick={() => openAuthModal('login')} // Open modal in Login mode
-                className="text-white hover:text-pink-400 transition-colors"
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => openAuthModal('signup')} // Open modal in Sign Up mode
-                className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                Sign Up
-              </button>
+              {/* Conditional rendering based on auth state */}
+              {loading ? (
+                <div className="h-8 w-8 rounded-full bg-gray-700 animate-pulse"></div>
+              ) : user ? (
+                <>
+                  <Link
+                    href="/profile"
+                    className="px-6 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold rounded-lg shadow-lg hover:from-pink-500 hover:to-purple-500 transition-all duration-300 transform hover:scale-105"
+                  >
+                    My Profile
+                  </Link>
+                  <button
+                    onClick={logout}
+                    className="text-white hover:text-pink-400 transition-colors"
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => openAuthModal('login')}
+                    className="text-white hover:text-pink-400 transition-colors"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => openAuthModal('signup')}
+                    className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </>
+              )}
             </div>
 
-            {/* Mobile Menu Button (implementation would require additional state) */}
+            {/* Mobile Menu Button */}
             <button className="md:hidden text-white">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -134,12 +141,14 @@ const StickyNavbar = () => {
         </div>
       </nav>
 
-      {/* Auth Modal */}
-      <AuthModals
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)} // Close the AuthModal
-        initialMode={authModalMode} // Pass the initial mode (login or signup)
-      />
+      {/* Auth Modal - Only show if user is not logged in */}
+      {!user && (
+        <AuthModals
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          initialMode={authModalMode}
+        />
+      )}
     </>
   );
 };

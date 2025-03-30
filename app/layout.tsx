@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import "./globals.css";
 import Providers from "./provider";
-import { AuthProvider } from '@/context/AuthContext'; // Import the AuthProvider
+import { AuthProvider } from './components/context/AuthContext'; // Import the AuthProvider
 
 interface LayoutProps {
   children: ReactNode;
