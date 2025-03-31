@@ -5,7 +5,12 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+// Use PrismaClient as a singleton to prevent multiple instances during development
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+
+export const prisma = globalForPrisma.prisma || new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export const authOptions = {
   adapter: PrismaAdapter(prisma),
@@ -31,6 +36,11 @@ export const authOptions = {
           throw new Error("User not found");
         }
 
+        // Check if the user has a password (might not if they used OAuth)
+        if (!user.password) {
+          throw new Error("No password set for this account. Try logging in with Google");
+        }
+
         const isValidPassword = await bcrypt.compare(credentials.password, user.password);
         if (!isValidPassword) {
           throw new Error("Incorrect password");
@@ -53,6 +63,7 @@ export const authOptions = {
       return session;
     },
   },
+  debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);
