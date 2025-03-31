@@ -1,21 +1,24 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import prisma from "../config/prisma.js";
+import bcrypt from "bcryptjs";
 
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-}, { timestamps: true });
+// Create a new user with hashed password
+async function createUser(email, password) {
+  const hashedPassword = await bcrypt.hash(password, 12);
+  return await prisma.user.create({
+    data: { email, password: hashedPassword },
+  });
+}
 
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
-});
+// Find user by email
+async function getUserByEmail(email) {
+  return await prisma.user.findUnique({
+    where: { email },
+  });
+}
 
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
-};
+// Compare password function
+async function comparePassword(inputPassword, hashedPassword) {
+  return await bcrypt.compare(inputPassword, hashedPassword);
+}
 
-export default mongoose.model('User', userSchema);
+export { createUser, getUserByEmail, comparePassword };
