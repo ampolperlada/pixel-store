@@ -1,22 +1,22 @@
-import User from '../models/User.js';
+import { getUserByEmail, createUser, comparePassword } from '../models/User.js';
 import jwt from 'jsonwebtoken';
 
 // Register new user
 export const register = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     // Check if user exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await getUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
     // Create user
-    const user = await User.create({ email, password });
-    
+    const user = await createUser(email, password);
+
     // Generate token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
       expiresIn: '1d',
     });
 
@@ -30,21 +30,21 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     // Check if user exists
-    const user = await User.findOne({ email });
+    const user = await getUserByEmail(email);
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Check password
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await comparePassword(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     // Generate token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
       expiresIn: '1d',
     });
 
@@ -77,9 +77,15 @@ export const checkAuth = async (req, res) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
-    
-    res.status(200).json({ user });
+    const user = await getUserByEmail(decoded.id);
+
+    if (!user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    // Exclude password from response
+    const { password, ...userWithoutPassword } = user;
+    res.status(200).json({ user: userWithoutPassword });
   } catch (error) {
     res.status(401).json({ message: 'Not authenticated' });
   }
