@@ -2,11 +2,12 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import morgan from "morgan";
+import rateLimit from "express-rate-limit";
 import { connectPostgres, connectMongoDB } from "./config/db.js";
-import authRoutes from "./routes/auth.js";
-import nftRoutes from "./routes/nftRoutes.js"; // <== Import NFT Routes
+import authRoutes from "./routes/authRoutes.js"; // Fixed import
+import nftRoutes from "./routes/nftRoutes.js"; // Fixed import
+import gameRoutes from "./routes/gameRoutes.js"; // Fixed import
 import errorHandler from "./middleware/errorMiddleware.js";
 
 // Load environment variables
@@ -14,26 +15,20 @@ dotenv.config();
 
 // Initialize Express app
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Security Middleware
+// Security & Middleware
+app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:3000", credentials: true }));
 app.use(helmet());
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    credentials: true,
-  })
-);
 app.use(morgan("dev"));
+app.use(express.json({ limit: "10kb" }));
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
 });
-app.use(limiter);
-
-// Body parser
-app.use(express.json({ limit: "10kb" }));
+app.use("/api/", apiLimiter);
 
 // Connect to databases
 (async () => {
@@ -43,7 +38,8 @@ app.use(express.json({ limit: "10kb" }));
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/nfts", nftRoutes); // <== Register NFT Routes
+app.use("/api/nfts", nftRoutes);
+app.use("/api/games", gameRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -59,7 +55,6 @@ app.use((req, res) => {
 });
 
 // Server setup
-const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
