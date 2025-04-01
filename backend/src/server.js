@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import morgan from "morgan";
 import { connectPostgres, connectMongoDB } from "./config/db.js";
 import authRoutes from "./routes/auth.js";
+import nftRoutes from "./routes/nftRoutes.js"; // <== Import NFT Routes
 import errorHandler from "./middleware/errorMiddleware.js";
 
 // Load environment variables
@@ -15,7 +16,7 @@ dotenv.config();
 const app = express();
 
 // Security Middleware
-app.use(helmet()); // Adds security headers
+app.use(helmet());
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
@@ -26,13 +27,13 @@ app.use(morgan("dev"));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
 });
 app.use(limiter);
 
 // Body parser
-app.use(express.json({ limit: "10kb" })); // Limit payload size
+app.use(express.json({ limit: "10kb" }));
 
 // Connect to databases
 (async () => {
@@ -42,13 +43,14 @@ app.use(express.json({ limit: "10kb" })); // Limit payload size
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/nfts", nftRoutes); // <== Register NFT Routes
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "healthy" });
 });
 
-// Error handling middleware (should be last)
+// Error handling middleware
 app.use(errorHandler);
 
 // Handle 404
