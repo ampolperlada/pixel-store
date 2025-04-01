@@ -9,6 +9,8 @@ import authRoutes from "./routes/authRoutes.js"; // Fixed import
 import nftRoutes from "./routes/nftRoutes.js"; // Fixed import
 import gameRoutes from "./routes/gameRoutes.js"; // Fixed import
 import errorHandler from "./middleware/errorMiddleware.js";
+import cookieParser from "cookie-parser";
+
 
 // Load environment variables
 dotenv.config();
@@ -22,6 +24,8 @@ app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:3000", creden
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json({ limit: "10kb" }));
+app.use(cookieParser());
+
 
 // Rate limiting
 const apiLimiter = rateLimit({
