@@ -1,4 +1,4 @@
-import { getUserByEmail, createUser, getUserById, comparePassword } from '../models/User.js';
+import { getUserByEmail, getUserById, createUser, comparePassword } from '../models/User.js';
 import jwt from 'jsonwebtoken';
 
 // Register new user
@@ -12,7 +12,7 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create user (ensure password is hashed)
+    // Create user
     const user = await createUser(email, password);
 
     // Generate token
@@ -48,7 +48,7 @@ export const login = async (req, res) => {
       expiresIn: '1d',
     });
 
-    // Set secure cookie
+    // Set cookie
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -68,23 +68,26 @@ export const logout = (req, res) => {
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
-// Check auth status
+// Check authentication status
 export const checkAuth = async (req, res) => {
   try {
+    // Get token from cookies
     const token = req.cookies.token;
     if (!token) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
+    // Verify JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await getUserById(decoded.id); // FIXED: Use `getUserById` instead of `getUserByEmail`
+    const user = await getUserById(decoded.id); // Get user by ID instead of email
 
     if (!user) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
     // Exclude password from response
-    const { password, ...userWithoutPassword } = user.toObject();
+    const { password, ...userWithoutPassword } = user.toObject?.() || user;
+
     res.status(200).json({ user: userWithoutPassword });
   } catch (error) {
     res.status(401).json({ message: 'Not authenticated' });
