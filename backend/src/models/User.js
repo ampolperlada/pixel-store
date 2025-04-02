@@ -16,9 +16,17 @@ async function getUserByEmail(email) {
   });
 }
 
+// Find user by ID (Added this function to fix the error)
+async function getUserById(id) {
+  return await prisma.user.findUnique({
+    where: { id },
+  });
+}
+
 // Compare password function
 async function comparePassword(inputPassword, hashedPassword) {
   return await bcrypt.compare(inputPassword, hashedPassword);
 }
 
-export { createUser, getUserByEmail, comparePassword };
+// Export all functions
+export { createUser, getUserByEmail, getUserById, comparePassword };
