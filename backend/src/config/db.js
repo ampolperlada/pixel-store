@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import prisma from "./prisma.js"; // Import your existing Prisma client
+import prisma from "./prisma.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -16,10 +16,7 @@ export const connectPostgres = async () => {
 
 export const connectMongoDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI, { 
-      useNewUrlParser: true, 
-      useUnifiedTopology: true 
-    });
+    await mongoose.connect(process.env.MONGO_URI); // ✅ Removed deprecated options
     console.log("✅ MongoDB Connected!");
   } catch (error) {
     console.error("❌ MongoDB Connection Failed:", error);
@@ -27,10 +24,9 @@ export const connectMongoDB = async () => {
   }
 };
 
-// Call these functions in your server startup
 export const connectDatabases = async () => {
   await connectPostgres();
   await connectMongoDB();
 };
 
-export default prisma; // Also export the prisma client for use elsewhere
+export default prisma;
