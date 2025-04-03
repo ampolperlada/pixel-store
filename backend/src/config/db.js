@@ -1,11 +1,8 @@
 import mongoose from "mongoose";
-import { PrismaClient } from "@prisma/client";
+import prisma from "./prisma.js"; // Import your existing Prisma client
 import dotenv from "dotenv";
 
-//Update db.js to connect to MongoDB:
-
 dotenv.config();
-const prisma = new PrismaClient();
 
 export const connectPostgres = async () => {
   try {
@@ -35,3 +32,5 @@ export const connectDatabases = async () => {
   await connectPostgres();
   await connectMongoDB();
 };
+
+export default prisma; // Also export the prisma client for use elsewhere
