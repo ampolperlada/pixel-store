@@ -1,8 +1,24 @@
 ﻿import express from 'express';
+import NFT from "../models/NFT.js";
+
 const router = express.Router();
 
-router.get('/', (req, res) => {
-    res.send('NFT Routes Working!');
-});
+// Create a new NFT
+router.post("/", async (req, res) => {
+    try {
+      const nft = new NFT(req.body);
+      await nft.save();
+      res.status(201).json(nft);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create NFT" });
+    }
+  });
+  
+
+router.get('/', async (req,res)=> {
+        // Here you can add any logic you need, like querying a database
+
+})
+
 
 export default router;
