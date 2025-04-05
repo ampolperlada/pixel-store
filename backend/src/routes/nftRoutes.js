@@ -14,11 +14,18 @@ router.post("/", async (req, res) => {
     }
   });
   
+  // Get all NFTs
 
-router.get('/', async (req,res)=> {
-        // Here you can add any logic you need, like querying a database
 
-})
+router.get("/", async (req, res) => {
+     // Here you can add any logic you need, like querying a database
+    try {
+      const nfts = await NFT.find();
+      res.json(nfts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch NFTs" });
+    }
+  });
 
 
 export default router;
