@@ -16,12 +16,20 @@ const prisma = new PrismaClient({
 
 // PostgreSQL Connection
 export const connectPostgres = async () => {
-  try {
-    await prisma.$connect();
-    console.log("✅ PostgreSQL Connected!");
-  } catch (error) {
-    console.error("❌ PostgreSQL Connection Failed:", error);
-    process.exit(1);
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      await prisma.$connect();
+      console.log("✅ PostgreSQL Connected!");
+      return;
+    } catch (error) {
+      retries--;
+      console.error(`❌ Connection failed (${retries} retries left):`, error);
+      if (retries === 0) {
+        process.exit(1);
+      }
+      await new Promise(res => setTimeout(res, 2000)); // Wait 2 seconds
+    }
   }
 };
 
