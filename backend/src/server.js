@@ -1,31 +1,39 @@
 import express from "express";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import { connectPostgres, connectMongoDB } from "./config/db.js";
-import authRoutes from "./routes/authRoutes.js"; // Fixed import
-import nftRoutes from "./routes/nftRoutes.js"; // Fixed import
-import gameRoutes from "./routes/gameRoutes.js"; // Fixed import
+import authRoutes from "./routes/authRoutes.js";
+import nftRoutes from "./routes/nftRoutes.js";
+import gameRoutes from "./routes/gameRoutes.js";
 import errorHandler from "./middleware/errorMiddleware.js";
 import cookieParser from "cookie-parser";
 
+// ES Module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Load environment variables
-dotenv.config();
+// Load .env from backend root (where package.json is)
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+console.log("DB URL:", process.env.DATABASE_URL); // Test logging
 
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security & Middleware
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:3000", credentials: true }));
+app.use(cors({ 
+  origin: process.env.CLIENT_URL || "http://localhost:3000", 
+  credentials: true 
+}));
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
-
 
 // Rate limiting
 const apiLimiter = rateLimit({
