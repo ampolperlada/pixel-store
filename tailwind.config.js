@@ -13,6 +13,6 @@ module.exports = {
     },
   },
   plugins: [
-    require('@tailwindcss/line-clamp'),
+    // The line-clamp plugin reference has been removed
   ],
 };
