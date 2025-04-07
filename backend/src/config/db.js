@@ -8,10 +8,10 @@ dotenv.config();
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL + "&connection_limit=5"
+      url: process.env.DATABASE_URL
     }
   },
-  log: process.env.NODE_ENV === 'development' ? ['query'] : []
+  log: ['info', 'warn', 'error'] // Better debugging
 });
 
 // PostgreSQL Connection
