@@ -8,7 +8,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    // FRONTEND-ONLY DEPS
     "@headlessui/react": "^2.2.0",
     "framer-motion": "^12.5.0",
     "lucide-react": "^0.479.0",
