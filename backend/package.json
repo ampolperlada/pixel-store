@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "engines": {
-    "node": ">=20.0.0",  // Matches your current Node 20.18.3
+    "node": ">=20.0.0",  
     "npm": ">=10.0.0"
   },
   "scripts": {
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
-    "bcryptjs": "^3.0.2",  // Consider switching to bcrypt for production
+    "bcryptjs": "^3.0.2",  
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -22,7 +22,7 @@
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.13.2",  // Remove if using only Prisma
+    "mongoose": "^8.13.2",  
     "morgan": "^1.10.0",
     "passport-google-oauth20": "^2.0.0",
     "winston": "^3.17.0"
