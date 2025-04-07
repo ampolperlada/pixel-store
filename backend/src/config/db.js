@@ -4,30 +4,32 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Initialize Prisma with Session Pooler settings
+// Initialize Prisma
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL + "&connection_limit=5" // Optimized for pooler
+      url: process.env.DATABASE_URL + "&connection_limit=5"
     }
   },
   log: process.env.NODE_ENV === 'development' ? ['query'] : []
 });
 
+// PostgreSQL Connection
 export const connectPostgres = async () => {
   try {
     await prisma.$connect();
-    console.log("✅ PostgreSQL (Prisma + Session Pooler) Connected!");
+    console.log("✅ PostgreSQL Connected!");
   } catch (error) {
     console.error("❌ PostgreSQL Connection Failed:", error);
     process.exit(1);
   }
 };
 
+// MongoDB Connection
 export const connectMongoDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 5000 // Faster failover
+      serverSelectionTimeoutMS: 5000
     });
     console.log("✅ MongoDB Connected!");
   } catch (error) {
@@ -36,7 +38,7 @@ export const connectMongoDB = async () => {
   }
 };
 
-// Unified connection handler
+// Combined connection (optional)
 export const connectDatabases = async () => {
   await Promise.allSettled([
     connectPostgres(),
@@ -44,4 +46,5 @@ export const connectDatabases = async () => {
   ]);
 };
 
-export { prisma };
+// Default export
+export default prisma;
