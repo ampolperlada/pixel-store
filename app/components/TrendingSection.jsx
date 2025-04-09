@@ -1,63 +1,62 @@
-// TrendingSection.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import axios from 'axios';
+import { io } from 'socket.io-client';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+let socket;
 
 const TrendingSection = () => {
   const [activeTab, setActiveTab] = useState('collections');
   const [activePeriod, setActivePeriod] = useState('1d');
+  const [trendingCollections, setTrendingCollections] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Sample data - in a real app, you would fetch this from an API
-  const trendingCollections = [
-    {
-      id: 1,
-      name: 'Pixel Warriors',
-      isVerified: true,
-      image: '/images/pixel-warriors.png', // Replace with your actual image path
-      floorPrice: 0.082,
-      floorChange: -5.2,
-      volume: 42.6,
-      volumeChange: 126.8,
-      items: '10K',
-      owners: '4.7K'
-    },
-    {
-      id: 2,
-      name: 'Cryptic Pixels',
-      isVerified: true,
-      image: '/images/cryptic-pixels.png',
-      floorPrice: 0.042,
-      floorChange: 12.3,
-      volume: 28.4,
-      volumeChange: 84.2,
-      items: '5.6K',
-      owners: '2.8K'
-    },
-    {
-      id: 3,
-      name: '8Bit Heroes',
-      isVerified: true,
-      image: '/images/8bit-heroes.png',
-      floorPrice: 0.075,
-      floorChange: -2.4,
-      volume: 15.3,
-      volumeChange: -8.6,
-      items: '8K',
-      owners: '3.9K'
-    },
-    {
-      id: 4,
-      name: 'Voxel Legends',
-      isVerified: true,
-      image: '/images/voxel-legends.png',
-      floorPrice: 0.018,
-      floorChange: 32.5,
-      volume: 9.7,
-      volumeChange: 218.4,
-      items: '12K',
-      owners: '5.2K'
+  useEffect(() => {
+    // Initialize socket connection
+    socket = io(API_URL);
+    
+    // Initial data fetch
+    fetchTrendingData();
+    
+    // Subscribe to updates for the selected period
+    socket.emit('subscribe', activePeriod);
+    
+    // Listen for real-time updates
+    socket.on('trendingUpdate', (data) => {
+      setTrendingCollections(data);
+      setLoading(false);
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  // Handle period changes
+  useEffect(() => {
+    if (socket) {
+      // Fetch data for the new period
+      fetchTrendingData();
+      
+      // Update subscription
+      socket.emit('subscribe', activePeriod);
     }
-  ];
+  }, [activePeriod]);
+
+  // Fetch data from API
+  const fetchTrendingData = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/api/collections/trending?period=${activePeriod}`);
+      setTrendingCollections(response.data);
+    } catch (error) {
+      console.error('Error fetching trending data:', error);
+    }
+    setLoading(false);
+  };
 
   // List of available time periods
   const timePeriods = [
@@ -67,7 +66,7 @@ const TrendingSection = () => {
     { id: '30d', label: '30D' }
   ];
 
-  // Chain filters - you would customize these based on your supported chains
+  // Chain filters
   const chainFilters = [
     { id: 'all', icon: '/images/all-chains.png', label: 'All chains' },
     { id: 'eth', icon: '/images/eth.png', label: 'Ethereum' },
@@ -128,66 +127,70 @@ const TrendingSection = () => {
             <div className="w-6 h-6 rounded-full overflow-hidden relative">
               {/* Replace with actual Image component when you have images */}
               <div className="w-6 h-6 bg-gray-600 rounded-full"></div>
-              {/* With real images:
-              <Image 
-                src={chain.icon} 
-                alt={chain.label} 
-                width={24} 
-                height={24}
-                className="rounded-full"
-              /> */}
             </div>
           </button>
         ))}
       </div>
 
-      {/* Table Header */}
-      <div className="grid grid-cols-8 gap-2 py-4 border-b border-[#252836]">
-        <div className="text-sm text-[#8A8AA0] font-medium">#</div>
-        <div className="text-sm text-[#8A8AA0] font-medium col-span-2">COLLECTION</div>
-        <div className="text-sm text-[#8A8AA0] font-medium">FLOOR PRICE</div>
-        <div className="text-sm text-[#8A8AA0] font-medium">FLOOR CHANGE</div>
-        <div className="text-sm text-[#8A8AA0] font-medium">VOLUME</div>
-        <div className="text-sm text-[#8A8AA0] font-medium">VOLUME CHANGE</div>
-        <div className="text-sm text-[#8A8AA0] font-medium">ITEMS</div>
-        <div className="text-sm text-[#8A8AA0] font-medium">OWNERS</div>
-      </div>
-
-      {/* Table Rows */}
-      {trendingCollections.map((collection) => (
-        <div
-          key={collection.id}
-          className="grid grid-cols-8 gap-2 py-5 border-b border-[#252836] items-center"
-        >
-          <div className="text-base font-semibold">{collection.id}</div>
-          <div className="flex items-center col-span-2">
-            <div className="w-10 h-10 bg-gray-600 rounded-lg mr-4 relative overflow-hidden">
-              {/* Replace with actual Image component when you have images */}
-              {/* <Image 
-                src={collection.image} 
-                alt={collection.name} 
-                layout="fill" 
-                objectFit="cover" 
-                className="rounded-lg"
-              /> */}
-            </div>
-            <span className="text-base font-semibold">{collection.name}</span>
-            {collection.isVerified && (
-              <div className="w-4 h-4 ml-1 bg-blue-500 rounded-full"></div>
-            )}
-          </div>
-          <div className="text-base font-semibold">{collection.floorPrice} ETH</div>
-          <div className={`text-base font-semibold ${collection.floorChange >= 0 ? 'text-[#00E096]' : 'text-[#FF3D71]'}`}>
-            {collection.floorChange >= 0 ? '+' : ''}{collection.floorChange}%
-          </div>
-          <div className="text-base font-semibold">{collection.volume} ETH</div>
-          <div className={`text-base font-semibold ${collection.volumeChange >= 0 ? 'text-[#00E096]' : 'text-[#FF3D71]'}`}>
-            {collection.volumeChange >= 0 ? '+' : ''}{collection.volumeChange}%
-          </div>
-          <div className="text-base font-semibold">{collection.items}</div>
-          <div className="text-base font-semibold">{collection.owners}</div>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FF3BC9]"></div>
         </div>
-      ))}
+      )}
+
+      {/* Table Content */}
+      {!loading && (
+        <>
+          {/* Table Header */}
+          <div className="grid grid-cols-8 gap-2 py-4 border-b border-[#252836]">
+            <div className="text-sm text-[#8A8AA0] font-medium">#</div>
+            <div className="text-sm text-[#8A8AA0] font-medium col-span-2">COLLECTION</div>
+            <div className="text-sm text-[#8A8AA0] font-medium">FLOOR PRICE</div>
+            <div className="text-sm text-[#8A8AA0] font-medium">FLOOR CHANGE</div>
+            <div className="text-sm text-[#8A8AA0] font-medium">VOLUME</div>
+            <div className="text-sm text-[#8A8AA0] font-medium">VOLUME CHANGE</div>
+            <div className="text-sm text-[#8A8AA0] font-medium">ITEMS</div>
+            <div className="text-sm text-[#8A8AA0] font-medium">OWNERS</div>
+          </div>
+
+          {/* Table Rows */}
+          {trendingCollections.map((collection, index) => (
+            <div
+              key={collection.id}
+              className="grid grid-cols-8 gap-2 py-5 border-b border-[#252836] items-center"
+            >
+              <div className="text-base font-semibold">{index + 1}</div>
+              <div className="flex items-center col-span-2">
+                <div className="w-10 h-10 bg-gray-600 rounded-lg mr-4 relative overflow-hidden">
+                  {/* Replace with actual Image component when you have images */}
+                  {/* <Image 
+                    src={collection.image} 
+                    alt={collection.name} 
+                    width={40}
+                    height={40}
+                    className="rounded-lg"
+                  /> */}
+                </div>
+                <span className="text-base font-semibold">{collection.name}</span>
+                {collection.isVerified && (
+                  <div className="w-4 h-4 ml-1 bg-blue-500 rounded-full"></div>
+                )}
+              </div>
+              <div className="text-base font-semibold">{collection.floorPrice} ETH</div>
+              <div className={`text-base font-semibold ${collection.floorChange >= 0 ? 'text-[#00E096]' : 'text-[#FF3D71]'}`}>
+                {collection.floorChange >= 0 ? '+' : ''}{collection.floorChange}%
+              </div>
+              <div className="text-base font-semibold">{collection.volume} ETH</div>
+              <div className={`text-base font-semibold ${collection.volumeChange >= 0 ? 'text-[#00E096]' : 'text-[#FF3D71]'}`}>
+                {collection.volumeChange >= 0 ? '+' : ''}{collection.volumeChange}%
+              </div>
+              <div className="text-base font-semibold">{collection.items}</div>
+              <div className="text-base font-semibold">{collection.owners}</div>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 };
