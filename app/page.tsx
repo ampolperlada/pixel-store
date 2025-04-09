@@ -36,7 +36,7 @@ export default function Home() {
 
       <ArtistShowcase />
 
-     New Features in the Future  {/* <TrendingSection />*/}
+   <TrendingSection />
 
       <HowItWorks />
       
