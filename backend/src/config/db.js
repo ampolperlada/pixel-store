@@ -36,8 +36,7 @@ export const connectPostgres = async () => {
 
 // MongoDB Connection - Modern version
 export const connectMongoDB = async () => {
-  const mongoUri = process.env.MONGODB_URI;
-  if (!mongoUri) {
+  const mongoUri = process.env.MONGO_URI;  if (!mongoUri) {
     console.error("❌ MongoDB URI not found");
     process.exit(1);
   }
