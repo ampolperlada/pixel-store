@@ -34,7 +34,7 @@ export const connectPostgres = async () => {
   }
 };
 
-// MongoDB Connection - Modern version
+// MongoDB Connection - Robust version
 export const connectMongoDB = async () => {
   const mongoUri = process.env.MONGO_URI;
   if (!mongoUri) {
@@ -42,27 +42,48 @@ export const connectMongoDB = async () => {
     process.exit(1);
   }
 
+  // Configure mongoose to use global Promise
+  mongoose.Promise = global.Promise;
+
+  // Connection options
+  const options = {
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 30000,
+    connectTimeoutMS: 30000,
+    retryWrites: true,
+    w: 'majority'
+  };
+
+  // Only add TLS options if not localhost
+  if (!mongoUri.includes('localhost')) {
+    options.tls = true;
+    options.tlsAllowInvalidCertificates = true; // Temporary for development
+  }
+
   try {
-    await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
-      retryWrites: true,
-      w: 'majority',
-      tls: true,  // Explicitly enable TLS
-      tlsAllowInvalidCertificates: true  // Bypass certificate validation (temporary)
-    });
+    // Close existing connection if exists
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.close();
+    }
+
+    await mongoose.connect(mongoUri, options);
     
-    const collections = await mongoose.connection.db.listCollections().toArray();
-    console.log("✅ MongoDB Connected! Collections:", collections.map(c => c.name));
+    console.log("✅ MongoDB Connected!");
     
-    mongoose.connection.on('error', err => {
-      console.error('MongoDB error:', err);
-    });
-    
-    mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected! Reconnecting in 5s...');
-      setTimeout(connectMongoDB, 5000);
+    // Event handlers
+    mongoose.connection.on('connected', () => {
+      console.log('MongoDB connection established');
     });
 
+    mongoose.connection.on('error', (err) => {
+      console.error('MongoDB connection error:', err);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.warn('MongoDB disconnected!');
+    });
+
+    // Verify connection
     await mongoose.connection.db.admin().ping();
     console.log("🏓 MongoDB Ping Successful");
 
@@ -72,26 +93,13 @@ export const connectMongoDB = async () => {
   }
 };
 
-export const connectDatabases = async () => {
-  try {
-    await Promise.all([
-      connectPostgres(),
-      connectMongoDB()
-    ]);
-    console.log("✅ All databases connected");
-  } catch (error) {
-    console.error("💥 Database connection failed:", error);
-    process.exit(1);
-  }
-};
-
 export const shutdown = async () => {
   try {
     await Promise.all([
-      prisma.$disconnect(),
-      mongoose.connection.close()
+      prisma.$disconnect().catch(err => console.error("Prisma disconnect error:", err)),
+      mongoose.connection.close().catch(err => console.error("MongoDB disconnect error:", err))
     ]);
-    console.log("🛑 Databases disconnected");
+    console.log("🛑 Databases disconnected gracefully");
   } catch (error) {
     console.error("Shutdown error:", error);
   }
