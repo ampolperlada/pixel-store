@@ -11,12 +11,12 @@ const prisma = new PrismaClient({
       url: process.env.DATABASE_URL
     }
   },
-  log: ['info', 'warn', 'error'] // Better debugging
+  log: ['info', 'warn', 'error']
 });
 
 // PostgreSQL Connection
 export const connectPostgres = async () => {
-  let retries = 5; // Increased from 3 to 5 for more resilience
+  let retries = 5;
   while (retries > 0) {
     try {
       await prisma.$connect();
@@ -26,50 +26,43 @@ export const connectPostgres = async () => {
       retries--;
       console.error(`❌ Connection failed (${retries} retries left):`, error);
       if (retries === 0) {
-        console.error("💥 Failed to connect to PostgreSQL after multiple attempts");
+        console.error("💥 Failed to connect to PostgreSQL");
         process.exit(1);
       }
-      await new Promise(res => setTimeout(res, 2000)); // Wait 2 seconds
+      await new Promise(res => setTimeout(res, 2000));
     }
   }
 };
 
-// MongoDB Connection - Enhanced version
-// MongoDB Connection - Enhanced with verification
+// MongoDB Connection - Modern version
 export const connectMongoDB = async () => {
-  const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  const mongoUri = process.env.MONGODB_URI;
   if (!mongoUri) {
-    console.error("❌ MongoDB connection string not found in environment variables");
+    console.error("❌ MongoDB URI not found");
     process.exit(1);
   }
 
   try {
-    // Connection with more options and verification
     await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000, // 5 seconds timeout
+      serverSelectionTimeoutMS: 5000,
       retryWrites: true,
-      w: 'majority',
-      useNewUrlParser: true,
-      useUnifiedTopology: true
+      w: 'majority'
     });
     
-    // Verify connection by checking collections
     const collections = await mongoose.connection.db.listCollections().toArray();
-    console.log("✅ MongoDB Connected! Available collections:", collections.map(c => c.name));
+    console.log("✅ MongoDB Connected! Collections:", collections.map(c => c.name));
     
-    // Event handlers
     mongoose.connection.on('error', err => {
-      console.error('MongoDB connection error:', err);
+      console.error('MongoDB error:', err);
     });
     
     mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected! Attempting to reconnect...');
-      connectMongoDB(); // Auto-reconnect
+      console.warn('MongoDB disconnected! Reconnecting in 5s...');
+      setTimeout(connectMongoDB, 5000);
     });
 
-    // Additional verification - ping the database
     await mongoose.connection.db.admin().ping();
-    console.log("🏓 MongoDB Ping Successful - Connection is healthy");
+    console.log("🏓 MongoDB Ping Successful");
 
   } catch (error) {
     console.error("❌ MongoDB Connection Failed:", error);
@@ -77,32 +70,29 @@ export const connectMongoDB = async () => {
   }
 };
 
-// Combined connection with better error handling
 export const connectDatabases = async () => {
   try {
-    await Promise.allSettled([
+    await Promise.all([
       connectPostgres(),
       connectMongoDB()
     ]);
-    console.log("✅ All databases connected successfully");
+    console.log("✅ All databases connected");
   } catch (error) {
-    console.error("💥 Failed to connect to one or more databases:", error);
+    console.error("💥 Database connection failed:", error);
     process.exit(1);
   }
 };
 
-// Graceful shutdown handler
 export const shutdown = async () => {
   try {
-    await Promise.allSettled([
+    await Promise.all([
       prisma.$disconnect(),
       mongoose.connection.close()
     ]);
-    console.log("🛑 Databases disconnected gracefully");
+    console.log("🛑 Databases disconnected");
   } catch (error) {
-    console.error("Error during shutdown:", error);
+    console.error("Shutdown error:", error);
   }
 };
 
-// Default export
 export default prisma;
