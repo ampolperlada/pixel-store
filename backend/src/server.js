@@ -25,7 +25,7 @@ console.log("DB URL:", process.env.DATABASE_URL); // Verify env loading
 
 // Initialize Express and HTTP server
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const httpServer = createServer(app);
 
 // Socket.IO setup

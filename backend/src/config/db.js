@@ -36,7 +36,8 @@ export const connectPostgres = async () => {
 
 // MongoDB Connection - Modern version
 export const connectMongoDB = async () => {
-  const mongoUri = process.env.MONGO_URI;  if (!mongoUri) {
+  const mongoUri = process.env.MONGO_URI;
+  if (!mongoUri) {
     console.error("❌ MongoDB URI not found");
     process.exit(1);
   }
@@ -45,7 +46,9 @@ export const connectMongoDB = async () => {
     await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 5000,
       retryWrites: true,
-      w: 'majority'
+      w: 'majority',
+      tls: true,  // Explicitly enable TLS
+      tlsAllowInvalidCertificates: true  // Bypass certificate validation (temporary)
     });
     
     const collections = await mongoose.connection.db.listCollections().toArray();
