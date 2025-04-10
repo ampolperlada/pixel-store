@@ -35,6 +35,7 @@ export const connectPostgres = async () => {
 };
 
 // MongoDB Connection - Enhanced version
+// MongoDB Connection - Enhanced with verification
 export const connectMongoDB = async () => {
   const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
   if (!mongoUri) {
@@ -43,12 +44,20 @@ export const connectMongoDB = async () => {
   }
 
   try {
+    // Connection with more options and verification
     await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 5000, // 5 seconds timeout
       retryWrites: true,
-      w: 'majority'
+      w: 'majority',
+      useNewUrlParser: true,
+      useUnifiedTopology: true
     });
     
+    // Verify connection by checking collections
+    const collections = await mongoose.connection.db.listCollections().toArray();
+    console.log("✅ MongoDB Connected! Available collections:", collections.map(c => c.name));
+    
+    // Event handlers
     mongoose.connection.on('error', err => {
       console.error('MongoDB connection error:', err);
     });
@@ -58,7 +67,10 @@ export const connectMongoDB = async () => {
       connectMongoDB(); // Auto-reconnect
     });
 
-    console.log("✅ MongoDB Connected!");
+    // Additional verification - ping the database
+    await mongoose.connection.db.admin().ping();
+    console.log("🏓 MongoDB Ping Successful - Connection is healthy");
+
   } catch (error) {
     console.error("❌ MongoDB Connection Failed:", error);
     process.exit(1);
