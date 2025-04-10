@@ -6,7 +6,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import { connectPostgres, connectMongoDB } from "./config/db.js";
+import { connectPostgres, connectMongoDB, shutdown } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import nftRoutes from "./routes/nftRoutes.js";
 import gameRoutes from "./routes/gameRoutes.js";
@@ -15,15 +15,12 @@ import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
-// ES Module equivalent of __dirname
+// Config setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Load environment variables
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
-console.log("DB URL:", process.env.DATABASE_URL); // Verify env loading
 
-// Initialize Express and HTTP server
+// App initialization
 const app = express();
 const PORT = process.env.PORT || 5001;
 const httpServer = createServer(app);
@@ -48,13 +45,30 @@ app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 
 // Rate limiting
-const apiLimiter = rateLimit({
+app.use("/api/", rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
-});
-app.use("/api/", apiLimiter);
+}));
 
-// Database Connection and Server Startup
+// Server instance variable
+let server;
+
+// Cleanup function
+const cleanup = async () => {
+  console.log("\n🛑 Shutting down gracefully...");
+  try {
+    if (server) {
+      server.close();
+    }
+    await shutdown();
+    process.exit(0);
+  } catch (err) {
+    console.error("Cleanup error:", err);
+    process.exit(1);
+  }
+};
+
+// Database connection and server startup
 const startServer = async () => {
   try {
     // Connect to databases first
@@ -66,32 +80,25 @@ const startServer = async () => {
     app.use("/api/nfts", nftRoutes);
     app.use("/api/games", gameRoutes);
 
-    // Trending collections endpoint
     app.get("/api/collections/trending", async (req, res) => {
-      const period = req.query.period || '1d';
       try {
-        const trendingData = await fetchTrendingData(period);
-        res.json(trendingData);
+        res.json(await fetchTrendingData(req.query.period || '1d'));
       } catch (error) {
-        console.error('Error fetching trending data:', error);
-        res.status(500).json({ error: 'Failed to fetch trending data' });
+        console.error('Trending data error:', error);
+        res.status(500).json({ error: 'Failed to fetch data' });
       }
     });
 
-    // Health check
     app.get("/api/health", (req, res) => {
       res.status(200).json({ status: "healthy" });
     });
 
-    // Error handling
     app.use(errorHandler);
-    app.use((req, res) => {
-      res.status(404).json({ message: "Not Found" });
-    });
+    app.use((req, res) => res.status(404).json({ message: "Not Found" }));
 
-    // Socket.IO Logic
+    // Socket.IO logic
     const activeSubscriptions = new Map();
-
+    
     io.on("connection", (socket) => {
       console.log("Client connected:", socket.id);
 
@@ -105,7 +112,7 @@ const startServer = async () => {
         
         fetchTrendingData(period)
           .then(data => socket.emit("trendingUpdate", data))
-          .catch(err => console.error(`Error sending data to ${socket.id}:`, err));
+          .catch(err => console.error(`Data send error:`, err));
       });
 
       socket.on("disconnect", () => {
@@ -115,20 +122,29 @@ const startServer = async () => {
     });
 
     // Start server
-    httpServer.listen(PORT, () => {
+    server = httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`Socket.IO ready for connections`);
     });
 
+    // Handle server errors
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use`);
+      } else {
+        console.error('Server error:', err);
+      }
+      process.exit(1);
+    });
+
   } catch (error) {
     console.error("Server startup failed:", error);
-    process.exit(1);
+    await cleanup();
   }
 };
 
-// Trending data function (replace with actual implementation)
+// Trending data mock
 async function fetchTrendingData(period) {
-  // This should be replaced with your real database queries
   return [
     {
       id: '1',
@@ -140,16 +156,17 @@ async function fetchTrendingData(period) {
       items: 10000,
       owners: 6500,
       isVerified: true
-    },
-    // ... other mock data
+    }
   ];
 }
 
-// Start the application
-startServer();
-
-// Handle unhandled rejections
+// Handle process termination
+process.on('SIGTERM', cleanup);
+process.on('SIGINT', cleanup);
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled Rejection:", err);
-  process.exit(1);
+  cleanup();
 });
+
+// Start the application
+startServer();
