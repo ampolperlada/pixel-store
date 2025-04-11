@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import dynamic from 'next/dynamic';
+import { io } from 'socket.io-client';
 
-// Use dynamic import for socket.io-client to avoid SSR issues
-const socketIOClient = dynamic(() => import('socket.io-client'), {
-  ssr: false,
-});
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 const TrendingSection = () => {
   const [activeTab, setActiveTab] = useState('collections');
@@ -18,28 +13,20 @@ const TrendingSection = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    const initSocket = async () => {
-      try {
-        const io = await socketIOClient();
-        const socketInstance = io(API_URL, {
-          transports: ['websocket'],
-          reconnection: true,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-        });
-        
-        setSocket(socketInstance);
-        
-        // Cleanup on unmount
-        return () => {
-          socketInstance.disconnect();
-        };
-      } catch (error) {
-        console.error('Socket initialization error:', error);
-      }
-    };
+    // Create the socket connection directly, no need for dynamic import
+    const socketInstance = io(API_URL, {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
     
-    initSocket();
+    setSocket(socketInstance);
+    
+    // Cleanup on unmount
+    return () => {
+      socketInstance.disconnect();
+    };
   }, []);
 
   // Setup socket event listeners once socket is initialized
