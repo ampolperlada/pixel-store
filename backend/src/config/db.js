@@ -34,7 +34,7 @@ export const connectPostgres = async () => {
   }
 };
 
-// MongoDB Connection - Robust version
+// MongoDB Connection - Enhanced Robust Version
 export const connectMongoDB = async () => {
   const mongoUri = process.env.MONGO_URI;
   if (!mongoUri) {
@@ -42,22 +42,31 @@ export const connectMongoDB = async () => {
     process.exit(1);
   }
 
-  // Configure mongoose to use global Promise
+  // Configure mongoose settings
   mongoose.Promise = global.Promise;
+  mongoose.set('bufferCommands', false);
+  mongoose.set('bufferTimeoutMS', 30000);
+  mongoose.set('strictQuery', true);
 
   // Connection options
   const options = {
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 30000,
+    serverSelectionTimeoutMS: 10000, // Increased to 10 seconds
+    socketTimeoutMS: 45000,
     connectTimeoutMS: 30000,
+    maxPoolSize: 10,
+    minPoolSize: 2,
     retryWrites: true,
-    w: 'majority'
+    w: 'majority',
+    retryReads: true,
+    keepAlive: true,
+    keepAliveInitialDelay: 300000,
+    heartbeatFrequencyMS: 10000
   };
 
-  // Only add TLS options if not localhost
+  // TLS configuration for production
   if (!mongoUri.includes('localhost')) {
     options.tls = true;
-    options.tlsAllowInvalidCertificates = true; // Temporary for development
+    options.tlsAllowInvalidCertificates = process.env.NODE_ENV !== 'production';
   }
 
   try {
@@ -70,7 +79,7 @@ export const connectMongoDB = async () => {
     
     console.log("✅ MongoDB Connected!");
     
-    // Event handlers
+    // Enhanced event handlers
     mongoose.connection.on('connected', () => {
       console.log('MongoDB connection established');
     });
@@ -80,19 +89,45 @@ export const connectMongoDB = async () => {
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected!');
+      console.warn('MongoDB disconnected! Attempting to reconnect...');
+      setTimeout(() => connectMongoDB(), 5000);
     });
 
-    // Verify connection
+    // Connection health monitoring
+    setInterval(async () => {
+      try {
+        await mongoose.connection.db.admin().ping();
+        console.log("🏓 MongoDB Heartbeat Ping Successful");
+      } catch (err) {
+        console.error("MongoDB Heartbeat Failed:", err);
+      }
+    }, 30000);
+
+    // Initial connection verification
     await mongoose.connection.db.admin().ping();
-    console.log("🏓 MongoDB Ping Successful");
+    console.log("🏓 MongoDB Initial Ping Successful");
 
   } catch (error) {
     console.error("❌ MongoDB Connection Failed:", error);
+    setTimeout(() => connectMongoDB(), 5000); // Auto-retry after failure
+  }
+};
+
+// Combined database connection
+export const connectDatabases = async () => {
+  try {
+    await Promise.all([
+      connectPostgres(),
+      connectMongoDB()
+    ]);
+    console.log("✅ All databases connected");
+  } catch (error) {
+    console.error("💥 Database connection failed:", error);
     process.exit(1);
   }
 };
 
+// Graceful shutdown handler
 export const shutdown = async () => {
   try {
     await Promise.all([

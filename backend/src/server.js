@@ -53,12 +53,26 @@ app.use("/api/", rateLimit({
 // Server instance variable
 let server;
 
-// Cleanup function
+// Connection state monitoring
+const monitorConnections = () => {
+  setInterval(() => {
+    const mongoState = mongoose.connection.readyState;
+    console.log(`Database Status - PostgreSQL: Connected | MongoDB: ${
+      mongoState === 0 ? 'Disconnected' :
+      mongoState === 1 ? 'Connected' :
+      mongoState === 2 ? 'Connecting' : 'Disconnecting'
+    }`);
+  }, 60000); // Log every minute
+};
+
+// Enhanced cleanup function
 const cleanup = async () => {
   console.log("\n🛑 Shutting down gracefully...");
   try {
     if (server) {
-      server.close();
+      server.close(() => {
+        console.log("HTTP server closed");
+      });
     }
     await shutdown();
     process.exit(0);
@@ -71,32 +85,50 @@ const cleanup = async () => {
 // Database connection and server startup
 const startServer = async () => {
   try {
+    console.log("⏳ Connecting to databases...");
+    
     // Connect to databases first
     await connectPostgres();
     await connectMongoDB();
+    
+    // Start connection monitoring
+    monitorConnections();
 
     // Routes
     app.use("/api/auth", authRoutes);
     app.use("/api/nfts", nftRoutes);
     app.use("/api/games", gameRoutes);
 
+    // Trending collections endpoint
     app.get("/api/collections/trending", async (req, res) => {
       try {
-        res.json(await fetchTrendingData(req.query.period || '1d'));
+        const trendingData = await fetchTrendingData(req.query.period || '1d');
+        res.json(trendingData);
       } catch (error) {
         console.error('Trending data error:', error);
-        res.status(500).json({ error: 'Failed to fetch data' });
+        res.status(500).json({ error: 'Failed to fetch trending data' });
       }
     });
 
-    app.get("/api/health", (req, res) => {
-      res.status(200).json({ status: "healthy" });
+    // Health check endpoint
+    app.get("/api/health", async (req, res) => {
+      const mongoAlive = mongoose.connection.readyState === 1;
+      res.status(200).json({
+        status: "healthy",
+        databases: {
+          postgres: true,
+          mongodb: mongoAlive
+        }
+      });
     });
 
+    // Error handling
     app.use(errorHandler);
-    app.use((req, res) => res.status(404).json({ message: "Not Found" }));
+    app.use((req, res) => {
+      res.status(404).json({ message: "Not Found" });
+    });
 
-    // Socket.IO logic
+    // Socket.IO Logic
     const activeSubscriptions = new Map();
     
     io.on("connection", (socket) => {
@@ -112,7 +144,7 @@ const startServer = async () => {
         
         fetchTrendingData(period)
           .then(data => socket.emit("trendingUpdate", data))
-          .catch(err => console.error(`Data send error:`, err));
+          .catch(err => console.error(`Data send error to ${socket.id}:`, err));
       });
 
       socket.on("disconnect", () => {
@@ -125,6 +157,9 @@ const startServer = async () => {
     server = httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`Socket.IO ready for connections`);
+      console.log(`PostgreSQL: Connected ✅ | MongoDB: ${
+        mongoose.connection.readyState === 1 ? 'Connected ✅' : 'Connecting...'
+      }`);
     });
 
     // Handle server errors
@@ -143,26 +178,43 @@ const startServer = async () => {
   }
 };
 
-// Trending data mock
+// Trending data function
 async function fetchTrendingData(period) {
-  return [
-    {
-      id: '1',
-      name: 'Bored Ape Yacht Club',
-      floorPrice: 12.5,
-      floorChange: 2.3,
-      volume: 150.75,
-      volumeChange: 5.6,
-      items: 10000,
-      owners: 6500,
-      isVerified: true
-    }
-  ];
+  try {
+    // Replace with actual MongoDB queries
+    // Example:
+    // return await mongoose.connection.db.collection('nfts')
+    //   .find({...})
+    //   .sort({volume: -1})
+    //   .limit(5)
+    //   .toArray();
+    
+    return [
+      {
+        id: '1',
+        name: 'Bored Ape Yacht Club',
+        floorPrice: 12.5,
+        floorChange: 2.3,
+        volume: 150.75,
+        volumeChange: 5.6,
+        items: 10000,
+        owners: 6500,
+        isVerified: true
+      }
+    ];
+  } catch (err) {
+    console.error('Failed to fetch trending data:', err);
+    throw err;
+  }
 }
 
 // Handle process termination
 process.on('SIGTERM', cleanup);
 process.on('SIGINT', cleanup);
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  cleanup();
+});
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled Rejection:", err);
   cleanup();
