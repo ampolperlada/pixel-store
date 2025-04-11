@@ -34,7 +34,7 @@ export const connectPostgres = async () => {
   }
 };
 
-// MongoDB Connection - Enhanced Robust Version
+// MongoDB Connection - Production-ready version
 export const connectMongoDB = async () => {
   const mongoUri = process.env.MONGO_URI;
   if (!mongoUri) {
@@ -50,17 +50,14 @@ export const connectMongoDB = async () => {
 
   // Connection options
   const options = {
-    serverSelectionTimeoutMS: 10000, // Increased to 10 seconds
+    serverSelectionTimeoutMS: 10000,
     socketTimeoutMS: 45000,
     connectTimeoutMS: 30000,
     maxPoolSize: 10,
     minPoolSize: 2,
     retryWrites: true,
     w: 'majority',
-    retryReads: true,
-    keepAlive: true,
-    keepAliveInitialDelay: 300000,
-    heartbeatFrequencyMS: 10000
+    retryReads: true
   };
 
   // TLS configuration for production
@@ -79,7 +76,7 @@ export const connectMongoDB = async () => {
     
     console.log("✅ MongoDB Connected!");
     
-    // Enhanced event handlers
+    // Event handlers
     mongoose.connection.on('connected', () => {
       console.log('MongoDB connection established');
     });
@@ -93,41 +90,16 @@ export const connectMongoDB = async () => {
       setTimeout(() => connectMongoDB(), 5000);
     });
 
-    // Connection health monitoring
-    setInterval(async () => {
-      try {
-        await mongoose.connection.db.admin().ping();
-        console.log("🏓 MongoDB Heartbeat Ping Successful");
-      } catch (err) {
-        console.error("MongoDB Heartbeat Failed:", err);
-      }
-    }, 30000);
-
-    // Initial connection verification
+    // Verify connection
     await mongoose.connection.db.admin().ping();
-    console.log("🏓 MongoDB Initial Ping Successful");
+    console.log("🏓 MongoDB Ping Successful");
 
   } catch (error) {
     console.error("❌ MongoDB Connection Failed:", error);
-    setTimeout(() => connectMongoDB(), 5000); // Auto-retry after failure
+    setTimeout(() => connectMongoDB(), 5000);
   }
 };
 
-// Combined database connection
-export const connectDatabases = async () => {
-  try {
-    await Promise.all([
-      connectPostgres(),
-      connectMongoDB()
-    ]);
-    console.log("✅ All databases connected");
-  } catch (error) {
-    console.error("💥 Database connection failed:", error);
-    process.exit(1);
-  }
-};
-
-// Graceful shutdown handler
 export const shutdown = async () => {
   try {
     await Promise.all([

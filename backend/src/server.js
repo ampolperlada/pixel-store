@@ -6,6 +6,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
 import { connectPostgres, connectMongoDB, shutdown } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import nftRoutes from "./routes/nftRoutes.js";
@@ -62,7 +63,7 @@ const monitorConnections = () => {
       mongoState === 1 ? 'Connected' :
       mongoState === 2 ? 'Connecting' : 'Disconnecting'
     }`);
-  }, 60000); // Log every minute
+  }, 60000);
 };
 
 // Enhanced cleanup function
@@ -87,11 +88,9 @@ const startServer = async () => {
   try {
     console.log("⏳ Connecting to databases...");
     
-    // Connect to databases first
     await connectPostgres();
     await connectMongoDB();
     
-    // Start connection monitoring
     monitorConnections();
 
     // Routes
@@ -162,7 +161,6 @@ const startServer = async () => {
       }`);
     });
 
-    // Handle server errors
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         console.error(`Port ${PORT} is already in use`);
@@ -181,14 +179,6 @@ const startServer = async () => {
 // Trending data function
 async function fetchTrendingData(period) {
   try {
-    // Replace with actual MongoDB queries
-    // Example:
-    // return await mongoose.connection.db.collection('nfts')
-    //   .find({...})
-    //   .sort({volume: -1})
-    //   .limit(5)
-    //   .toArray();
-    
     return [
       {
         id: '1',
