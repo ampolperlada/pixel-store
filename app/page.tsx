@@ -1,7 +1,8 @@
-'use client';  // Ensure this is a Client Component
+'use client'; // Ensure this is a Client Component
 
 import { useState } from "react";
-import AuthModals from "./components/AuthModals";
+import LoginModal from "./components/LoginModal";
+import SignupModal from "./components/SignupModal";
 import UserSuccessStories from "./components/UserSuccessStories";
 import HeroSection from "./components/HeroSection";
 import FeaturedArtworkCarousel from "./components/FeaturedArtworkCarousel";
@@ -19,9 +20,9 @@ import HowItWorks from "./components/HowItWorks";
 import RoyaltySystem from "./components/Royalty";
 import TrendingSection from './components/TrendingSection';
 
-
 export default function Home() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -36,13 +37,13 @@ export default function Home() {
 
       <ArtistShowcase />
 
-      {/* <TrendingSection />*/}
+      {/* <TrendingSection /> */}
 
       <HowItWorks />
-      
+
       <RoyaltySystem />
 
-      {/* Features Tabs (Games if i do have games i will import it here) */}
+      {/* Features Tabs (Games if I do have games, I will import it here) */}
       {/* <FeaturesTabs featuredGames={featuredGames} /> */}
 
       {/* Statistics Section */}
@@ -75,18 +76,27 @@ export default function Home() {
       {/* Call to Action */}
       <CallToAction />
 
-      {/* Login Button */}
-      <div className="fixed bottom-5 right-5">
+      {/* Login and Signup Buttons */}
+      <div className="fixed bottom-5 right-5 space-y-2">
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => setIsLoginOpen(true)}
           className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-md shadow-md transition"
         >
           Login
         </button>
+        <button
+          onClick={() => setIsSignupOpen(true)}
+          className="bg-pink-600 hover:bg-pink-500 text-white font-bold py-3 px-6 rounded-md shadow-md transition"
+        >
+          Signup
+        </button>
       </div>
 
-      {/* Auth Modal */}
-      <AuthModals isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* Login Modal */}
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
+      {/* Signup Modal */}
+      <SignupModal isOpen={isSignupOpen} onClose={() => setIsSignupOpen(false)} />
     </main>
   );
 }

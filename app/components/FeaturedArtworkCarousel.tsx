@@ -1,5 +1,4 @@
 "use client";
-import { withAuth } from '../components/AuthModals';
 import React, { useState, useEffect } from "react";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, EffectCoverflow, Keyboard } from "swiper/modules";
@@ -18,6 +17,7 @@ interface FeaturedArtworkCarouselProps {
   autoplayDelay?: number;
 }
 
+// The rest of the component remains unchanged
 const FeaturedArtworkCarousel: React.FC<FeaturedArtworkCarouselProps> = ({ 
   featuredArt, 
   title = "FEATURED ARTWORK",
