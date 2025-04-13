@@ -1,7 +1,7 @@
 'use client'; // Add this directive at the top
 
 import React, { useState, useEffect } from 'react';
-import ReCAPTCHA from "react-google-recaptcha"; // Import ReCAPTCHA
+import GoogleReCAPTCHA from "react-google-recaptcha"; // Rename imported ReCAPTCHA
 
 interface AuthModalsProps {
   isOpen: boolean;
@@ -626,7 +626,7 @@ const AuthModals: React.FC<AuthModalsProps> = ({
               
               {/* CAPTCHA component */}
               <div className="flex flex-col items-center">
-                <ReCAPTCHA
+                <GoogleReCAPTCHA
                   sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" // Replace with your actual site key
                   onChange={handleCaptchaChange}
                   theme="dark"
@@ -762,7 +762,7 @@ interface OAuthProvider {
 }
 
 // Mock CAPTCHA component - Replace with actual ReCAPTCHA in production
-const ReCAPTCHA: React.FC<{
+const LocalReCAPTCHA: React.FC<{
   sitekey: string;
   onChange: (token: string | null) => void;
   theme?: 'light' | 'dark';
