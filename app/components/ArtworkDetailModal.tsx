@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import type { ArtworkItem } from "../data/sampleData";
-import withAuth from '../components/AuthModals';
-import AuthModals from '../components/AuthModals'; // Import the AuthModals component
+
+import LoginModal from './LoginModal'; // Import the LoginModal component
+import SignupModal from './SignupModal'; // Import the SignupModal component
 
 interface ArtworkDetailModalProps {
   artwork: ArtworkItem;
@@ -385,7 +386,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
 
       {/* Login Modal */}
       {showLoginModal && (
-        <AuthModals 
+        <LoginModal 
           isOpen={showLoginModal} 
           onClose={() => setShowLoginModal(false)}
           triggerReason="marketplace"

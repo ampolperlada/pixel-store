@@ -5,9 +5,10 @@ import React, { useState } from 'react';
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  triggerReason?: string; // Optional property for trigger reason
 }
 
-const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, triggerReason }) => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -54,6 +55,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         username: formData.username,
         password: formData.password,
         rememberMe: formData.rememberMe,
+        triggerReason, // Log the trigger reason if provided
       });
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -77,6 +79,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       ></div>
       <div className="relative w-full max-w-md bg-gradient-to-br from-purple-900 to-blue-900 p-8 rounded-lg border-2 border-cyan-400 shadow-lg shadow-cyan-500/50">
         <h2 className="text-3xl font-bold text-center mb-6 text-cyan-300">LOGIN</h2>
+        {triggerReason && (
+          <p className="text-sm text-gray-300 mb-4 text-center">
+            You need to log in to {triggerReason}.
+          </p>
+        )}
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="block text-cyan-300 text-sm font-medium mb-1">USERNAME</label>
