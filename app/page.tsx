@@ -76,22 +76,6 @@ export default function Home() {
       {/* Call to Action */}
       <CallToAction />
 
-      {/* Login and Signup Buttons */}
-      <div className="fixed bottom-5 right-5 space-y-2">
-        <button
-          onClick={() => setIsLoginOpen(true)}
-          className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-md shadow-md transition"
-        >
-          Login
-        </button>
-        <button
-          onClick={() => setIsSignupOpen(true)}
-          className="bg-pink-600 hover:bg-pink-500 text-white font-bold py-3 px-6 rounded-md shadow-md transition"
-        >
-          Signup
-        </button>
-      </div>
-
       {/* Login Modal */}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
 
