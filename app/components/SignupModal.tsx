@@ -19,6 +19,13 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [walletState, setWalletState] = useState<{
+    address: string | null;
+    status: 'disconnected' | 'connecting' | 'connected' | 'error';
+  }>({
+    address: null,
+    status: 'disconnected'
+  });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -60,6 +67,27 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     return Object.keys(errors).length === 0;
   };
 
+  const handleConnectWallet = async () => {
+    try {
+      setWalletState({ address: null, status: 'connecting' });
+      
+      // Simulate wallet connection - replace with actual wallet connection logic
+      const mockWalletAddress = `0x${Math.random().toString(16).slice(2, 42)}`;
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate async operation
+      
+      setWalletState({
+        address: mockWalletAddress,
+        status: 'connected'
+      });
+    } catch (error) {
+      console.error('Wallet connection failed:', error);
+      setWalletState({
+        address: null,
+        status: 'error'
+      });
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -68,15 +96,27 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     setIsSubmitting(true);
 
     try {
-      console.log('Signup attempted with:', {
+      // 1. Create the user account
+      const userData = {
         username: formData.username,
         email: formData.email,
         password: formData.password,
         agreeToTerms: formData.agreeToTerms,
         captchaToken,
-      });
+        walletAddress: walletState.address
+      };
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log('Signup attempted with:', userData);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // 2. If wallet was connected, link it to the account
+      if (walletState.address) {
+        console.log('Linking wallet:', walletState.address);
+        // Add your wallet linking logic here
+      }
+
       console.log('User signed up successfully');
       onClose();
     } catch (error) {
@@ -103,11 +143,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     // Add your Google OAuth logic here
   };
 
-  const handleConnectWallet = () => {
-    console.log('Connect Wallet clicked');
-    // Add your wallet connection logic here
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -116,7 +151,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
         className="absolute inset-0 bg-black/90 backdrop-blur-md transition-opacity duration-300"
         onClick={onClose}
       ></div>
-      <div className="relative w-full max-w-4xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8 rounded-xl border border-cyan-500/50 shadow-2xl shadow-cyan-500/10">
+      <div className="relative w-full max-w-5xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8 rounded-xl border border-cyan-500/50 shadow-2xl shadow-cyan-500/10 overflow-y-auto max-h-[90vh]">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
@@ -131,41 +166,41 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
           Create Your Account
         </h2>
 
-        <div className="flex flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Left Column - Form */}
           <div className="flex-1">
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                    placeholder="Enter your username"
-                  />
-                  {formErrors.username && (
-                    <p className="text-red-400 text-xs mt-1">{formErrors.username}</p>
-                  )}
-                </div>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  placeholder="Enter your username"
+                />
+                {formErrors.username && (
+                  <p className="text-red-400 text-xs mt-1">{formErrors.username}</p>
+                )}
+              </div>
 
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                    placeholder="your@email.com"
-                  />
-                  {formErrors.email && (
-                    <p className="text-red-400 text-xs mt-1">{formErrors.email}</p>
-                  )}
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  placeholder="your@email.com"
+                />
+                {formErrors.email && (
+                  <p className="text-red-400 text-xs mt-1">{formErrors.email}</p>
+                )}
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
                   <input
@@ -197,6 +232,50 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
+              {/* Wallet Connection Button */}
+              <button
+                type="button"
+                onClick={handleConnectWallet}
+                disabled={walletState.status === 'connecting'}
+                className={`w-full py-3 rounded-lg font-medium transition-all border ${
+                  walletState.status === 'connected'
+                    ? 'bg-green-600/20 border-green-500 text-green-400'
+                    : walletState.status === 'connecting'
+                    ? 'bg-gray-600/50 border-gray-500 text-gray-400 cursor-not-allowed'
+                    : 'bg-purple-600/20 hover:bg-purple-600/30 border-purple-500/50 hover:border-purple-500/70'
+                }`}
+              >
+                {walletState.status === 'connecting' ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Connecting...
+                  </span>
+                ) : walletState.status === 'connected' ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Wallet Connected
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Connect Wallet (Optional)
+                  </span>
+                )}
+              </button>
+
+              {walletState.status === 'connected' && (
+                <p className="text-xs text-green-400">
+                  Wallet will be linked to your account: {walletState.address?.slice(0, 6)}...{walletState.address?.slice(-4)}
+                </p>
+              )}
+
               <div className="flex items-start">
                 <div className="flex items-center h-5">
                   <input
@@ -215,18 +294,16 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
                 <p className="text-red-400 text-xs mt-1">{formErrors.agreeToTerms}</p>
               )}
 
-              <div className="pt-2">
-                <div className="transform scale-90 origin-center">
-                  <GoogleReCAPTCHA
-                    sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
-                    onChange={handleCaptchaChange}
-                    theme="dark"
-                  />
-                </div>
-                {formErrors.captcha && (
-                  <p className="text-red-400 text-xs text-center mt-1">{formErrors.captcha}</p>
-                )}
+              <div className="flex justify-center mt-4">
+                <GoogleReCAPTCHA
+                  sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                  onChange={handleCaptchaChange}
+                  theme="dark"
+                />
               </div>
+              {formErrors.captcha && (
+                <p className="text-red-400 text-xs text-center mt-1">{formErrors.captcha}</p>
+              )}
 
               <button
                 type="submit"
@@ -247,8 +324,8 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* Right Column - Social/Alternative Options */}
-          <div className="flex-1 flex flex-col">
-            <div className="h-full flex flex-col justify-center space-y-4 border-l border-gray-700/50 pl-8">
+          <div className="flex-1 flex flex-col lg:border-l lg:border-gray-700/50 lg:pl-8">
+            <div className="h-full flex flex-col justify-center space-y-4">
               <div className="text-center mb-4">
                 <p className="text-sm text-gray-400">Or sign up with</p>
               </div>
@@ -264,16 +341,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
                   <path d="M12 5.375C13.615 5.375 15.065 5.93 16.205 7.02L19.36 3.865C17.455 2.09 14.965 1 12 1C7.7 1 3.98 3.79 2.17 7.34L5.845 9.91C6.71 7.31 9.135 5.375 12 5.375Z" fill="#EA4335"/>
                 </svg>
                 Continue with Google
-              </button>
-
-              <button
-                onClick={handleConnectWallet}
-                className="w-full flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600/30 text-white py-3 rounded-lg font-medium transition-all duration-300 border border-purple-500/50 hover:border-purple-500/70"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Connect Wallet for NFT
               </button>
 
               <div className="mt-6 text-center">
