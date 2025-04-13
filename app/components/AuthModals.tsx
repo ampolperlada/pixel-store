@@ -488,7 +488,7 @@ const AuthModals: React.FC<AuthModalsProps> = ({
               </span>
             </h2>
             
-            <form className="space-y-3 relative z-10" onSubmit={handleSubmit}>
+            <form className="space-y-4 relative z-10" onSubmit={handleSubmit}>
               <div>
                 <label className="block text-pink-300 text-sm font-medium mb-1">USERNAME</label>
                 <input 
@@ -517,38 +517,40 @@ const AuthModals: React.FC<AuthModalsProps> = ({
                 )}
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-pink-300 text-sm font-medium mb-1">PASSWORD</label>
-                  <input 
-                    type="password" 
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="w-full bg-indigo-900/50 text-white border border-pink-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400"
-                  />
-                  {formErrors.password && (
-                    <p className="text-red-400 text-xs mt-1">{formErrors.password}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-pink-300 text-sm font-medium mb-1">CONFIRM</label>
-                  <input 
-                    type="password" 
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    className="w-full bg-indigo-900/50 text-white border border-pink-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400"
-                  />
-                  {formErrors.confirmPassword && (
-                    <p className="text-red-400 text-xs mt-1">{formErrors.confirmPassword}</p>
-                  )}
+              <div className="space-y-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-pink-300 text-sm font-medium mb-1">PASSWORD</label>
+                    <input 
+                      type="password" 
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="w-full bg-indigo-900/50 text-white border border-pink-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400"
+                    />
+                    {formErrors.password && (
+                      <p className="text-red-400 text-xs mt-1">{formErrors.password}</p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-pink-300 text-sm font-medium mb-1">CONFIRM</label>
+                    <input 
+                      type="password" 
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      className="w-full bg-indigo-900/50 text-white border border-pink-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400"
+                    />
+                    {formErrors.confirmPassword && (
+                      <p className="text-red-400 text-xs mt-1">{formErrors.confirmPassword}</p>
+                    )}
+                  </div>
                 </div>
               </div>
               
-              <div className="border border-pink-500 rounded-md p-2 bg-indigo-900/30">
-                <label className="block text-pink-300 text-sm font-medium mb-1">WALLET CONNECTION</label>
+              <div className="border border-pink-500 rounded-md p-3 bg-indigo-900/30 space-y-2">
+                <label className="block text-pink-300 text-sm font-medium">WALLET CONNECTION</label>
                 
                 {walletAddress ? (
                   <div className="flex items-center justify-between">
@@ -571,7 +573,7 @@ const AuthModals: React.FC<AuthModalsProps> = ({
                     {isConnectingWallet ? 'Connecting...' : 'Connect Wallet'}
                   </button>
                 )}
-                <p className="text-pink-200 text-xs mt-1">Connect your wallet to mint and trade NFTs</p>
+                <p className="text-pink-200 text-xs">Connect your wallet to mint and trade NFTs</p>
               </div>
               
               <div className="flex justify-center w-full">
