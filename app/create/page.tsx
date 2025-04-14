@@ -1,6 +1,7 @@
 "use client";
-import { withAuth } from '../components/AuthModals';
-
+import { useRouter } from 'next/navigation';
+import LoginModal from "../components/LoginModal";
+import SignupModal from "../components/SignupModal";
 
 import React, { useState, useRef, useEffect } from 'react';
 
@@ -29,6 +30,13 @@ const PixelMarketplace: React.FC = () => {
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [hoveredPixel, setHoveredPixel] = useState<{ x: number; y: number } | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(true);
+  
+  // Login and auth states
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState<boolean>(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [loginTriggerReason, setLoginTriggerReason] = useState<string>('');
+  const [walletConnected, setWalletConnected] = useState<boolean>(false);
   
   // Pre-made pixel items/weapons for the browser
   const premadeItems: PremadeItem[] = [
@@ -88,6 +96,54 @@ const PixelMarketplace: React.FC = () => {
     }
   }, [pixels]);
 
+  // Authentication handlers
+  const handleCloseLoginModal = () => {
+    setIsLoginModalOpen(false);
+  };
+
+  const handleCloseSignupModal = () => {
+    setIsSignupModalOpen(false);
+  };
+
+  const handleSwitchToSignup = () => {
+    setIsLoginModalOpen(false);
+    setIsSignupModalOpen(true);
+  };
+
+  const handleSwitchToLogin = () => {
+    setIsSignupModalOpen(false);
+    setIsLoginModalOpen(true);
+  };
+
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+    setIsLoginModalOpen(false);
+    // Handle the action that triggered the login
+    if (loginTriggerReason === 'publish') {
+      handlePublish();
+    } else if (loginTriggerReason === 'mint') {
+      handleMint();
+    } else if (loginTriggerReason === 'sell') {
+      handleSell();
+    } else if (loginTriggerReason === 'import item') {
+      importSelectedItem();
+    }
+  };
+
+  const handleConnectWallet = () => {
+    // Here you would implement actual wallet connection logic
+    setWalletConnected(true);
+  };
+
+  const checkLoginRequired = (action: string): boolean => {
+    if (!isLoggedIn) {
+      setLoginTriggerReason(action);
+      setIsLoginModalOpen(true);
+      return true;
+    }
+    return false;
+  };
+
   const initializeCanvas = () => {
     const pixelCount = parseInt(canvasSize.split('x')[0]);
     const newPixels: Pixel[] = [];
@@ -98,7 +154,6 @@ const PixelMarketplace: React.FC = () => {
 
   const getPixelSize = (): number => {
     const pixelCount = parseInt(canvasSize.split('x')[0]);
-    // Increased canvas size
     return 600 / pixelCount;
   };
 
@@ -265,15 +320,66 @@ const PixelMarketplace: React.FC = () => {
   };
 
   const exportSpriteSheet = () => {
+    if (checkLoginRequired('export sprite sheet')) return;
     alert('Sprite sheet export functionality would go here');
   };
 
   const importSelectedItem = () => {
+    if (checkLoginRequired('import item')) return;
+    
     if (selectedItem) {
       alert(`Importing ${selectedItem.name}`);
       // In a full implementation, we would add pixel data from the selected item
     } else {
       alert('Please select an item first');
+    }
+  };
+
+  // New functions for premium features
+  const handlePublish = () => {
+    if (!isLoggedIn) return;
+    
+    if (!walletConnected) {
+      alert('Please connect your wallet to publish your pixel art');
+      return;
+    }
+    
+    alert('Publishing your pixel art to the marketplace!');
+    // Implementation for publishing the art would go here
+  };
+
+  const handleMint = () => {
+    if (!isLoggedIn) return;
+    
+    if (!walletConnected) {
+      alert('Please connect your wallet to mint your pixel art as NFT');
+      return;
+    }
+    
+    alert('Minting your pixel art as an NFT!');
+    // Implementation for minting the art would go here
+  };
+
+  const handleSell = () => {
+    if (!isLoggedIn) return;
+    
+    if (!walletConnected) {
+      alert('Please connect your wallet to list your pixel art for sale');
+      return;
+    }
+    
+    alert('Listing your pixel art for sale on the marketplace!');
+    // Implementation for selling the art would go here
+  };
+
+  const handlePreviewAndPublish = () => {
+    if (checkLoginRequired('publish')) return;
+    
+    // Show publish options
+    if (!walletConnected) {
+      handleConnectWallet();
+    } else {
+      handlePublish();
     }
   };
 
@@ -323,9 +429,35 @@ const PixelMarketplace: React.FC = () => {
           >
             {darkMode ? '☀️ Light' : '🌙 Dark'}
           </button>
-          <button className={`${buttonClass} px-4 py-2 rounded-md font-medium`}>
-            Preview & Publish
-          </button>
+          
+          {!isLoggedIn ? (
+            <button 
+              className={`${buttonClass} px-4 py-2 rounded-md font-medium`}
+              onClick={() => setIsLoginModalOpen(true)}
+            >
+              Login / Signup
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              {!walletConnected ? (
+                <button 
+                  className={`${secondaryButtonClass} px-3 py-2 rounded-md flex items-center`}
+                  onClick={handleConnectWallet}
+                >
+                  Connect Wallet
+                </button>
+              ) : (
+                <span className="text-green-400 text-sm">Wallet Connected</span>
+              )}
+              
+              <button 
+                className={`${buttonClass} px-4 py-2 rounded-md font-medium`}
+                onClick={handlePreviewAndPublish}
+              >
+                Preview & Publish
+              </button>
+            </div>
+          )}
         </div>
       </header>
       
@@ -452,6 +584,24 @@ const PixelMarketplace: React.FC = () => {
               >
                 🗃️ Export Sprite Sheet
               </button>
+              
+              {/* New premium actions */}
+              {isLoggedIn && (
+                <>
+                  <button 
+                    className={`w-full ${darkMode ? 'bg-blue-700 hover:bg-blue-600' : 'bg-blue-500 hover:bg-blue-600'} text-white p-3 rounded-lg font-medium`}
+                    onClick={() => checkLoginRequired('mint') || handleMint()}
+                  >
+                    🖼️ Mint as NFT
+                  </button>
+                  <button 
+                    className={`w-full ${darkMode ? 'bg-green-700 hover:bg-green-600' : 'bg-green-500 hover:bg-green-600'} text-white p-3 rounded-lg font-medium`}
+                    onClick={() => checkLoginRequired('sell') || handleSell()}
+                  >
+                    💰 Sell on Marketplace
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -566,55 +716,4 @@ const PixelMarketplace: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
-            {filteredItems.map(item => (
-              <div 
-                key={item.id} 
-                className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} p-3 rounded-xl cursor-pointer transition border-2 ${selectedItem?.id === item.id ? (darkMode ? 'border-cyan-500' : 'border-indigo-500') : 'border-transparent'}`}
-                onClick={() => setSelectedItem(item)}
-              >
-                <div 
-                  className="w-full h-24 mb-2 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: item.color + '33' }} // Adding transparency
-                >
-                  <div className="text-3xl">{
-                    item.category === 'weapon' ? '⚔️' : 
-                    item.category === 'item' ? '🎁' : '✨'
-                  }</div>
-                </div>
-                <p className={`${darkMode ? 'text-white' : 'text-gray-800'} text-sm font-medium truncate`}>{item.name}</p>
-                <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'} text-xs capitalize flex items-center`}>
-                  <span className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: item.color }}></span>
-                  {item.category}
-                </p>
-              </div>
-            ))}
-          </div>
-          
-          <button 
-            className={`w-full mt-4 ${buttonClass} p-3 rounded-lg font-medium ${!selectedItem ? 'opacity-50 cursor-not-allowed' : ''}`}
-            onClick={importSelectedItem}
-            disabled={!selectedItem}
-          >
-            📥 Import {selectedItem ? selectedItem.name : 'Selected Item'}
-          </button>
-        </div>
-      </div>
-      
-      {/* Status bar */}
-      <div className={`${darkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-600 border-t border-gray-300'} py-2 px-4 text-sm flex justify-between`}>
-        <div>
-          Pixels: {pixels.filter(Boolean).length} / {parseInt(canvasSize.split('x')[0]) * parseInt(canvasSize.split('x')[0])}
-        </div>
-        <div>
-          History: {historyIndex + 1} / {history.length}
-        </div>
-        <div>
-          Made with ❤️ in Pixel Marketplace
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default withAuth(PixelMarketplace);
-
+            {filtere
