@@ -88,6 +88,33 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleSignup = async (userData: {
+    username: string;
+    email: string;
+    password: string;
+    wallet_address: string | null;
+    agreedToTerms: boolean;
+    profile_image_url?: string;
+  }) => {
+    const res = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok) {
+      console.log('Signup successful:', data);
+      return { success: true, data };
+      // Redirect or show success handled in calling function
+    } else {
+      console.error('Signup failed:', data.error);
+      throw new Error(data.error || 'Signup failed');
+      // Show error message handled in calling function
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -96,32 +123,28 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     setIsSubmitting(true);
 
     try {
-      // 1. Create the user account
+      // Prepare user data for API
       const userData = {
         username: formData.username,
         email: formData.email,
         password: formData.password,
-        agreeToTerms: formData.agreeToTerms,
-        captchaToken,
-        walletAddress: walletState.address
+        wallet_address: walletState.address,
+        agreedToTerms: formData.agreeToTerms,
+        profile_image_url: undefined, // Not collected in the form, but included in API
       };
 
-      console.log('Signup attempted with:', userData);
+      // Call the API function
+      const result = await handleSignup(userData);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // 2. If wallet was connected, link it to the account
-      if (walletState.address) {
-        console.log('Linking wallet:', walletState.address);
-        // Add your wallet linking logic here
-      }
-
-      console.log('User signed up successfully');
+      console.log('User signed up successfully', result);
+      
+      // Close the modal on success
       onClose();
     } catch (error) {
       console.error('Error during signup process:', error);
-      setFormErrors({ submit: 'An error occurred. Please try again.' });
+      setFormErrors({ 
+        submit: error instanceof Error ? error.message : 'An error occurred. Please try again.' 
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -303,6 +326,12 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
               </div>
               {formErrors.captcha && (
                 <p className="text-red-400 text-xs text-center mt-1">{formErrors.captcha}</p>
+              )}
+
+              {formErrors.submit && (
+                <p className="text-red-400 text-sm text-center mt-1 p-2 bg-red-900/20 border border-red-800/50 rounded">
+                  {formErrors.submit}
+                </p>
               )}
 
               <button
