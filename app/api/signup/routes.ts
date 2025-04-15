@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const {
     username,
     email,
-    password,
+    password, 
     wallet_address,
     agreedToTerms,
     profile_image_url,
