@@ -1,10 +1,16 @@
-import { AuthOptions, Session } from "next-auth"
+import { AuthOptions, Session, User } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from 'bcrypt'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const TABLE = 'users'
+
+declare module "next-auth" {
+  interface User {
+    walletAddress?: string;
+  }
+}
 
 export const authOptions: AuthOptions = {
   providers: [
