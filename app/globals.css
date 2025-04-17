@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Styles */
+@layer components {
+  /* Artwork Card Container */
+  .artwork-card {
+    position: relative; /* Ensures absolute elements inside are positioned relative to this */
+    overflow: hidden; /* Prevents child elements from exceeding the card */
+    min-height: 200px; /* Adjust based on your design */
+  }
+
+  /* Card Text (Prevents Overlapping & Expanding Issues) */
+  .card-text {
+    position: absolute;
+    bottom: 10px; /* Moves the text just above the bottom */
+    left: 50%;
+    transform: translateX(-50%); /* Centers the text */
+    background: rgba(0, 0, 0, 0.7); /* Adds a background for readability */
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    color: white;
+    z-index: 10; /* Ensures text stays on top */
+    max-width: 90%; /* Prevents text from overflowing */
+    text-align: center;
+    white-space: nowrap; /* Prevents line breaks */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Adds "..." if text is too long */
+  }
+}
