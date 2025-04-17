@@ -1,28 +1,6 @@
 // app/api/auth/[...nextauth]/route.ts
-import NextAuth from "next-auth"
-import { authOptions } from "../../lib/auth"
-import { NextResponse } from "next/server"
+import { authOptions } from "../../lib/auth";
+import NextAuth from "next-auth";
 
-const handler = NextAuth(authOptions)
-
-export async function GET(req: Request) {
-  try {
-    return await handler(req)
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Authentication error" },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(req: Request) {
-  try {
-    return await handler(req)
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Authentication error" },
-      { status: 500 }
-    )
-  }
-}
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST };
