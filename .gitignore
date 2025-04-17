@@ -1,13 +1,20 @@
 ﻿# Dependency directories
 node_modules/
+.next/
+dist/
 
 # Environment files
 .env
 .env.local
-
-# Build files
-.next
-dist
+.env*.local
 
 # Logs
 *.log
+logs/
+
+# Database
+*.sql
+*.sqlite
+
+# System files
+.DS_Store
