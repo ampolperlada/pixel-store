@@ -88,33 +88,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleSignup = async (userData: {
-    username: string;
-    email: string;
-    password: string;
-    wallet_address: string | null;
-    agreedToTerms: boolean;
-    profile_image_url?: string;
-  }) => {
-    const res = await fetch('/api/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData),
-    });
-    
-    const data = await res.json();
-    
-    if (res.ok) {
-      console.log('Signup successful:', data);
-      return { success: true, data };
-      // Redirect or show success handled in calling function
-    } else {
-      console.error('Signup failed:', data.error);
-      throw new Error(data.error || 'Signup failed');
-      // Show error message handled in calling function
-    }
-  };
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -130,16 +103,28 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
         password: formData.password,
         wallet_address: walletState.address,
         agreedToTerms: formData.agreeToTerms,
-        profile_image_url: undefined, // Not collected in the form, but included in API
+        profile_image_url: undefined, // Not collected in the form
+        captchaToken: captchaToken // Add the captcha token
       };
 
-      // Call the API function
-      const result = await handleSignup(userData);
+      // Call the API
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Signup failed');
+      }
       
       console.log('User signed up successfully', result);
       
       // Close the modal on success
       onClose();
+      // You might want to redirect or show success message here
     } catch (error) {
       console.error('Error during signup process:', error);
       setFormErrors({ 
@@ -161,9 +146,11 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
     console.log('Sign up with Google clicked');
-    // Add your Google OAuth logic here
+    // Implement your Google OAuth logic here
+    // For example:
+    // window.location.href = '/api/auth/google';
   };
 
   if (!isOpen) return null;
@@ -319,7 +306,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
 
               <div className="flex justify-center mt-4">
                 <GoogleReCAPTCHA
-                  sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                  sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" // Replace with your actual reCAPTCHA site key
                   onChange={handleCaptchaChange}
                   theme="dark"
                 />
