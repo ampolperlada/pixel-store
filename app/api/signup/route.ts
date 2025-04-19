@@ -1,4 +1,3 @@
-// app/api/signup/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcrypt'
 
@@ -16,11 +15,12 @@ export async function POST(req: NextRequest) {
     wallet_address,
     agreedToTerms,
     profile_image_url,
-    captchaToken // Add this to receive the token from frontend
+    captchaToken,
+    isGoogleSignup = false // New field to identify Google signups
   } = body
 
-  // Basic validations
-  if (!username || !email || !password || !agreedToTerms) {
+  // Basic validations (skip password check for Google signup)
+  if (!username || !email || (!isGoogleSignup && !password) || !agreedToTerms) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
@@ -30,25 +30,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
   }
 
-  // Verify reCAPTCHA token
-  if (!captchaToken) {
+  // Verify reCAPTCHA token only for regular signups
+  if (!isGoogleSignup && !captchaToken) {
     return NextResponse.json({ error: 'CAPTCHA verification required' }, { status: 400 });
   }
 
   try {
-    // Verify reCAPTCHA with Google
-    const recaptchaRes = await fetch(`https://www.google.com/recaptcha/api/siteverify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `secret=${RECAPTCHA_SECRET_KEY}&response=${captchaToken}`
-    });
+    // Verify reCAPTCHA for regular signups
+    if (!isGoogleSignup) {
+      const recaptchaRes = await fetch(`https://www.google.com/recaptcha/api/siteverify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `secret=${RECAPTCHA_SECRET_KEY}&response=${captchaToken}`
+      });
 
-    const recaptchaData = await recaptchaRes.json();
-    
-    if (!recaptchaData.success) {
-      return NextResponse.json({ error: 'CAPTCHA verification failed' }, { status: 400 });
+      const recaptchaData = await recaptchaRes.json();
+      
+      if (!recaptchaData.success) {
+        return NextResponse.json({ error: 'CAPTCHA verification failed' }, { status: 400 });
+      }
     }
 
     // Check if user already exists
@@ -64,7 +66,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User already exists' }, { status: 409 });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // For Google signup, generate a random password if not provided
+    const hashedPassword = password 
+      ? await bcrypt.hash(password, 10)
+      : await bcrypt.hash(Math.random().toString(36).slice(2) + Date.now().toString(36), 10);
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`, {
       method: 'POST',
@@ -82,6 +87,7 @@ export async function POST(req: NextRequest) {
         agreed_to_terms: agreedToTerms,
         profile_image_url: profile_image_url || null,
         created_at: new Date().toISOString(),
+        is_google_account: isGoogleSignup || false,
       }),
     });
 
@@ -91,7 +97,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: data.message || 'Signup failed' }, { status: res.status });
     }
 
-    return NextResponse.json({ message: 'Signup successful', user: data[0] }, { status: 201 });
+    return NextResponse.json({ 
+      message: 'Signup successful', 
+      user: data[0],
+      isGoogleSignup // Return this to frontend
+    }, { status: 201 });
 
   } catch (err) {
     console.error('Signup error:', err);
