@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import GoogleReCAPTCHA from 'react-google-recaptcha';
+import { useRouter } from 'next/navigation';
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface SignupModalProps {
 }
 
 const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -43,7 +45,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const validateForm = (): boolean => {
+  const validateForm = (isGoogleSignup = false): boolean => {
     const errors: Record<string, string> = {};
 
     if (!formData.username) errors.username = 'Username is required';
@@ -52,14 +54,14 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Email is invalid';
     }
-    if (!formData.password) errors.password = 'Password is required';
-    if (formData.password !== formData.confirmPassword) {
+    if (!isGoogleSignup && !formData.password) errors.password = 'Password is required';
+    if (!isGoogleSignup && formData.password !== formData.confirmPassword) {
       errors.confirmPassword = 'Passwords do not match';
     }
     if (!formData.agreeToTerms) {
       errors.agreeToTerms = 'You must agree to the Terms and Conditions';
     }
-    if (!captchaToken) {
+    if (!isGoogleSignup && !captchaToken) {
       errors.captcha = 'Please complete the CAPTCHA';
     }
 
@@ -71,19 +73,25 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     try {
       setWalletState({ address: null, status: 'connecting' });
       
-      // Simulate wallet connection - replace with actual wallet connection logic
-      const mockWalletAddress = `0x${Math.random().toString(16).slice(2, 42)}`;
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate async operation
-      
-      setWalletState({
-        address: mockWalletAddress,
-        status: 'connected'
-      });
+      // Replace this with actual wallet connection logic (e.g., MetaMask, WalletConnect)
+      if (window.ethereum) {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        setWalletState({
+          address: accounts[0],
+          status: 'connected'
+        });
+      } else {
+        throw new Error('Ethereum wallet not detected');
+      }
     } catch (error) {
       console.error('Wallet connection failed:', error);
       setWalletState({
         address: null,
         status: 'error'
+      });
+      setFormErrors({
+        ...formErrors,
+        wallet: 'Wallet connection failed. Please try again or skip this step.'
       });
     }
   };
@@ -96,18 +104,16 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     setIsSubmitting(true);
 
     try {
-      // Prepare user data for API
       const userData = {
         username: formData.username,
         email: formData.email,
         password: formData.password,
         wallet_address: walletState.address,
         agreedToTerms: formData.agreeToTerms,
-        profile_image_url: undefined, // Not collected in the form
-        captchaToken: captchaToken // Add the captcha token
+        profile_image_url: undefined,
+        captchaToken: captchaToken
       };
 
-      // Call the API
       const response = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,14 +127,55 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
       }
       
       console.log('User signed up successfully', result);
-      
-      // Close the modal on success
       onClose();
-      // You might want to redirect or show success message here
+      router.refresh(); // Refresh the page to update auth state
     } catch (error) {
       console.error('Error during signup process:', error);
       setFormErrors({ 
         submit: error instanceof Error ? error.message : 'An error occurred. Please try again.' 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    if (!validateForm(true)) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // This would normally be handled by NextAuth or similar
+      // For demo purposes, we'll simulate it with our API
+      const userData = {
+        username: formData.username,
+        email: formData.email,
+        password: '', // No password for Google signup
+        wallet_address: walletState.address,
+        agreedToTerms: formData.agreeToTerms,
+        profile_image_url: undefined,
+        isGoogleSignup: true
+      };
+
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Google signup failed');
+      }
+      
+      console.log('User signed up with Google successfully', result);
+      onClose();
+      router.refresh();
+    } catch (error) {
+      console.error('Error during Google signup:', error);
+      setFormErrors({ 
+        submit: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
       });
     } finally {
       setIsSubmitting(false);
@@ -144,13 +191,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
         return newErrors;
       });
     }
-  };
-
-  const handleGoogleSignup = async () => {
-    console.log('Sign up with Google clicked');
-    // Implement your Google OAuth logic here
-    // For example:
-    // window.location.href = '/api/auth/google';
   };
 
   if (!isOpen) return null;
@@ -286,6 +326,10 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
                 </p>
               )}
 
+              {formErrors.wallet && (
+                <p className="text-red-400 text-xs mt-1">{formErrors.wallet}</p>
+              )}
+
               <div className="flex items-start">
                 <div className="flex items-center h-5">
                   <input
@@ -306,7 +350,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
 
               <div className="flex justify-center mt-4">
                 <GoogleReCAPTCHA
-                  sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" // Replace with your actual reCAPTCHA site key
+                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
                   onChange={handleCaptchaChange}
                   theme="dark"
                 />
@@ -348,7 +392,8 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
               
               <button
                 onClick={handleGoogleSignup}
-                className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-3 rounded-lg font-medium transition-all duration-300 border border-gray-600 hover:border-gray-500"
+                disabled={isSubmitting}
+                className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-3 rounded-lg font-medium transition-all duration-300 border border-gray-600 hover:border-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.255H17.92C17.665 15.63 16.89 16.795 15.725 17.575V20.115H19.28C21.36 18.14 22.56 15.42 22.56 12.25Z" fill="#4285F4"/>
