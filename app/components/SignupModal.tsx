@@ -1,6 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string }) => Promise<any>;
+    };
+  }
+}
 import GoogleReCAPTCHA from 'react-google-recaptcha';
 import { useRouter } from 'next/navigation';
 
@@ -73,11 +81,16 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     try {
       setWalletState({ address: null, status: 'connecting' });
       
-      // Replace this with actual wallet connection logic (e.g., MetaMask, WalletConnect)
+      // Check if Ethereum provider is available
       if (window.ethereum) {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        // Request account access
+        const accounts = await window.ethereum.request({ 
+          method: 'eth_requestAccounts' 
+        });
+        
+        // Update wallet state with the first account
         setWalletState({
-          address: accounts[0],
+          address: accounts[0], // Now accounts is properly defined
           status: 'connected'
         });
       } else {
@@ -95,7 +108,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
       });
     }
   };
-
+  
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
