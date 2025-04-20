@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { signIn } from 'next-auth/react';
 
 declare global {
   interface Window {
@@ -108,7 +109,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
       });
     }
   };
-  
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -153,48 +154,32 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleGoogleSignup = async () => {
-    if (!validateForm(true)) return;
-    
-    setIsSubmitting(true);
-    
     try {
-      // This would normally be handled by NextAuth or similar
-      // For demo purposes, we'll simulate it with our API
-      const userData = {
-        username: formData.username,
-        email: formData.email,
-        password: '', // No password for Google signup
-        wallet_address: walletState.address,
-        agreedToTerms: formData.agreeToTerms,
-        profile_image_url: undefined,
-        isGoogleSignup: true
-      };
-
-      const response = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Google signup failed');
+      // Only validate the terms agreement for Google signup
+      if (!formData.agreeToTerms) {
+        setFormErrors({
+          agreeToTerms: 'You must agree to the Terms and Conditions'
+        });
+        return;
       }
       
-      console.log('User signed up with Google successfully', result);
-      onClose();
-      router.refresh();
+      setIsSubmitting(true);
+      
+      // This redirects to Google OAuth flow
+      await signIn('google', { 
+        callbackUrl: '/api/auth/google-callback',
+        redirect: false
+      });
+      
+      // The rest of the process will be handled by NextAuth.js in the callback
     } catch (error) {
-      console.error('Error during Google signup:', error);
+      console.error('Error initiating Google signup:', error);
       setFormErrors({ 
         submit: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
-
   const handleCaptchaChange = (token: string | null) => {
     setCaptchaToken(token);
     if (token) {
