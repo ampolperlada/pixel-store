@@ -1,14 +1,13 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from 'next-auth/react';
+import { NextRequest, NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession({ req });
+export async function GET(req: NextRequest) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   
-  if (!session) {
-    return res.status(401).json({ error: 'Not authenticated' });
+  if (!token) {
+    return NextResponse.redirect(new URL('/', req.url));
   }
   
   // User is now authenticated with Google
-  // Redirect to home page or dashboard
-  res.redirect('/');
+  return NextResponse.redirect(new URL('/', req.url));
 }
