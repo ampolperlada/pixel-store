@@ -56,28 +56,37 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
 
   const validateForm = (isGoogleSignup = false): boolean => {
     const errors: Record<string, string> = {};
-
-    if (!formData.username) errors.username = 'Username is required';
-    if (!formData.email) {
-      errors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Email is invalid';
+  
+    // Only validate username and email for regular signup
+    if (!isGoogleSignup) {
+      if (!formData.username) errors.username = 'Username is required';
+      if (!formData.email) {
+        errors.email = 'Email is required';
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        errors.email = 'Email is invalid';
+      }
     }
+  
+    // Always validate password for regular signup
     if (!isGoogleSignup && !formData.password) errors.password = 'Password is required';
     if (!isGoogleSignup && formData.password !== formData.confirmPassword) {
       errors.confirmPassword = 'Passwords do not match';
     }
+  
+    // Always validate terms and conditions
     if (!formData.agreeToTerms) {
       errors.agreeToTerms = 'You must agree to the Terms and Conditions';
     }
+  
+    // Only validate captcha for regular signup
     if (!isGoogleSignup && !captchaToken) {
       errors.captcha = 'Please complete the CAPTCHA';
     }
-
+  
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
-
+  
   const handleConnectWallet = async () => {
     try {
       setWalletState({ address: null, status: 'connecting' });
