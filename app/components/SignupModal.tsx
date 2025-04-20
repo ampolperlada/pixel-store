@@ -86,7 +86,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
-  
+
   const handleConnectWallet = async () => {
     try {
       setWalletState({ address: null, status: 'connecting' });
@@ -120,47 +120,55 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  event.preventDefault();
 
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    setIsSubmitting(true);
+  setIsSubmitting(true);
 
-    try {
-      const userData = {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        wallet_address: walletState.address,
-        agreedToTerms: formData.agreeToTerms,
-        profile_image_url: undefined,
-        captchaToken: captchaToken
-      };
+  try {
+    const userData = {
+      username: formData.username,
+      email: formData.email,
+      password: formData.password,
+      wallet_address: walletState.address,
+      agreedToTerms: formData.agreeToTerms,
+      profile_image_url: undefined,
+      captchaToken: captchaToken
+    };
 
-      const response = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Signup failed');
+    const response = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+    });
+    
+    if (!response.ok) {
+      // Try to get detailed error message from response
+      let errorMessage = 'Signup failed';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // If JSON parsing fails, use status text
+        errorMessage = response.statusText || errorMessage;
       }
-      
-      console.log('User signed up successfully', result);
-      onClose();
-      router.refresh(); // Refresh the page to update auth state
-    } catch (error) {
-      console.error('Error during signup process:', error);
-      setFormErrors({ 
-        submit: error instanceof Error ? error.message : 'An error occurred. Please try again.' 
-      });
-    } finally {
-      setIsSubmitting(false);
+      throw new Error(errorMessage);
     }
-  };
+    
+    const result = await response.json();
+    console.log('User signed up successfully', result);
+    onClose();
+    router.refresh(); // Refresh the page to update auth state
+  } catch (error) {
+    console.error('Error during signup process:', error);
+    setFormErrors({ 
+      submit: error instanceof Error ? error.message : 'An error occurred. Please try again.' 
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleGoogleSignup = async () => {
     try {
