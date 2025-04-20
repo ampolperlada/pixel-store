@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 
-export default NextAuth({
+const handler = NextAuth({
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -48,3 +48,6 @@ export default NextAuth({
     error: '/', // Redirect to home page on error
   },
 });
+
+// Export the handler functions for App Router
+export { handler as GET, handler as POST };

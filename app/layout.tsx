@@ -1,7 +1,10 @@
+'use client';
+
 import { ReactNode } from "react";
 import "./globals.css";
 import Providers from "./provider";
-import { AuthProvider } from './components/context/AuthContext'; // Import the AuthProvider
+import { AuthProvider } from './components/context/AuthContext';
+import { SessionProvider } from 'next-auth/react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,11 +14,13 @@ export default function RootLayout({ children }: LayoutProps) {
   return (
     <html lang="en">
       <body style={{ backgroundColor: 'black', color: 'white' }}>
-        <Providers> {/* Your existing providers */}
-          <AuthProvider> {/* New auth provider */}
-            <main>{children}</main>
-          </AuthProvider>
-        </Providers>
+        <SessionProvider>
+          <Providers>
+            <AuthProvider>
+              <main>{children}</main>
+            </AuthProvider>
+          </Providers>
+        </SessionProvider>
       </body>
     </html>
   );
