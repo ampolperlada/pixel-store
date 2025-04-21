@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import GoogleReCAPTCHA from 'react-google-recaptcha';
+import { signIn } from 'next-auth/react'; // Import NextAuth
+import { useRouter } from 'next/navigation';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -16,6 +18,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   triggerReason,
   onSwitchToSignup 
 }) => {
+  const router = useRouter(); // Add router for redirects
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -66,28 +69,33 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      console.log('Login attempted with:', {
+      // Use NextAuth signIn method instead of custom fetch
+      const result = await signIn('credentials', {
+        redirect: false, // Prevent automatic redirect
         email: formData.email,
         password: formData.password,
-        rememberMe: formData.rememberMe,
-        captchaToken,
-        triggerReason,
+        captchaToken
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+
       console.log('User logged in successfully');
       onClose();
+      router.refresh(); // Refresh to update auth state in the UI
     } catch (error) {
       console.error('Error during login process:', error);
-      setFormErrors({ submit: 'An error occurred. Please try again.' });
+      setFormErrors({ 
+        submit: error instanceof Error ? error.message : 'Invalid email or password. Please try again.' 
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    console.log('Sign in with Google clicked');
-    // Add your Google OAuth logic here
+    signIn('google', { callbackUrl: window.location.origin });
   };
 
   const handleCaptchaChange = (token: string | null) => {
@@ -218,6 +226,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 <p className="text-red-400 text-xs text-center mt-1">{formErrors.captcha}</p>
               )}
             </div>
+            
+            {/* Show error message if login fails */}
+            {formErrors.submit && (
+              <p className="text-red-400 text-sm text-center p-2 bg-red-900/20 border border-red-800/50 rounded">
+                {formErrors.submit}
+              </p>
+            )}
             
             {/* Login button in its own row */}
             <button
