@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 type CustomUser = {
   id: string;
@@ -35,7 +36,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CustomUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  // Get NextAuth session
+  const { data: nextAuthSession, status: nextAuthStatus } = useSession();
 
+  // This function gets user data from Supabase
   const refreshUser = async () => {
     setLoading(true);
     try {
@@ -49,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: supabaseUser.email ?? '',
           name: supabaseUser.user_metadata?.name,
           avatar: supabaseUser.user_metadata?.avatar_url,
+          wallet_address: supabaseUser.user_metadata?.wallet_address,
         });
       } else {
         setUser(null);
@@ -64,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = async () => {
     setLoading(true);
     try {
+      // Check Supabase session
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) throw error;
@@ -74,6 +80,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: session.user.email ?? '',
           name: session.user.user_metadata?.name,
           avatar: session.user.user_metadata?.avatar_url,
+          wallet_address: session.user.user_metadata?.wallet_address,
+        });
+      } else if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
+        // If no Supabase session but NextAuth session exists, use NextAuth data
+        setUser({
+          id: nextAuthSession.user.email || '', // Use email as a unique identifier
+          email: nextAuthSession.user.email || '',
+          name: nextAuthSession.user.name || '',
+          avatar: nextAuthSession.user.image || '',
         });
       } else {
         setUser(null);
@@ -86,6 +101,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Effect to watch for NextAuth session changes
+  useEffect(() => {
+    if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
+      // When NextAuth authenticates, update our user state
+      setUser({
+        id: nextAuthSession.user.id || '',
+        email: nextAuthSession.user.email || '',
+        name: nextAuthSession.user.name || '',
+        avatar: nextAuthSession.user.image || '',
+      });
+      setLoading(false);
+    } else if (nextAuthStatus === 'unauthenticated') {
+      // Only set user to null if there's no Supabase session either
+      checkAuth();
+    }
+  }, [nextAuthStatus, nextAuthSession]);
+
+  // Effect to watch for Supabase auth changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
@@ -94,9 +127,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: session.user.email ?? '',
           name: session.user.user_metadata?.name,
           avatar: session.user.user_metadata?.avatar_url,
+          wallet_address: session.user.user_metadata?.wallet_address,
         });
       } else {
-        setUser(null);
+        // Only set user to null if there's no NextAuth session
+        if (nextAuthStatus !== 'authenticated') {
+          setUser(null);
+        }
       }
       setLoading(false);
     });
@@ -111,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (credentials: { email: string; password: string }) => {
     setLoading(true);
     try {
+      // First authenticate with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
@@ -119,13 +157,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
+        // Then authenticate with NextAuth
+        const result = await signIn('credentials', {
+          redirect: false,
+          email: credentials.email,
+          password: credentials.password,
+        });
+
+        if (result?.error) {
+          console.warn("NextAuth login failed, but Supabase login succeeded:", result.error);
+        }
+
         setUser({
           id: data.user.id,
           email: data.user.email ?? '',
           name: data.user.user_metadata?.name,
           avatar: data.user.user_metadata?.avatar_url,
+          wallet_address: data.user.user_metadata?.wallet_address,
         });
+        
         router.push('/profile');
+        router.refresh(); // Force refresh to update UI state
       }
     } catch (error) {
       console.error('Login failed:', error);
@@ -157,7 +209,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: data.user.user_metadata?.name,
         };
         
+        // Also sign in with NextAuth
+        await signIn('credentials', {
+          redirect: false,
+          email: credentials.email,
+          password: credentials.password,
+        });
+        
         setUser(customUser);
+        router.refresh(); // Force refresh to update UI state
+        
         return {
           user: customUser,
           session: data.session
@@ -179,10 +240,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setLoading(true);
     try {
+      // Sign out from both auth systems
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Sign out from NextAuth
+      await signOut({ redirect: false });
+      
       setUser(null);
       router.push('/');
+      router.refresh(); // Force refresh to update UI state
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {

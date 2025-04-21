@@ -10,6 +10,7 @@ interface LoginModalProps {
   onClose: () => void;
   triggerReason?: string;
   onSwitchToSignup?: () => void;
+  refreshAuth?: () => Promise<void>; // Add this prop
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ 
@@ -63,25 +64,27 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
+  
     if (!validateForm()) return;
-
+  
     setIsSubmitting(true);
-
+  
     try {
-      // Use NextAuth signIn method instead of custom fetch
+      // Use NextAuth signIn method
       const result = await signIn('credentials', {
         redirect: false, // Prevent automatic redirect
         email: formData.email,
         password: formData.password,
         captchaToken
       });
-
+  
       if (result?.error) {
         throw new Error(result.error);
       }
-
+  
       console.log('User logged in successfully');
+      // Add this line to call your refreshUser function from AuthContext
+      await refreshAuth(); // Make sure this is passed as a prop
       onClose();
       router.refresh(); // Refresh to update auth state in the UI
     } catch (error) {
