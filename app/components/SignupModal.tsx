@@ -162,41 +162,30 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleGoogleSignup = async () => {
-    try {
-      // Only validate the terms agreement for Google signup
-      if (!formData.agreeToTerms) {
-        setFormErrors({
-          agreeToTerms: 'You must agree to the Terms and Conditions'
-        });
-        return;
-      }
-
-        // 2. Check CAPTCHA
-    if (!captchaToken) {
+ // In your SignupModal.tsx component
+const handleGoogleSignup = async () => {
+  try {
+    if (!formData.agreeToTerms) {
       setFormErrors({
-        captcha: 'Please complete the CAPTCHA before continuing.'
+        agreeToTerms: 'You must agree to the Terms and Conditions'
       });
       return;
     }
-      
-      setIsSubmitting(true);
-      
-      // This redirects to Google OAuth flow
-      await signIn('google', { 
-        callbackUrl: '/api/auth/google-callback',
-        redirect: false
-      });
-      
-      // The rest of the process will be handled by NextAuth.js in the callback
-    } catch (error) {
-      console.error('Error initiating Google signup:', error);
-      setFormErrors({ 
-        submit: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
-      });
-      setIsSubmitting(false);
-    }
-  };
+    
+    setIsSubmitting(true);
+    
+    // Use the simple form of signIn without any parameters
+    signIn('google');
+    
+    // The rest will be handled by NextAuth callbacks
+  } catch (error) {
+    console.error('Error initiating Google signup:', error);
+    setFormErrors({ 
+      submit: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
+    });
+    setIsSubmitting(false);
+  }
+};
   const handleCaptchaChange = (token: string | null) => {
     setCaptchaToken(token);
     if (token) {
