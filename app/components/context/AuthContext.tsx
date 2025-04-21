@@ -3,12 +3,14 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase'; // Make sure this path is correct
 
 type User = {
   id: string;
   email: string;
   name?: string;
   avatar?: string;
+  wallet_address?: string;
   // Add other user properties as needed
 };
 
@@ -19,6 +21,7 @@ type AuthContextType = {
   register: (credentials: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,16 +31,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const checkAuth = async () => {
+  const refreshUser = async () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/auth/check', { 
-        credentials: 'include',
-        cache: 'no-store'
-      });
+      const { data: { user: supabaseUser }, error } = await supabase.auth.getUser();
       
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
+      if (error) throw error;
+      
+      if (supabaseUser) {
+        setUser({
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          // Add any additional user data from your database if needed
+        });
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkAuth = async () => {
+    setLoading(true);
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) throw error;
+      
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          // Add any additional user data
+        });
       } else {
         setUser(null);
       }
@@ -50,25 +80,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          // Add any additional user data
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    // Initial auth check
     checkAuth();
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const login = async (credentials: { email: string; password: string }) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
-        credentials: 'include',
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        setUser(data.user);
+      if (error) throw error;
+
+      if (data.user) {
+        setUser({
+          id: data.user.id,
+          email: data.user.email || '',
+        });
         router.push('/profile');
       }
-      return data;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -77,24 +130,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (credentials: { email: string; password: string }) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
+      const { data, error } = await supabase.auth.signUp({
+        email: credentials.email,
+        password: credentials.password,
       });
-      return await res.json();
+
+      if (error) throw error;
+
+      if (data.user) {
+        setUser({
+          id: data.user.id,
+          email: data.user.email || '',
+        });
+      }
+      return data;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   const logout = async () => {
-    await fetch('/api/auth/logout', { 
-      method: 'POST',
-      credentials: 'include'
-    });
-    setUser(null);
-    router.push('/login');
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setUser(null);
+      router.push('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const refreshAuth = async () => {
@@ -109,7 +178,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login, 
         register, 
         logout, 
-        refreshAuth 
+        refreshAuth,
+        refreshUser 
       }}
     >
       {children}

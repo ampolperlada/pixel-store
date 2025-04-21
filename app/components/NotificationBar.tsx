@@ -27,6 +27,11 @@ const StickyNavbar = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignupOpen, setIsSignupOpen] = useState(false);
   const { user, loading, logout } = useAuth();
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -45,13 +50,17 @@ const StickyNavbar = () => {
           method: 'eth_requestAccounts' 
         });
         
+        if (!user) {
+          throw new Error('User must be logged in to connect wallet');
+        }
+
         // Save wallet address to user profile
         const response = await fetch('/api/connect-wallet', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             wallet_address: accounts[0],
-            user_id: user.id // Assuming you have user ID in your auth context
+            user_id: user.id
           }),
         });
         
@@ -59,19 +68,20 @@ const StickyNavbar = () => {
           throw new Error('Failed to save wallet address');
         }
         
-        // Update local user state with wallet address
-        // This depends on how your auth context is set up
-        // You might need to refresh the user object or manually update it
-        
+        // You'll need to update your auth context to refresh the user data
+        // This depends on your implementation
         console.log('Wallet connected successfully:', accounts[0]);
+        alert('Wallet connected successfully!');
       } else {
-        throw new Error('Ethereum wallet not detected');
+        throw new Error('Ethereum wallet not detected. Please install MetaMask or another wallet provider.');
       }
     } catch (error) {
       console.error('Wallet connection failed:', error);
-      // Handle error - maybe show a toast notification
+      alert(`Wallet connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
+
+  if (!hasMounted) return null;
 
   return (
     <>
@@ -170,12 +180,14 @@ const StickyNavbar = () => {
                       {user.wallet_address.slice(0, 6)}...{user.wallet_address.slice(-4)}
                     </div>
                   )}
+                  
                   <Link
                     href="/profile"
                     className="px-6 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold rounded-lg shadow-lg hover:from-pink-500 hover:to-purple-500 transition-all duration-300 transform hover:scale-105"
                   >
                     My Profile
                   </Link>
+                  
                   <button
                     onClick={logout}
                     className="text-white hover:text-pink-400 transition-colors"

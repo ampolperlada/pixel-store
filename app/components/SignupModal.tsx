@@ -162,6 +162,14 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  // In your SignupModal component
+const handleSignupSuccess = async () => {
+  // This should be passed from your auth context
+  // Replace with your actual user refresh logic or remove if unnecessary
+  console.warn('refreshUser function is not defined. Implement user refresh logic here if needed.');
+  onClose(); // Close the modal
+};
+
  // In your SignupModal.tsx component
 const handleGoogleSignup = async () => {
   try {
