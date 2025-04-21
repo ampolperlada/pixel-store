@@ -1,3 +1,4 @@
+// app/api/auth/[...nextauth]/route.ts
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 
@@ -6,10 +7,20 @@ const handler = NextAuth({
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
+          scope: "openid email profile"
+        }
+      }
     }),
   ],
   callbacks: {
     async signIn({ user, account }) {
+      console.log("Sign in attempt:", { user: user.email, provider: account?.provider });
+      
       if (account?.provider === 'google') {
         try {
           // Make a request to your signup API endpoint
@@ -28,12 +39,13 @@ const handler = NextAuth({
           });
           
           if (!response.ok) {
+            console.error("Signup API error:", await response.text());
             return false;
           }
           
           return true;
         } catch (error) {
-          console.error("Error in Google signup callback:", error);
+          console.error("Detailed error in Google signup callback:", error);
           return false;
         }
       }
@@ -47,6 +59,7 @@ const handler = NextAuth({
     signIn: '/', // Redirect to home page after sign in
     error: '/', // Redirect to home page on error
   },
+  secret: process.env.NEXTAUTH_SECRET,
 });
 
 // Export the handler functions for App Router
