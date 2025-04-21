@@ -3,22 +3,27 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase'; // Make sure this path is correct
+import { supabase } from '../../lib/supabase';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
-type User = {
+type CustomUser = {
   id: string;
   email: string;
   name?: string;
   avatar?: string;
   wallet_address?: string;
-  // Add other user properties as needed
+};
+
+type AuthResponse = {
+  user: CustomUser | null;
+  session: Session | null;
 };
 
 type AuthContextType = {
-  user: User | null;
+  user: CustomUser | null;
   loading: boolean;
   login: (credentials: { email: string; password: string }) => Promise<void>;
-  register: (credentials: { email: string; password: string }) => Promise<void>;
+  register: (credentials: { email: string; password: string }) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -27,7 +32,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<CustomUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -41,8 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (supabaseUser) {
         setUser({
           id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          // Add any additional user data from your database if needed
+          email: supabaseUser.email ?? '',
+          name: supabaseUser.user_metadata?.name,
+          avatar: supabaseUser.user_metadata?.avatar_url,
         });
       } else {
         setUser(null);
@@ -65,8 +71,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         setUser({
           id: session.user.id,
-          email: session.user.email || '',
-          // Add any additional user data
+          email: session.user.email ?? '',
+          name: session.user.user_metadata?.name,
+          avatar: session.user.user_metadata?.avatar_url,
         });
       } else {
         setUser(null);
@@ -80,13 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser({
           id: session.user.id,
-          email: session.user.email || '',
-          // Add any additional user data
+          email: session.user.email ?? '',
+          name: session.user.user_metadata?.name,
+          avatar: session.user.user_metadata?.avatar_url,
         });
       } else {
         setUser(null);
@@ -94,7 +101,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    // Initial auth check
     checkAuth();
 
     return () => {
@@ -115,7 +121,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.user) {
         setUser({
           id: data.user.id,
-          email: data.user.email || '',
+          email: data.user.email ?? '',
+          name: data.user.user_metadata?.name,
+          avatar: data.user.user_metadata?.avatar_url,
         });
         router.push('/profile');
       }
@@ -127,23 +135,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (credentials: { email: string; password: string }) => {
+  const register = async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
         email: credentials.email,
         password: credentials.password,
+        options: {
+          data: {
+            name: credentials.email.split('@')[0], // Default name
+          }
+        }
       });
 
       if (error) throw error;
 
       if (data.user) {
-        setUser({
+        const customUser: CustomUser = {
           id: data.user.id,
-          email: data.user.email || '',
-        });
+          email: data.user.email ?? '',
+          name: data.user.user_metadata?.name,
+        };
+        
+        setUser(customUser);
+        return {
+          user: customUser,
+          session: data.session
+        };
       }
-      return data;
+      
+      return {
+        user: null,
+        session: null
+      };
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
