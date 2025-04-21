@@ -37,6 +37,42 @@ const StickyNavbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleConnectWallet = async () => {
+    try {
+      if (window.ethereum) {
+        // Request account access
+        const accounts = await window.ethereum.request({ 
+          method: 'eth_requestAccounts' 
+        });
+        
+        // Save wallet address to user profile
+        const response = await fetch('/api/connect-wallet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            wallet_address: accounts[0],
+            user_id: user.id // Assuming you have user ID in your auth context
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to save wallet address');
+        }
+        
+        // Update local user state with wallet address
+        // This depends on how your auth context is set up
+        // You might need to refresh the user object or manually update it
+        
+        console.log('Wallet connected successfully:', accounts[0]);
+      } else {
+        throw new Error('Ethereum wallet not detected');
+      }
+    } catch (error) {
+      console.error('Wallet connection failed:', error);
+      // Handle error - maybe show a toast notification
+    }
+  };
+
   return (
     <>
       <nav
@@ -121,6 +157,19 @@ const StickyNavbar = () => {
                 <div className="h-8 w-8 rounded-full bg-gray-700 animate-pulse"></div>
               ) : user ? (
                 <>
+                  {/* Check if user has wallet connected, if not show connect wallet button */}
+                  {!user.wallet_address ? (
+                    <button
+                      onClick={handleConnectWallet}
+                      className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-lg shadow-lg hover:from-purple-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-105"
+                    >
+                      Connect Wallet
+                    </button>
+                  ) : (
+                    <div className="px-4 py-2 bg-gray-800 text-green-400 rounded-lg font-mono text-sm">
+                      {user.wallet_address.slice(0, 6)}...{user.wallet_address.slice(-4)}
+                    </div>
+                  )}
                   <Link
                     href="/profile"
                     className="px-6 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold rounded-lg shadow-lg hover:from-pink-500 hover:to-purple-500 transition-all duration-300 transform hover:scale-105"
