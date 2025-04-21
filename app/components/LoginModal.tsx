@@ -4,13 +4,13 @@ import React, { useState } from 'react';
 import GoogleReCAPTCHA from 'react-google-recaptcha';
 import { signIn } from 'next-auth/react'; // Import NextAuth
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../components/context/AuthContext'; // Import AuthContext
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   triggerReason?: string;
   onSwitchToSignup?: () => void;
-  refreshAuth?: () => Promise<void>; // Add this prop
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ 
@@ -20,6 +20,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   onSwitchToSignup 
 }) => {
   const router = useRouter(); // Add router for redirects
+  const { login } = useAuth(); // Get login function from AuthContext
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -64,27 +65,19 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-  
+
     if (!validateForm()) return;
-  
+
     setIsSubmitting(true);
-  
+
     try {
-      // Use NextAuth signIn method
-      const result = await signIn('credentials', {
-        redirect: false, // Prevent automatic redirect
+      // Use AuthContext login function which handles both Supabase and NextAuth
+      await login({
         email: formData.email,
         password: formData.password,
-        captchaToken
       });
-  
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-  
+
       console.log('User logged in successfully');
-      // Add this line to call your refreshUser function from AuthContext
-      await refreshAuth(); // Make sure this is passed as a prop
       onClose();
       router.refresh(); // Refresh to update auth state in the UI
     } catch (error) {

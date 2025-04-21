@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
       // When NextAuth authenticates, update our user state
       setUser({
-        id: nextAuthSession.user.id || '',
+        id: nextAuthSession.user.email || '',
         email: nextAuthSession.user.email || '',
         name: nextAuthSession.user.name || '',
         avatar: nextAuthSession.user.image || '',
