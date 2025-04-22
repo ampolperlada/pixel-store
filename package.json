@@ -39,6 +39,7 @@
     "swiper": "^10.0.0"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.13.10",
     "@types/react": "^19",
     "@types/react-dom": "^19",
