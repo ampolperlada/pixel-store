@@ -69,27 +69,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = async () => {
     setLoading(true);
     try {
-      // Check Supabase session
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) throw error;
-      
-      if (session?.user) {
+      // First get the NextAuth session if it's not loading
+      const resolvedNextAuthSession = nextAuthStatus === 'loading' ? null : nextAuthSession;
+  
+      // Check both sessions in parallel
+      const [supabaseSession, nextAuthSessionResult] = await Promise.all([
+        supabase.auth.getSession(),
+        Promise.resolve(resolvedNextAuthSession)
+      ]);
+  
+      // Handle Supabase session
+      if (supabaseSession.data?.session?.user) {
         setUser({
-          id: session.user.id,
-          email: session.user.email ?? '',
-          name: session.user.user_metadata?.name,
-          avatar: session.user.user_metadata?.avatar_url,
-          wallet_address: session.user.user_metadata?.wallet_address,
+          id: supabaseSession.data.session.user.id,
+          email: supabaseSession.data.session.user.email ?? '',
+          name: supabaseSession.data.session.user.user_metadata?.name,
+          avatar: supabaseSession.data.session.user.user_metadata?.avatar_url,
+          wallet_address: supabaseSession.data.session.user.user_metadata?.wallet_address,
         });
-      } else if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
-        // If no Supabase session but NextAuth session exists, use NextAuth data
+      } 
+      // Fall back to NextAuth session if no Supabase session
+      else if (nextAuthSessionResult?.user) {
         setUser({
-          id: nextAuthSession.user.email || '', // Use email as a unique identifier
-          email: nextAuthSession.user.email || '',
-          name: nextAuthSession.user.name || '',
-          avatar: nextAuthSession.user.image || '',
+          id: nextAuthSessionResult.user.email || '',
+          email: nextAuthSessionResult.user.email || '',
+          name: nextAuthSessionResult.user.name || '',
+          avatar: nextAuthSessionResult.user.image || '',
         });
+        
+        // Ensure we have a Supabase session for NextAuth users
+        try {
+          const { error } = await supabase.auth.signInWithPassword({
+            email: nextAuthSessionResult.user.email || '',
+            password: '' // This will fail, but triggers the right flow
+          });
+          
+          if (error) {
+            // Create a Supabase user if they don't exist
+            await supabase.auth.signUp({
+              email: nextAuthSessionResult.user.email || '',
+              password: '', // Social auth users don't need password
+              options: {
+                data: {
+                  name: nextAuthSessionResult.user.name,
+                  avatar_url: nextAuthSessionResult.user.image
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error syncing NextAuth with Supabase:', error);
+        }
       } else {
         setUser(null);
       }
