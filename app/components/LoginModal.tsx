@@ -91,7 +91,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   const handleGoogleLogin = () => {
-    signIn('google', { callbackUrl: window.location.origin });
+    signIn('google', { 
+      callbackUrl: window.location.origin, // This is the key change
+      redirect: true
+    });
   };
 
   const handleCaptchaChange = (token: string | null) => {

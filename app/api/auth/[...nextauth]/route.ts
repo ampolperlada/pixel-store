@@ -3,6 +3,26 @@ import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { SupabaseAdapter } from '@next-auth/supabase-adapter';
 import jwt from 'jsonwebtoken';
+import type { JWT } from 'next-auth/jwt';
+
+// Add proper typing for the session
+interface SessionWithSupabase extends DefaultSession {
+  user: {
+    id: string;
+    email: string;
+    name?: string | null;
+    image?: string | null;
+  };
+  supabaseToken?: string;
+}
+
+interface DefaultSession {
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
+}
 
 const handler = NextAuth({
   providers: [
@@ -95,19 +115,48 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }) {
+      // Type cast to our extended session type
+      const typedSession = session as SessionWithSupabase;
+      
       // Send Supabase token to client
-      session.supabaseToken = token.supabaseToken;
+      typedSession.supabaseToken = token.supabaseToken as string;
       
       // Add user info to session
       if (token) {
-        session.user.id = token.id;
-        session.user.name = token.name;
-        session.user.email = token.email;
-        session.user.image = token.image;
+        // Make sure the user object exists
+        if (!typedSession.user) {
+          typedSession.user = {
+            id: '',
+            email: '',
+          };
+        }
+        
+        typedSession.user.id = token.id as string;
+        typedSession.user.name = token.name as string;
+        typedSession.user.email = token.email as string;
+        typedSession.user.image = token.image as string;
       }
       
-      return session;
+      return typedSession;
     },
+    async redirect({ url, baseUrl }) {
+      // Handle redirects to clean up the URL
+      // This prevents the callbackUrl parameter from persisting
+      if (url.startsWith(baseUrl)) {
+        // For same-origin URLs, just return the pathname without query params
+        // This removes the callbackUrl from the URL
+        const parsedUrl = new URL(url);
+        
+        // If we're on the homepage with the callback parameter
+        if (parsedUrl.pathname === '/' && parsedUrl.searchParams.has('callbackUrl')) {
+          return baseUrl; // Return just the base URL without params
+        }
+        
+        return url;
+      }
+      // For external URLs, or if no callbackUrl exists, return as is
+      return baseUrl;
+    }
   },
   pages: {
     signIn: '/',
