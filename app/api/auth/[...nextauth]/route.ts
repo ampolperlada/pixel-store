@@ -1,6 +1,8 @@
 // app/api/auth/[...nextauth]/route.ts
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import { SupabaseAdapter } from '@next-auth/supabase-adapter';
+import jwt from 'jsonwebtoken';
 
 const handler = NextAuth({
   providers: [
@@ -17,24 +19,49 @@ const handler = NextAuth({
       }
     }),
   ],
+  adapter: SupabaseAdapter({
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  }),
   callbacks: {
     async signIn({ user, account }) {
       console.log("Sign in attempt:", { user: user.email, provider: account?.provider });
       
       if (account?.provider === 'google') {
         try {
-          // Make a request to your signup API endpoint
+          // Generate a Supabase-compatible JWT
+          const supabaseToken = jwt.sign(
+            {
+              aud: 'authenticated',
+              exp: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour expiration
+              sub: user.id,
+              email: user.email,
+              role: 'authenticated',
+              app_metadata: { provider: 'google' },
+              user_metadata: {
+                name: user.name,
+                avatar_url: user.image
+              }
+            },
+            process.env.SUPABASE_JWT_SECRET!,
+            { algorithm: 'HS256' }
+          );
+
+          // Store the Supabase token in the account object
+          account.supabase_token = supabaseToken;
+
           const response = await fetch(`${process.env.NEXTAUTH_URL}/api/signup`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              username: user.name, // Use name from Google as username
+              username: user.name,
               email: user.email,
-              password: '', // No password for Google signup
-              wallet_address: null, // Can be updated later
-              agreedToTerms: true, // This should be checked before initiating Google signin
+              password: '',
+              wallet_address: null,
+              agreedToTerms: true,
               profile_image_url: user.image,
-              isGoogleSignup: true
+              isGoogleSignup: true,
+              supabase_token: supabaseToken
             }),
           });
           
@@ -51,16 +78,47 @@ const handler = NextAuth({
       }
       return true;
     },
+    async jwt({ token, account, user }) {
+      // Persist the Supabase token to the JWT
+      if (account?.supabase_token) {
+        token.supabaseToken = String(account.supabase_token);
+      }
+      
+      // Add user info to token
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.image = user.image;
+      }
+      
+      return token;
+    },
     async session({ session, token }) {
+      // Send Supabase token to client
+      session.supabaseToken = token.supabaseToken;
+      
+      // Add user info to session
+      if (token) {
+        session.user.id = token.id;
+        session.user.name = token.name;
+        session.user.email = token.email;
+        session.user.image = token.image;
+      }
+      
       return session;
     },
   },
   pages: {
-    signIn: '/', // Redirect to home page after sign in
-    error: '/', // Redirect to home page on error
+    signIn: '/',
+    error: '/',
+  },
+  session: {
+    strategy: 'jwt', // Required for Supabase integration
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
 });
 
-// Export the handler functions for App Router
 export { handler as GET, handler as POST };
