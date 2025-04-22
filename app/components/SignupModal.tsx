@@ -171,7 +171,7 @@ const handleSignupSuccess = async () => {
 };
 
  // In your SignupModal.tsx component
-const handleGoogleSignup = async () => {
+ const handleGoogleSignup = async () => {
   try {
     if (!formData.agreeToTerms) {
       setFormErrors({
@@ -182,10 +182,20 @@ const handleGoogleSignup = async () => {
     
     setIsSubmitting(true);
     
-    // Use the simple form of signIn without any parameters
-    signIn('google');
+    // Sign in with Google via NextAuth
+    const result = await signIn('google', { 
+      redirect: false,
+      callbackUrl: window.location.origin 
+    });
     
-    // The rest will be handled by NextAuth callbacks
+    if (result?.error) {
+      throw new Error(result.error);
+    }
+    
+    // Close the modal if successful
+    if (!result?.error) {
+      onClose();
+    }
   } catch (error) {
     console.error('Error initiating Google signup:', error);
     setFormErrors({ 
@@ -194,6 +204,7 @@ const handleGoogleSignup = async () => {
     setIsSubmitting(false);
   }
 };
+
   const handleCaptchaChange = (token: string | null) => {
     setCaptchaToken(token);
     if (token) {
