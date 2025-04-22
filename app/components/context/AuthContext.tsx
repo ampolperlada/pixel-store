@@ -178,40 +178,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (credentials: { email: string; password: string }) => {
     setLoading(true);
     try {
-      // First authenticate with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Try Supabase login first
+      const { data: supabaseData, error: supabaseError } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Then authenticate with NextAuth
+  
+      if (supabaseError) {
+        // If Supabase fails, try NextAuth credentials
         const result = await signIn('credentials', {
           redirect: false,
           email: credentials.email,
           password: credentials.password,
         });
-
+  
         if (result?.error) {
-          console.warn("NextAuth login failed, but Supabase login succeeded:", result.error);
+          throw new Error(result.error);
         }
-
-        setUser({
-          id: data.user.id,
-          email: data.user.email ?? '',
-          name: data.user.user_metadata?.name,
-          avatar: data.user.user_metadata?.avatar_url,
-          wallet_address: data.user.user_metadata?.wallet_address,
+  
+        // If NextAuth succeeds but Supabase failed, create a Supabase user
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: credentials.email,
+          password: credentials.password,
+          options: {
+            data: {
+              name: credentials.email.split('@')[0],
+            }
+          }
         });
-        
-        router.push('/profile');
-        router.refresh(); // Force refresh to update UI state
+  
+        if (signUpError) throw signUpError;
       }
+  
+      // Refresh user data after successful login
+      await refreshUser();
+      router.refresh();
     } catch (error) {
       console.error('Login failed:', error);
-      throw error;
+      throw new Error(
+        error instanceof Error ? error.message : 'Invalid email or password'
+      );
     } finally {
       setLoading(false);
     }
