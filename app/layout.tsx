@@ -6,6 +6,7 @@ import "./globals.css";
 // Global context providers
 import Providers from "./provider";
 import { AuthProvider } from './components/context/AuthContext';
+import { ModalProvider } from './components/context/ModalContext'; // ✅ Make sure this path matches your project structure
 
 // NextAuth session provider
 import { SessionProvider } from 'next-auth/react';
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: LayoutProps) {
         <SessionProvider>
           <Providers>
             <AuthProvider>
-              <main>{children}</main>
+              <ModalProvider> {/* ✅ Inject ModalProvider here */}
+                <main>{children}</main>
+              </ModalProvider>
             </AuthProvider>
           </Providers>
         </SessionProvider>
