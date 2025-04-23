@@ -1,26 +1,19 @@
-// components/ProtectedRoute.tsx
-'use client';
-import { useSession } from 'next-auth/react';
-import { useEffect } from 'react';
-import { useModal } from '../context/ModalContext';
+"use client";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function ProtectedRoute({ children }) {
   const { data: session, status } = useSession();
-  const { setShowLoginModal } = useModal();
+  const router = useRouter();
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      setShowLoginModal(true);
+    if (status === "unauthenticated") {
+      router.push("/login");
     }
-  }, [status, setShowLoginModal]);
+  }, [status, router]);
 
-  if (status === 'loading') {
-    return <div className="text-center p-4">Loading...</div>;
-  }
+  if (status === "loading") return null; // prevent flicker/crash
 
-  if (status === 'authenticated') {
-    return <>{children}</>;
-  }
-
-  return null; // while modal is open, show nothing
+  return <>{children}</>;
 }
