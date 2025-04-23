@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import LoginModal from "../components/LoginModal";
 import SignupModal from "../components/SignupModal";
-
+import ProtectedRoute from "../components/ProtectedRoute";
 import React, { useState, useRef, useEffect } from 'react';
 
 interface Pixel {
@@ -20,6 +20,14 @@ interface PremadeItem {
 }
 
 const PixelMarketplace: React.FC = () => {
+  return (
+    <ProtectedRoute>
+      <PixelMarketplaceContent />
+    </ProtectedRoute>
+  );
+};
+
+const PixelMarketplaceContent = () => {
   const [currentTool, setCurrentTool] = useState<string>('pencil');
   const [currentColor, setCurrentColor] = useState<string>('#000000');
   const [canvasSize, setCanvasSize] = useState<string>('32x32');
@@ -99,7 +107,6 @@ const PixelMarketplace: React.FC = () => {
 
   const getPixelSize = (): number => {
     const pixelCount = parseInt(canvasSize.split('x')[0]);
-    // Increased canvas size
     return 600 / pixelCount;
   };
 
@@ -134,7 +141,6 @@ const PixelMarketplace: React.FC = () => {
           setCurrentColor(pixel.color);
         }
       } else if (currentTool === 'fill') {
-        // Simple flood fill
         const targetColor = pixels[pixelIndex]?.color || null;
         if (targetColor !== currentColor) {
           const newPixels = [...pixels];
@@ -203,14 +209,12 @@ const PixelMarketplace: React.FC = () => {
       if (currentColor === replacementColor) continue;
       if (targetColor !== null && currentColor !== targetColor) continue;
       
-      // Replace color
       pixelsArray[pixelIndex] = {
         x: cx,
         y: cy,
         color: replacementColor
       };
       
-      // Add neighbors to stack
       stack.push({x: cx + 1, y: cy});
       stack.push({x: cx - 1, y: cy});
       stack.push({x: cx, y: cy + 1});
@@ -246,10 +250,8 @@ const PixelMarketplace: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Fill with transparent background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw pixels
     pixels.forEach(pixel => {
       if (pixel && pixel.color) {
         ctx.fillStyle = pixel.color;
@@ -257,7 +259,6 @@ const PixelMarketplace: React.FC = () => {
       }
     });
     
-    // Convert to data URL and download
     const dataURL = canvas.toDataURL('image/png');
     const link = document.createElement('a');
     link.download = `pixel-art-${canvasSize}.png`;
@@ -272,7 +273,6 @@ const PixelMarketplace: React.FC = () => {
   const importSelectedItem = () => {
     if (selectedItem) {
       alert(`Importing ${selectedItem.name}`);
-      // In a full implementation, we would add pixel data from the selected item
     } else {
       alert('Please select an item first');
     }
@@ -457,12 +457,10 @@ const PixelMarketplace: React.FC = () => {
           </div>
         </div>
         
-        {/* Main canvas area - ENLARGED */}
+        {/* Main canvas area */}
         <div className="flex-1 p-6 flex flex-col items-center justify-center">
           <div className="relative">
-            {/* Canvas border and background */}
             <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-4 rounded-xl shadow-lg`}>
-              {/* Grid canvas - ENLARGED */}
               <div 
                 ref={canvasRef}
                 className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg overflow-hidden shadow-inner`}
@@ -478,7 +476,6 @@ const PixelMarketplace: React.FC = () => {
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
               >
-                {/* Rendered pixels */}
                 {pixels.map((pixel, index) => (
                   pixel && pixel.color && (
                     <div
@@ -495,7 +492,6 @@ const PixelMarketplace: React.FC = () => {
                   )
                 ))}
                 
-                {/* Hover indicator */}
                 {hoveredPixel && (
                   <div
                     style={{
@@ -513,7 +509,6 @@ const PixelMarketplace: React.FC = () => {
               </div>
             </div>
             
-            {/* Canvas info overlay */}
             <div className={`${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'} py-2 px-4 rounded-lg shadow absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center space-x-4`}>
               <div className="flex items-center">
                 <span className="text-sm">Size:</span>
@@ -546,7 +541,7 @@ const PixelMarketplace: React.FC = () => {
           )}
         </div>
         
-        {/* Always visible pre-made items browser */}
+        {/* Right sidebar */}
         <div className={`w-80 ${sidebarClass} p-5 shadow-md ${darkMode ? '' : 'border-l'}`}>
           <h2 className="text-xl font-bold mb-4 flex items-center">
             <span className="mr-2">🏆</span> Pre-made Pixel Art
@@ -575,7 +570,7 @@ const PixelMarketplace: React.FC = () => {
               >
                 <div 
                   className="w-full h-24 mb-2 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: item.color + '33' }} // Adding transparency
+                  style={{ backgroundColor: item.color + '33' }}
                 >
                   <div className="text-3xl">{
                     item.category === 'weapon' ? '⚔️' : 
@@ -601,7 +596,6 @@ const PixelMarketplace: React.FC = () => {
         </div>
       </div>
       
-      {/* Status bar */}
       <div className={`${darkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-600 border-t border-gray-300'} py-2 px-4 text-sm flex justify-between`}>
         <div>
           Pixels: {pixels.filter(Boolean).length} / {parseInt(canvasSize.split('x')[0]) * parseInt(canvasSize.split('x')[0])}
@@ -617,5 +611,4 @@ const PixelMarketplace: React.FC = () => {
   );
 };
 
-export default (PixelMarketplace);
-
+export default PixelMarketplace;
