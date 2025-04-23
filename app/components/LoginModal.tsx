@@ -92,7 +92,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleGoogleLogin = () => {
     signIn('google', { 
-      callbackUrl: window.location.origin, // This is the key change
+      callbackUrl: window.location.origin,
       redirect: true
     });
   };
