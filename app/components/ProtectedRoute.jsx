@@ -1,30 +1,27 @@
-// src/components/ProtectedRoute.jsx
+'use client';
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useSession } from 'next-auth/react';
+import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function ProtectedRoute({ children }) {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(router.asPath)}`);
+    if (status === 'unauthenticated') {
+      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(pathname)}`);
     }
-  }, [status, router]);
+  }, [status, pathname, router]);
 
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <span className="text-lg font-semibold">Checking credentials...</span>
-      </div>
-    );
+  if (status === 'loading') {
+    return <div className="text-center p-4">Checking authentication...</div>;
   }
 
   if (!session) {
-    return null; // Or fallback content
+    return null; // Or show a spinner, etc.
   }
 
-  return children;
+  return <>{children}</>;
 }
