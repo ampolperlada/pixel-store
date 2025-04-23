@@ -16,12 +16,13 @@ export default function ProtectedRoute({ children }) {
   }, [status, pathname, router]);
 
   if (status === 'loading') {
-    return <div className="text-center p-4">Checking authentication...</div>;
+    return <div className="text-center p-4">Loading...</div>;
   }
 
-  if (!session) {
-    return null; // Or show a spinner, etc.
+  if (status === 'authenticated') {
+    return <>{children}</>;
   }
 
-  return <>{children}</>;
+  // Return null or a loading spinner while redirecting
+  return null;
 }

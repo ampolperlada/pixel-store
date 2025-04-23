@@ -19,6 +19,8 @@ import ArtistShowcase from "./components/ArtistShowcase";
 import HowItWorks from "./components/HowItWorks";
 import RoyaltySystem from "./components/Royalty";
 import TrendingSection from './components/TrendingSection';
+import ProtectedRoute from './components/ProtectedRoute';
+
 
 export default function Home() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
