@@ -1,8 +1,8 @@
 // app/api/auth/[...nextauth]/route.ts
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import { SupabaseAdapter } from '@next-auth/supabase-adapter';
-import jwt from 'jsonwebtoken';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { supabase } from '../../../lib/supabase';
 
 const handler = NextAuth({
   providers: [
@@ -18,124 +18,123 @@ const handler = NextAuth({
         }
       }
     }),
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            return null;
+          }
+          
+          // Authenticate with Supabase
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: credentials.email,
+            password: credentials.password,
+          });
+          
+          if (error) throw error;
+          
+          if (data.user) {
+            return {
+              id: data.user.id,
+              email: data.user.email,
+              name: data.user.user_metadata?.name || data.user.email?.split('@')[0],
+              image: data.user.user_metadata?.avatar_url
+            };
+          }
+          
+          return null;
+        } catch (error) {
+          console.error("Auth error:", error);
+          return null;
+        }
+      }
+    }),
   ],
-  adapter: SupabaseAdapter({
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  }),
   callbacks: {
     async signIn({ user, account }) {
       console.log("Sign in attempt:", { user: user.email, provider: account?.provider });
       
       if (account?.provider === 'google') {
         try {
-          // Generate a Supabase-compatible JWT
-          const supabaseToken = jwt.sign(
-            {
-              aud: 'authenticated',
-              exp: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour expiration
-              sub: user.id,
-              email: user.email,
-              role: 'authenticated',
-              app_metadata: { provider: 'google' },
-              user_metadata: {
-                name: user.name,
-                avatar_url: user.image
-              }
-            },
-            process.env.SUPABASE_JWT_SECRET!,
-            { algorithm: 'HS256' }
-          );
-
-          // Store the Supabase token in the account object
-          account.supabase_token = supabaseToken;
-
-          const response = await fetch(`${process.env.NEXTAUTH_URL}/api/signup`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username: user.name,
-              email: user.email,
-              password: '',
-              wallet_address: null,
-              agreedToTerms: true,
-              profile_image_url: user.image,
-              isGoogleSignup: true,
-              supabase_token: supabaseToken
-            }),
+          // First check if this Google user already exists in Supabase
+          const { data, error: checkError } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent',
+              },
+            }
           });
+
+          const existingUser = null; // Adjust logic as needed since 'user' is not part of the returned data
           
-          if (!response.ok) {
-            console.error("Signup API error:", await response.text());
-            return false;
+          if (checkError) {
+            // If no existing user, create one
+            try {
+              // Make a request to your signup API endpoint
+              const response = await fetch(`${process.env.NEXTAUTH_URL}/api/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  username: user.name, // Use name from Google as username
+                  email: user.email,
+                  password: '', // No password for Google signup
+                  wallet_address: null, // Can be updated later
+                  agreedToTerms: true, // This should be checked before initiating Google signin
+                  profile_image_url: user.image,
+                  isGoogleSignup: true
+                }),
+              });
+              
+              if (!response.ok) {
+                console.error("Signup API error:", await response.text());
+                return false;
+              }
+            } catch (error) {
+              console.error("Detailed error in Google signup callback:", error);
+              return false;
+            }
           }
           
           return true;
         } catch (error) {
-          console.error("Detailed error in Google signup callback:", error);
+          console.error("Error during Google auth:", error);
           return false;
         }
       }
       return true;
     },
-    async jwt({ token, account, user }) {
-      // Persist the Supabase token to the JWT
-      if (account?.supabase_token) {
-        token.supabaseToken = String(account.supabase_token);
-      }
-      
-      // Add user info to token
-      if (user) {
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.image = user.image;
-      }
-      
-      return token;
-    },
     async session({ session, token }) {
-      // Send Supabase token to client
-      if (!session.user) {
-        session.user = {};
+      if (token && token.sub) {
+        session.user = {
+          ...session.user,
+          id: token.sub
+        };
       }
-      
-      session.supabaseToken = token.supabaseToken;
-      
-      // Add user info to session
-      if (token) {
-        session.user.id = token.id;
-        session.user.name = token.name;
-        session.user.email = token.email;
-        session.user.image = token.image;
-      }
-      
       return session;
     },
-    // This is what fixes the URL issue
-    async redirect({ url, baseUrl }) {
-      // If the URL is the same origin
-      if (url.startsWith(baseUrl)) {
-        // For callback with the unwanted callbackUrl parameter
-        if (url.includes('callbackUrl=')) {
-          // Strip querystring and just return base URL
-          return baseUrl;
-        }
-        return url;
+    async jwt({ token, user }) {
+      if (user) {
+        token.sub = user.id;
       }
-      return baseUrl;
+      return token;
     }
   },
   pages: {
-    signIn: '/',
-    error: '/',
-  },
-  session: {
-    strategy: 'jwt', // Required for Supabase integration
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    signIn: '/', // Redirect to home page after sign in
+    error: '/', // Redirect to home page on error
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development',
+  session: {
+    strategy: 'jwt', // Use JWT for session handling
+  }
 });
 
+// Export the handler functions for App Router
 export { handler as GET, handler as POST };

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import GoogleReCAPTCHA from 'react-google-recaptcha';
 import { signIn } from 'next-auth/react'; // Import NextAuth
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../components/context/AuthContext'; // Import AuthContext
+import { useAuth } from './context/AuthContext'; // Import AuthContext
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -91,10 +91,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   const handleGoogleLogin = () => {
-    signIn('google', { 
-      callbackUrl: window.location.origin,
-      redirect: true
-    });
+    signIn('google', { callbackUrl: window.location.origin });
   };
 
   const handleCaptchaChange = (token: string | null) => {
