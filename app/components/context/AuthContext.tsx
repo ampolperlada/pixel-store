@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { useSession, signIn, signOut, getSession } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 type CustomUser = {
   id: string;
@@ -36,8 +36,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CustomUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  // Get NextAuth session
   const { data: nextAuthSession, status: nextAuthStatus } = useSession();
 
+  // This function gets user data from Supabase
   const refreshUser = async () => {
     setLoading(true);
     try {
@@ -67,51 +69,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = async () => {
     setLoading(true);
     try {
-      const resolvedNextAuthSession = nextAuthStatus === 'loading' ? null : nextAuthSession;
-  
-      const [supabaseSession, nextAuthSessionResult] = await Promise.all([
-        supabase.auth.getSession(),
-        Promise.resolve(resolvedNextAuthSession)
-      ]);
-  
-      if (supabaseSession.data?.session?.user) {
+      // Check Supabase session
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) throw error;
+      
+      if (session?.user) {
         setUser({
-          id: supabaseSession.data.session.user.id,
-          email: supabaseSession.data.session.user.email ?? '',
-          name: supabaseSession.data.session.user.user_metadata?.name,
-          avatar: supabaseSession.data.session.user.user_metadata?.avatar_url,
-          wallet_address: supabaseSession.data.session.user.user_metadata?.wallet_address,
+          id: session.user.id,
+          email: session.user.email ?? '',
+          name: session.user.user_metadata?.name,
+          avatar: session.user.user_metadata?.avatar_url,
+          wallet_address: session.user.user_metadata?.wallet_address,
         });
-      } 
-      else if (nextAuthSessionResult?.user) {
+      } else if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
+        // If no Supabase session but NextAuth session exists, use NextAuth data
         setUser({
-          id: nextAuthSessionResult.user.email || '',
-          email: nextAuthSessionResult.user.email || '',
-          name: nextAuthSessionResult.user.name || '',
-          avatar: nextAuthSessionResult.user.image || '',
+          id: nextAuthSession.user.id || '',
+          email: nextAuthSession.user.email || '',
+          name: nextAuthSession.user.name || '',
+          avatar: nextAuthSession.user.image || '',
         });
-        
-        try {
-          const { error } = await supabase.auth.signInWithPassword({
-            email: nextAuthSessionResult.user.email || '',
-            password: ''
-          });
-          
-          if (error) {
-            await supabase.auth.signUp({
-              email: nextAuthSessionResult.user.email || '',
-              password: '',
-              options: {
-                data: {
-                  name: nextAuthSessionResult.user.name,
-                  avatar_url: nextAuthSessionResult.user.image
-                }
-              }
-            });
-          }
-        } catch (error) {
-          console.error('Error syncing NextAuth with Supabase:', error);
-        }
       } else {
         setUser(null);
       }
@@ -123,57 +101,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Session synchronization between Supabase and NextAuth
-  useEffect(() => {
-    const syncSessions = async () => {
-      if (!user) return;
-      
-      try {
-        const { data: { session: supabaseSession } } = await supabase.auth.getSession();
-        const nextAuthSession = await getSession();
-        
-        // If we have NextAuth session but no Supabase session
-        if (!supabaseSession && nextAuthSession?.user) {
-          // Get the Supabase JWT from NextAuth session
-          const supabaseJWT = (nextAuthSession as any).supabaseToken;
-          
-          if (supabaseJWT) {
-            await supabase.auth.setSession({
-              access_token: supabaseJWT,
-              refresh_token: ''
-            });
-          }
-        }
-        // If we have Supabase session but no NextAuth session
-        else if (supabaseSession?.user && !nextAuthSession?.user) {
-          await signIn('credentials', {
-            redirect: false,
-            email: supabaseSession.user.email,
-            password: ''
-          });
-        }
-      } catch (error) {
-        console.error('Session sync error:', error);
-      }
-    };
-
-    syncSessions();
-  }, [user]);
-
+  // Effect to watch for NextAuth session changes
   useEffect(() => {
     if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
+      // When NextAuth authenticates, update our user state
       setUser({
-        id: nextAuthSession.user.email || '',
+        id: nextAuthSession.user.id || '',
         email: nextAuthSession.user.email || '',
         name: nextAuthSession.user.name || '',
         avatar: nextAuthSession.user.image || '',
       });
       setLoading(false);
     } else if (nextAuthStatus === 'unauthenticated') {
+      // Only set user to null if there's no Supabase session either
       checkAuth();
     }
   }, [nextAuthStatus, nextAuthSession]);
 
+  // Effect to watch for Supabase auth changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
@@ -185,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           wallet_address: session.user.user_metadata?.wallet_address,
         });
       } else {
+        // Only set user to null if there's no NextAuth session
         if (nextAuthStatus !== 'authenticated') {
           setUser(null);
         }
@@ -194,52 +140,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     checkAuth();
 
-    return () => subscription?.unsubscribe();
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const login = async (credentials: { email: string; password: string }) => {
     setLoading(true);
     try {
-      const { data: supabaseData, error: supabaseError } = await supabase.auth.signInWithPassword({
+      // First authenticate with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       });
-  
-      if (supabaseError) {
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Then authenticate with NextAuth
         const result = await signIn('credentials', {
           redirect: false,
           email: credentials.email,
           password: credentials.password,
         });
-  
-        if (result?.error) throw new Error(result.error);
-  
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: credentials.email,
-          password: credentials.password,
-          options: {
-            data: {
-              name: credentials.email.split('@')[0],
-            }
-          }
+
+        if (result?.error) {
+          console.warn("NextAuth login failed, but Supabase login succeeded:", result.error);
+        }
+
+        setUser({
+          id: data.user.id,
+          email: data.user.email ?? '',
+          name: data.user.user_metadata?.name,
+          avatar: data.user.user_metadata?.avatar_url,
+          wallet_address: data.user.user_metadata?.wallet_address,
         });
-  
-        if (signUpError) throw signUpError;
+        
+        router.push('/profile');
+        router.refresh(); // Force refresh to update UI state
       }
-  
-      await refreshUser();
-      router.refresh();
     } catch (error) {
       console.error('Login failed:', error);
-      throw new Error(
-        error instanceof Error ? error.message : 'Invalid email or password'
-      );
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (credentials: { email: string; password: string }) => {
+  const register = async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -247,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password: credentials.password,
         options: {
           data: {
-            name: credentials.email.split('@')[0],
+            name: credentials.email.split('@')[0], // Default name
           }
         }
       });
@@ -261,6 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: data.user.user_metadata?.name,
         };
         
+        // Also sign in with NextAuth
         await signIn('credentials', {
           redirect: false,
           email: credentials.email,
@@ -268,7 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         
         setUser(customUser);
-        router.refresh();
+        router.refresh(); // Force refresh to update UI state
         
         return {
           user: customUser,
@@ -276,7 +225,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
       
-      return { user: null, session: null };
+      return {
+        user: null,
+        session: null
+      };
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
@@ -288,11 +240,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setLoading(true);
     try {
-      await supabase.auth.signOut();
+      // Sign out from both auth systems
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // Sign out from NextAuth
       await signOut({ redirect: false });
+      
       setUser(null);
       router.push('/');
-      router.refresh();
+      router.refresh(); // Force refresh to update UI state
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
