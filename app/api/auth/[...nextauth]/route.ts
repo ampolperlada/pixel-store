@@ -18,6 +18,8 @@ const handler = NextAuth({
         }
       }
     }),
+
+    
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -135,6 +137,8 @@ const handler = NextAuth({
     strategy: 'jwt', // Use JWT for session handling
   }
 });
+
+
 
 // Export the handler functions for App Router
 export { handler as GET, handler as POST };
