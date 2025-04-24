@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import GoogleReCAPTCHA from 'react-google-recaptcha';
+// Removed static import of GoogleReCAPTCHA to avoid conflict with dynamic import
 import { signIn } from 'next-auth/react'; // Import NextAuth
+import dynamic from 'next/dynamic'; // Import dynamic for dynamic imports
 import { useRouter } from 'next/navigation';
 import { useAuth } from './context/AuthContext'; // Import AuthContext
 
@@ -12,6 +13,10 @@ interface LoginModalProps {
   triggerReason?: string;
   onSwitchToSignup?: () => void;
 }
+
+const GoogleReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {
+  ssr: false,
+});
 
 const LoginModal: React.FC<LoginModalProps> = ({ 
   isOpen, 
