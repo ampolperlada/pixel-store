@@ -7,6 +7,7 @@ export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
   const { pathname } = request.nextUrl;
 
+  // Define protected routes
   const protectedRoutes = ['/create', '/explore'];
 
   const isProtected = protectedRoutes.some(route =>
@@ -14,8 +15,9 @@ export async function middleware(request: NextRequest) {
   );
 
   if (!token && isProtected) {
-    const url = new URL(`/login`, request.url);
-    url.searchParams.set('callbackUrl', pathname);
+    // Save the original URL as a callback
+    const url = new URL('/login', request.url);
+    url.searchParams.set('callbackUrl', encodeURIComponent(pathname));
     return NextResponse.redirect(url);
   }
 
@@ -23,5 +25,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/create/:path*', '/explore/:path*'], // or just ['/create', '/explore'] for simple routes
+  matcher: ['/create/:path*', '/explore/:path*'],
 };
