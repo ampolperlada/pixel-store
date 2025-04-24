@@ -6,9 +6,5 @@ import ExploreArt from '../components/ExploreArt';
 import ProtectedRoute from '../components/ProtectedRoute';
 
 export default function ExplorePage() {
-  return (
-    <ProtectedRoute>
-      <ExploreArt />
-    </ProtectedRoute>
-  );
+  return <ExploreArt />;
 }

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // Removed static import of GoogleReCAPTCHA to avoid conflict with dynamic import
 import { signIn } from 'next-auth/react'; // Import NextAuth
 import dynamic from 'next/dynamic'; // Import dynamic for dynamic imports
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from './context/AuthContext'; // Import AuthContext
 
 interface LoginModalProps {
@@ -25,6 +25,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
   onSwitchToSignup 
 }) => {
   const router = useRouter(); // Add router for redirects
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
   const { login } = useAuth(); // Get login function from AuthContext
   const [formData, setFormData] = useState({
     email: '',
@@ -77,14 +79,21 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
     try {
       // Use AuthContext login function which handles both Supabase and NextAuth
-      await login({
+      const result = await login({
         email: formData.email,
         password: formData.password,
+        // redirectTo: decodeURIComponent(callbackUrl as string), // Removed as it's not a valid property
       });
 
       console.log('User logged in successfully');
       onClose();
-      router.refresh(); // Refresh to update auth state in the UI
+      
+      // If there's a callback URL, redirect to it
+      if (callbackUrl && callbackUrl !== '/') {
+        router.push(decodeURIComponent(callbackUrl));
+      } else {
+        router.refresh(); // Refresh to update auth state in the UI
+      }
     } catch (error) {
       console.error('Error during login process:', error);
       setFormErrors({ 
@@ -96,7 +105,9 @@ const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   const handleGoogleLogin = () => {
-    signIn('google', { callbackUrl: window.location.origin });
+    signIn('google', { 
+      callbackUrl: callbackUrl !== '/' ? decodeURIComponent(callbackUrl) : window.location.origin 
+    });
   };
 
   const handleCaptchaChange = (token: string | null) => {
@@ -109,6 +120,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
       });
     }
   };
+
+  // Display the protected route info if coming from a protected route
+  useEffect(() => {
+    if (callbackUrl && callbackUrl !== '/') {
+      // You can set a custom trigger reason based on the protected route
+      console.log(`User is being redirected from: ${callbackUrl}`);
+    }
+  }, [callbackUrl]);
 
   if (!isOpen) return null;
 
@@ -141,6 +160,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
           {triggerReason && (
             <p className="text-sm text-gray-300 mb-4 text-center">
               You need to log in to {triggerReason}.
+            </p>
+          )}
+          
+          {/* Show message if coming from a protected route */}
+          {callbackUrl && callbackUrl !== '/' && !triggerReason && (
+            <p className="text-sm text-gray-300 mb-4 text-center">
+              You need to log in to access this page.
             </p>
           )}
           

@@ -20,11 +20,7 @@ interface PremadeItem {
 }
 
 const PixelMarketplace: React.FC = () => {
-  return (
-    <ProtectedRoute>
-      <PixelMarketplaceContent />
-    </ProtectedRoute>
-  );
+    return <PixelMarketplaceContent />;
 };
 
 const PixelMarketplaceContent = () => {
