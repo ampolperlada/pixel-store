@@ -1,9 +1,10 @@
+// app/create/page.tsx
 "use client";
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
 import LoginModal from "../components/LoginModal";
 import SignupModal from "../components/SignupModal";
-import ProtectedRoute from "../components/ProtectedRoute";
-import React, { useState, useRef, useEffect } from 'react';
 
 interface Pixel {
   x: number;
@@ -19,11 +20,76 @@ interface PremadeItem {
   color: string;
 }
 
-const PixelMarketplace: React.FC = () => {
-    return <PixelMarketplaceContent />;
+const CreatePage = () => {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [triggerReason] = useState('create pixel art');
+
+  // Redirect to login if unauthenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      setShowLoginModal(true);
+    }
+  }, [status]);
+
+  // Close modals if authenticated
+  useEffect(() => {
+    if (status === 'authenticated') {
+      setShowLoginModal(false);
+      setShowSignupModal(false);
+    }
+  }, [status]);
+
+  const handleCloseLoginModal = () => {
+    setShowLoginModal(false);
+    router.push('/'); // Redirect to home when closing login modal
+  };
+
+  const handleSwitchToSignup = () => {
+    setShowLoginModal(false);
+    setShowSignupModal(true);
+  };
+
+  const handleCloseSignupModal = () => {
+    setShowSignupModal(false);
+  };
+
+  // If not authenticated, show loading state or nothing (modals will handle the auth flow)
+  if (status !== 'authenticated') {
+    return (
+      <>
+        {showLoginModal && (
+          <LoginModal
+            isOpen={showLoginModal}
+            onClose={handleCloseLoginModal}
+            triggerReason={triggerReason}
+            onSwitchToSignup={handleSwitchToSignup}
+          />
+        )}
+        {showSignupModal && (
+          <SignupModal
+            isOpen={showSignupModal}
+            onClose={handleCloseSignupModal}
+          />
+        )}
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500 mx-auto"></div>
+            <p className="mt-4 text-lg">Checking authentication...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // If authenticated, render the PixelMarketplace component
+  return <PixelMarketplace />;
 };
 
-const PixelMarketplaceContent = () => {
+// PixelMarketplace component
+const PixelMarketplace: React.FC = () => {
   const [currentTool, setCurrentTool] = useState<string>('pencil');
   const [currentColor, setCurrentColor] = useState<string>('#000000');
   const [canvasSize, setCanvasSize] = useState<string>('32x32');
@@ -607,4 +673,4 @@ const PixelMarketplaceContent = () => {
   );
 };
 
-export default PixelMarketplace;
+export default CreatePage;

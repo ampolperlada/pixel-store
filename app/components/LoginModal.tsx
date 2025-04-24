@@ -72,32 +72,36 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     if (!validateForm()) return;
-
+  
     setIsSubmitting(true);
-
+  
     try {
-      // Use AuthContext login function which handles both Supabase and NextAuth
       const result = await login({
         email: formData.email,
         password: formData.password,
-        // redirectTo: decodeURIComponent(callbackUrl as string), // Removed as it's not a valid property
       });
-
+  
       console.log('User logged in successfully');
       onClose();
       
-      // If there's a callback URL, redirect to it
-      if (callbackUrl && callbackUrl !== '/') {
-        router.push(decodeURIComponent(callbackUrl));
+      // Handle callback URL
+      if (callbackUrl) {
+        // Ensure the callback URL is properly decoded and safe
+        const decodedUrl = decodeURIComponent(callbackUrl);
+        // Validate the URL to prevent open redirect vulnerabilities
+        if (decodedUrl.startsWith('/')) {
+          router.push(decodedUrl);
+        } else {
+          router.push('/');
+        }
       } else {
-        router.refresh(); // Refresh to update auth state in the UI
+        router.push('/');
       }
     } catch (error) {
-      console.error('Error during login process:', error);
-      setFormErrors({ 
-        submit: error instanceof Error ? error.message : 'Invalid email or password. Please try again.' 
+      console.error('Login error:', error);
+      setFormErrors({
+        submit: 'Invalid credentials. Please try again.'
       });
     } finally {
       setIsSubmitting(false);

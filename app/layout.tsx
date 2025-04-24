@@ -16,6 +16,8 @@ interface LayoutProps {
   children: ReactNode;
 }
 
+
+
 // Wrap this separately so we can access hooks
 function LayoutContent({ children }: { children: ReactNode }) {
   const { showLoginModal, setShowLoginModal } = useModal();
