@@ -28,7 +28,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const callbackUrl = searchParams?.get('callbackUrl') || '/';
   const { login } = useAuth();
   const [formData, setFormData] = useState({
-    email: '',
+    username: '', // Changed from email to username
     password: '',
     rememberMe: false,
   });
@@ -59,11 +59,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
-    if (!formData.email) {
-      errors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Email is invalid';
+    // Validate username instead of email
+    if (!formData.username) {
+      errors.username = 'Username is required';
     }
+    
     if (!formData.password) errors.password = 'Password is required';
     if (!captchaToken) {
       errors.captcha = 'Please complete the CAPTCHA';
@@ -73,6 +73,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     return Object.keys(errors).length === 0;
   };
 
+  // Modified handleSubmit to use username/password login
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!validateForm()) return;
@@ -80,8 +81,24 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setIsSubmitting(true);
   
     try {
+      // First we need to look up the user's email by username
+      const usernameResponse = await fetch('/api/user/by-username', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: formData.username,
+        }),
+      });
+      
+      const usernameResult = await usernameResponse.json();
+      
+      if (!usernameResponse.ok || !usernameResult.email) {
+        throw new Error('Invalid username or password');
+      }
+      
+      // Now we can login with the email and password
       const result = await login({
-        email: formData.email,
+        email: usernameResult.email,
         password: formData.password,
       });
   
@@ -180,17 +197,17 @@ const LoginModal: React.FC<LoginModalProps> = ({
         <div className="w-full md:w-3/5 p-4">
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-cyan-300 text-sm font-medium mb-1">EMAIL</label>
+              <label className="block text-cyan-300 text-sm font-medium mb-1">USERNAME</label>
               <input
-                type="email"
-                name="email"
-                value={formData.email}
+                type="text"  // Changed from email to text type
+                name="username"  // Changed from email to username
+                value={formData.username}
                 onChange={handleInputChange}
                 className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                placeholder="your@email.com"
+                placeholder="Enter your username"  // Updated placeholder text
               />
-              {formErrors.email && (
-                <p className="text-red-400 text-xs mt-1">{formErrors.email}</p>
+              {formErrors.username && (
+                <p className="text-red-400 text-xs mt-1">{formErrors.username}</p>
               )}
             </div>
 
