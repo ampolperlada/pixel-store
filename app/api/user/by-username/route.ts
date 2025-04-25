@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const { username } = await request.json();
-    
+
     if (!username) {
       return NextResponse.json(
         { error: 'Username is required' },
@@ -12,14 +12,25 @@ export async function POST(request: Request) {
       );
     }
 
-    // Query Supabase for user with this username
+    console.log('Looking up username:', username);
+
     const { data, error } = await supabase
       .from('profiles')
       .select('email')
       .eq('username', username)
       .single();
 
-    if (error || !data) {
+    console.log('Supabase result:', data, error);
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json(
+        { error: 'Database query failed' },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
@@ -27,9 +38,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ email: data.email });
-    
+
   } catch (error) {
-    console.error('Error in username lookup:', error);
+    console.error('Unexpected error in username lookup:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

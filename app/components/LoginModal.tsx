@@ -79,10 +79,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
     if (!validateForm()) return;
   
     setIsSubmitting(true);
+    setFormErrors({}); // clear any existing errors
   
     try {
-      // Option 1: If you want to keep username login
-      // First lookup email by username
+      // Lookup email by username first
       const usernameResponse = await fetch('/api/user/by-username', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,7 +96,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   
       const { email } = await usernameResponse.json();
   
-      // Then authenticate with email/password
+      // Authenticate using NextAuth credentials provider
       const result = await signIn('credentials', {
         email,
         password: formData.password,
@@ -107,7 +107,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         throw new Error(result.error);
       }
   
-      // Login successful
+      // Login successful, close the modal
       handleClose();
   
     } catch (error) {
@@ -119,6 +119,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       setIsSubmitting(false);
     }
   };
+  
 
   const handleGoogleLogin = () => {
     signIn('google', { 
