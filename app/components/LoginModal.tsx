@@ -74,51 +74,53 @@ const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   // Modified handleSubmit to use username/password login
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!validateForm()) return;
-  
-    setIsSubmitting(true);
-    setFormErrors({}); // clear any existing errors
-  
-    try {
-      // Lookup email by username first
-      const usernameResponse = await fetch('/api/user/by-username', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: formData.username }),
-      });
-  
-      if (!usernameResponse.ok) {
-        const errorData = await usernameResponse.json();
-        throw new Error(errorData.error || 'Username lookup failed');
-      }
-  
-      const { email } = await usernameResponse.json();
-  
-      // Authenticate using NextAuth credentials provider
-      const result = await signIn('credentials', {
-        email,
-        password: formData.password,
-        redirect: false,
-      });
-  
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-  
-      // Login successful, close the modal
-      handleClose();
-  
-    } catch (error) {
-      console.error('Login error:', error);
-      setFormErrors({
-        submit: error instanceof Error ? error.message : 'Login failed. Please try again.'
-      });
-    } finally {
-      setIsSubmitting(false);
+  // In your handleSubmit function:
+const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  event.preventDefault();
+  if (!validateForm()) return;
+
+  setIsSubmitting(true);
+  setFormErrors({});
+
+  try {
+    const usernameResponse = await fetch('/api/user/by-username', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: formData.username }),
+    });
+
+    const responseData = await usernameResponse.json();
+    
+    if (!usernameResponse.ok) {
+      throw new Error(
+        responseData.error || 
+        responseData.details || 
+        'Username lookup failed'
+      );
     }
-  };
+
+    const { email } = responseData;
+    
+    const result = await signIn('credentials', {
+      email,
+      password: formData.password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      throw new Error(result.error);
+    }
+
+    handleClose();
+  } catch (error) {
+    console.error('Full login error:', error);
+    setFormErrors({
+      submit: error instanceof Error ? error.message : 'Login failed. Please try again.'
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   
 
   const handleGoogleLogin = () => {
