@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-// Removed static import of GoogleReCAPTCHA to avoid conflict with dynamic import
-import { signIn } from 'next-auth/react'; // Import NextAuth
-import dynamic from 'next/dynamic'; // Import dynamic for dynamic imports
+import { signIn } from 'next-auth/react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from './context/AuthContext'; // Import AuthContext
+import { useAuth } from './context/AuthContext';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -24,10 +23,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
   triggerReason,
   onSwitchToSignup 
 }) => {
-  const router = useRouter(); // Add router for redirects
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
-  const { login } = useAuth(); // Get login function from AuthContext
+  const callbackUrl = searchParams?.get('callbackUrl') || '/';
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -36,6 +35,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+
+  const handleClose = () => {
+    router.push(callbackUrl);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -83,21 +86,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       });
   
       console.log('User logged in successfully');
-      onClose();
-      
-      // Handle callback URL
-      if (callbackUrl) {
-        // Ensure the callback URL is properly decoded and safe
-        const decodedUrl = decodeURIComponent(callbackUrl);
-        // Validate the URL to prevent open redirect vulnerabilities
-        if (decodedUrl.startsWith('/')) {
-          router.push(decodedUrl);
-        } else {
-          router.push('/');
-        }
-      } else {
-        router.push('/');
-      }
+      handleClose();
     } catch (error) {
       console.error('Login error:', error);
       setFormErrors({
@@ -125,10 +114,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
-  // Display the protected route info if coming from a protected route
   useEffect(() => {
     if (callbackUrl && callbackUrl !== '/') {
-      // You can set a custom trigger reason based on the protected route
       console.log(`User is being redirected from: ${callbackUrl}`);
     }
   }, [callbackUrl]);
@@ -139,14 +126,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/90 backdrop-blur-md transition-opacity duration-300"
-        onClick={onClose}
+        onClick={handleClose}
       ></div>
       
-      {/* Landscape-oriented modal with two columns */}
       <div className="relative w-full max-w-4xl bg-gradient-to-br from-gray-900 via-gray-800 to-black p-6 rounded-xl border border-cyan-500 shadow-lg shadow-cyan-500/20 flex flex-col md:flex-row">
-        {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
           aria-label="Close"
         >
@@ -155,7 +140,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
           </svg>
         </button>
 
-        {/* Left Column - Welcome and branding */}
         <div className="w-full md:w-2/5 flex flex-col justify-center items-center p-4 md:border-r md:border-gray-700">
           <h2 className="text-3xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
             Welcome Back
@@ -167,7 +151,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </p>
           )}
           
-          {/* Show message if coming from a protected route */}
           {callbackUrl && callbackUrl !== '/' && !triggerReason && (
             <p className="text-sm text-gray-300 mb-4 text-center">
               You need to log in to access this page.
@@ -194,7 +177,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
           </div>
         </div>
 
-        {/* Right Column - Login Form */}
         <div className="w-full md:w-3/5 p-4">
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
@@ -243,7 +225,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
               </a>
             </div>
 
-            {/* CAPTCHA properly positioned and styled */}
             <div className="mt-4">
               <div className="flex justify-center bg-gray-800/50 p-2 rounded-lg">
                 <GoogleReCAPTCHA
@@ -258,14 +239,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
               )}
             </div>
             
-            {/* Show error message if login fails */}
             {formErrors.submit && (
               <p className="text-red-400 text-sm text-center p-2 bg-red-900/20 border border-red-800/50 rounded">
                 {formErrors.submit}
               </p>
             )}
             
-            {/* Login button in its own row */}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -273,7 +252,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
             >
               {isSubmitting ? 'LOGGING IN...' : 'LOGIN'}
             </button>
-
           </form>
 
           <div className="my-6 flex items-center">
@@ -295,7 +273,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
             Continue with Google
           </button>
           
-          {/* Sign up link for mobile view */}
           <div className="mt-6 text-center md:hidden">
             <p className="text-sm text-gray-500">
               Don't have an account?{' '}

@@ -6,17 +6,15 @@ import { getToken } from 'next-auth/jwt';
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
   const { pathname, search } = request.nextUrl;
-  
-  // Define protected routes
-  const protectedRoutes = ['/create', '/explore'];
+
+  // Only protect /explore (server redirect), let /create handle it client-side
+  const protectedRoutes = ['/explore'];
   const isProtected = protectedRoutes.some(route => pathname.startsWith(route));
 
   if (!token && isProtected) {
-    // Construct the callback URL with both pathname and search params
     const callbackUrl = `${pathname}${search}`;
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', callbackUrl);
-    
     return NextResponse.redirect(loginUrl);
   }
 
@@ -24,5 +22,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/create', '/create/:path*', '/explore', '/explore/:path*'],
+  matcher: ['/explore', '/explore/:path*'], // removed /create
 };
