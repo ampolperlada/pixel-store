@@ -13,22 +13,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Try both tables - first profiles, then auth.users
+    // Try profiles table first with maybeSingle()
     let { data, error } = await supabase
       .from('profiles')
       .select('email')
       .eq('username', username)
-      .single();
+      .maybeSingle(); // Changed to maybeSingle
 
-    if (error || !data) {
-      // Fallback to auth.users if not found in profiles
+    if (error) {
+      console.error('Profiles query error:', error);
+      throw error;
+    }
+
+    // If not found in profiles, try users table
+    if (!data) {
       const { data: authData, error: authError } = await supabase
-        .from('users') // or whatever your auth table is called
+        .from('users')
         .select('email')
         .eq('username', username)
-        .single();
+        .maybeSingle(); // Changed to maybeSingle
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error('Users query error:', authError);
+        throw authError;
+      }
+
       if (!authData) {
         return NextResponse.json(
           { error: 'User not found' },
@@ -46,7 +55,8 @@ export async function POST(request: Request) {
       { 
         error: 'Database query failed',
         details: error.message,
-        code: error.code 
+        code: error.code,
+        hint: error.hint // Supabase often provides helpful hints
       },
       { status: 500 }
     );

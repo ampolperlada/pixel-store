@@ -22,44 +22,43 @@ const handler = NextAuth({
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        username: { label: "Username", type: "text" }, // Changed from email to username
+        username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         try {
           if (!credentials?.username || !credentials?.password) {
-            return null;
+            throw new Error("Username and password are required");
           }
           
-          // 1. First find the user by username in your public.users table
+          // 1. Find user by username (with better error handling)
           const { data: userData, error: userError } = await supabase
             .from('users')
             .select('*')
             .eq('username', credentials.username)
-            .single();
-
-          if (userError || !userData) {
-            throw new Error(userError?.message || "User not found");
-          }
-
-          // 2. Now authenticate with Supabase using the email we found
+            .maybeSingle(); // Use maybeSingle instead of single
+    
+          if (userError) throw userError;
+          if (!userData) throw new Error("Invalid username or password");
+    
+          // 2. Authenticate with Supabase using the found email
           const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email: userData.email, // Use the email from the users table
+            email: userData.email,
             password: credentials.password,
           });
-
+    
           if (authError) throw authError;
           
           if (authData.user) {
             return {
               id: authData.user.id,
               email: authData.user.email,
-              name: credentials.username, // Return the username as name
+              name: credentials.username, // Use the provided username
               image: authData.user.user_metadata?.avatar_url
             };
           }
           
-          return null;
+          throw new Error("Authentication failed");
         } catch (error) {
           console.error("Auth error:", error);
           throw error; // Rethrow to show error in UI

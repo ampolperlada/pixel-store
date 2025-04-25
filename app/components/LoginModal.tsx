@@ -84,7 +84,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   
     try {
       const result = await signIn('credentials', {
-        username: formData.username, // Now sending username directly
+        username: formData.username,
         password: formData.password,
         redirect: false,
       });
@@ -93,7 +93,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
         throw new Error(result.error);
       }
   
-      handleClose();
+      if (result?.ok) {
+        handleClose();
+      } else {
+        throw new Error("Login failed - no error returned");
+      }
     } catch (error) {
       console.error('Login error:', error);
       setFormErrors({
