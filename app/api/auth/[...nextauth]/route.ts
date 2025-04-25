@@ -19,51 +19,61 @@ const handler = NextAuth({
       }
     }),
 
-    
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        username: { label: "Username", type: "text" }, // Changed from email to username
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         try {
-          if (!credentials?.email || !credentials?.password) {
+          if (!credentials?.username || !credentials?.password) {
             return null;
           }
           
-          // Authenticate with Supabase
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email: credentials.email,
+          // 1. First find the user by username in your public.users table
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('username', credentials.username)
+            .single();
+
+          if (userError || !userData) {
+            throw new Error(userError?.message || "User not found");
+          }
+
+          // 2. Now authenticate with Supabase using the email we found
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: userData.email, // Use the email from the users table
             password: credentials.password,
           });
+
+          if (authError) throw authError;
           
-          if (error) throw error;
-          
-          if (data.user) {
+          if (authData.user) {
             return {
-              id: data.user.id,
-              email: data.user.email,
-              name: data.user.user_metadata?.name || data.user.email?.split('@')[0],
-              image: data.user.user_metadata?.avatar_url
+              id: authData.user.id,
+              email: authData.user.email,
+              name: credentials.username, // Return the username as name
+              image: authData.user.user_metadata?.avatar_url
             };
           }
           
           return null;
         } catch (error) {
           console.error("Auth error:", error);
-          return null;
+          throw error; // Rethrow to show error in UI
         }
       }
     }),
   ],
   callbacks: {
     async signIn({ user, account }) {
-      console.log("Sign in attempt:", { user: user.email, provider: account?.provider });
+      console.log("Sign in attempt:", { user, provider: account?.provider });
       
       if (account?.provider === 'google') {
         try {
-          // First check if this Google user already exists in Supabase
+          // Existing Google OAuth flow remains unchanged
           const { data, error: checkError } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
@@ -74,21 +84,19 @@ const handler = NextAuth({
             }
           });
 
-          const existingUser = null; // Adjust logic as needed since 'user' is not part of the returned data
+          const existingUser = null;
           
           if (checkError) {
-            // If no existing user, create one
             try {
-              // Make a request to your signup API endpoint
               const response = await fetch(`${process.env.NEXTAUTH_URL}/api/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  username: user.name, // Use name from Google as username
+                  username: user.name,
                   email: user.email,
-                  password: '', // No password for Google signup
-                  wallet_address: null, // Can be updated later
-                  agreedToTerms: true, // This should be checked before initiating Google signin
+                  password: '',
+                  wallet_address: null,
+                  agreedToTerms: true,
                   profile_image_url: user.image,
                   isGoogleSignup: true
                 }),
@@ -129,16 +137,13 @@ const handler = NextAuth({
     }
   },
   pages: {
-    signIn: '/', // Redirect to home page after sign in
-    error: '/', // Redirect to home page on error
+    signIn: '/',
+    error: '/',
   },
   secret: process.env.NEXTAUTH_SECRET,
   session: {
-    strategy: 'jwt', // Use JWT for session handling
+    strategy: 'jwt',
   }
 });
 
-
-
-// Export the handler functions for App Router
 export { handler as GET, handler as POST };

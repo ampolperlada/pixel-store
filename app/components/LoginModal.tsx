@@ -75,52 +75,34 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   // Modified handleSubmit to use username/password login
   // In your handleSubmit function:
-const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-  event.preventDefault();
-  if (!validateForm()) return;
-
-  setIsSubmitting(true);
-  setFormErrors({});
-
-  try {
-    const usernameResponse = await fetch('/api/user/by-username', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: formData.username }),
-    });
-
-    const responseData = await usernameResponse.json();
-    
-    if (!usernameResponse.ok) {
-      throw new Error(
-        responseData.error || 
-        responseData.details || 
-        'Username lookup failed'
-      );
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!validateForm()) return;
+  
+    setIsSubmitting(true);
+    setFormErrors({});
+  
+    try {
+      const result = await signIn('credentials', {
+        username: formData.username, // Now sending username directly
+        password: formData.password,
+        redirect: false,
+      });
+  
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+  
+      handleClose();
+    } catch (error) {
+      console.error('Login error:', error);
+      setFormErrors({
+        submit: error instanceof Error ? error.message : 'Login failed. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const { email } = responseData;
-    
-    const result = await signIn('credentials', {
-      email,
-      password: formData.password,
-      redirect: false,
-    });
-
-    if (result?.error) {
-      throw new Error(result.error);
-    }
-
-    handleClose();
-  } catch (error) {
-    console.error('Full login error:', error);
-    setFormErrors({
-      submit: error instanceof Error ? error.message : 'Login failed. Please try again.'
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
   
 
   const handleGoogleLogin = () => {
