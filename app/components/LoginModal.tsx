@@ -81,40 +81,39 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setIsSubmitting(true);
   
     try {
-      // First we need to look up the user's email by username
+      // Option 1: If you want to keep username login
+      // First lookup email by username
       const usernameResponse = await fetch('/api/user/by-username', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: formData.username,
-        }),
-      });
-      
-      // Check if response is OK before trying to parse JSON
-      if (!usernameResponse.ok) {
-        const errorText = await usernameResponse.text();
-        console.error('API error:', errorText);
-        throw new Error(`Username lookup failed: ${usernameResponse.status}`);
-      }
-      
-      const usernameResult = await usernameResponse.json();
-      
-      if (!usernameResult.email) {
-        throw new Error('Invalid username or password');
-      }
-      
-      // Continue with login process...
-      const result = await login({
-        email: usernameResult.email,
-        password: formData.password,
+        body: JSON.stringify({ username: formData.username }),
       });
   
-      console.log('User logged in successfully');
+      if (!usernameResponse.ok) {
+        const errorData = await usernameResponse.json();
+        throw new Error(errorData.error || 'Username lookup failed');
+      }
+  
+      const { email } = await usernameResponse.json();
+  
+      // Then authenticate with email/password
+      const result = await signIn('credentials', {
+        email,
+        password: formData.password,
+        redirect: false,
+      });
+  
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+  
+      // Login successful
       handleClose();
+  
     } catch (error) {
       console.error('Login error:', error);
       setFormErrors({
-        submit: error instanceof Error ? error.message : 'Invalid credentials. Please try again.'
+        submit: error instanceof Error ? error.message : 'Login failed. Please try again.'
       });
     } finally {
       setIsSubmitting(false);
