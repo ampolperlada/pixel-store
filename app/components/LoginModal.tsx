@@ -89,19 +89,25 @@ const LoginModal: React.FC<LoginModalProps> = ({
         redirect: false,
       });
   
+      console.log('SignIn result:', result); // Add this line
+  
       if (result?.error) {
-        throw new Error(result.error);
+        // Parse Supabase error messages
+        const errorMessage = result.error.includes('Invalid login credentials')
+          ? 'Invalid username or password'
+          : result.error;
+        throw new Error(errorMessage);
       }
   
-      if (result?.ok) {
-        handleClose();
-      } else {
-        throw new Error("Login failed - no error returned");
+      if (!result?.ok) {
+        throw new Error('Authentication failed without error');
       }
+  
+      handleClose();
     } catch (error) {
       console.error('Login error:', error);
       setFormErrors({
-        submit: error instanceof Error ? error.message : 'Login failed. Please try again.'
+        submit: error instanceof Error ? error.message : 'Authentication failed'
       });
     } finally {
       setIsSubmitting(false);

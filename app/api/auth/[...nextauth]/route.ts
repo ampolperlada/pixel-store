@@ -27,40 +27,76 @@ const handler = NextAuth({
       },
       async authorize(credentials) {
         try {
+          // Validate credentials
           if (!credentials?.username || !credentials?.password) {
-            throw new Error("Username and password are required");
+            throw new Error("Both username and password are required");
           }
+    
+          console.log('Attempting login for username:', credentials.username);
           
-          // 1. Find user by username (with better error handling)
+          // 1. Find user by username with enhanced debugging
           const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('*')
+            .select('id, email, auth_user_id')
             .eq('username', credentials.username)
-            .maybeSingle(); // Use maybeSingle instead of single
+            .maybeSingle();
     
-          if (userError) throw userError;
-          if (!userData) throw new Error("Invalid username or password");
+          console.log('User lookup results:', { userData, userError });
     
-          // 2. Authenticate with Supabase using the found email
+          if (userError) {
+            console.error('Database error:', userError);
+            throw new Error("Service temporarily unavailable");
+          }
+    
+          if (!userData) {
+            console.warn('No user found for username:', credentials.username);
+            throw new Error("Invalid username or password");
+          }
+    
+          if (!userData.email) {
+            console.error('User record missing email:', userData);
+            throw new Error("Account configuration error");
+          }
+    
+          // 2. Authenticate with Supabase
+          console.log('Attempting authentication for email:', userData.email);
           const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: userData.email,
             password: credentials.password,
           });
     
-          if (authError) throw authError;
-          
-          if (authData.user) {
-            return {
-              id: authData.user.id,
-              email: authData.user.email,
-              name: credentials.username, // Use the provided username
-              image: authData.user.user_metadata?.avatar_url
-            };
+          console.log('Authentication results:', { authData, authError });
+    
+          if (authError) {
+            // Handle specific Supabase auth errors
+            if (authError.message.includes('Invalid login credentials')) {
+              throw new Error("Invalid username or password");
+            }
+            throw new Error(`Authentication failed: ${authError.message}`);
           }
-          
-          throw new Error("Authentication failed");
+    
+          if (!authData?.user) {
+            throw new Error("Authentication failed - no user data returned");
+          }
+    
+          // 3. Verify user IDs match if using separate tables
+          if (userData.auth_user_id && userData.auth_user_id !== authData.user.id) {
+            console.error('User ID mismatch:', {
+              localId: userData.auth_user_id,
+              authId: authData.user.id
+            });
+            throw new Error("Account verification failed");
+          }
+    
+          return {
+            id: authData.user.id,
+            email: authData.user.email,
+            name: credentials.username,
+            image: authData.user.user_metadata?.avatar_url
+          };
+    
         } catch (error) {
-          console.error("Auth error:", error);
+          console.error("Authentication error:", error);
           throw error; // Rethrow to show error in UI
         }
       }
