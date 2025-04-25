@@ -90,13 +90,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
         }),
       });
       
+      // Check if response is OK before trying to parse JSON
+      if (!usernameResponse.ok) {
+        const errorText = await usernameResponse.text();
+        console.error('API error:', errorText);
+        throw new Error(`Username lookup failed: ${usernameResponse.status}`);
+      }
+      
       const usernameResult = await usernameResponse.json();
       
-      if (!usernameResponse.ok || !usernameResult.email) {
+      if (!usernameResult.email) {
         throw new Error('Invalid username or password');
       }
       
-      // Now we can login with the email and password
+      // Continue with login process...
       const result = await login({
         email: usernameResult.email,
         password: formData.password,
@@ -107,7 +114,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     } catch (error) {
       console.error('Login error:', error);
       setFormErrors({
-        submit: 'Invalid credentials. Please try again.'
+        submit: error instanceof Error ? error.message : 'Invalid credentials. Please try again.'
       });
     } finally {
       setIsSubmitting(false);
