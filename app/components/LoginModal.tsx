@@ -84,30 +84,30 @@ const LoginModal: React.FC<LoginModalProps> = ({
   
     try {
       const result = await signIn('credentials', {
-        username: formData.username,
+        username: formData.username.trim(),
         password: formData.password,
         redirect: false,
       });
   
-      console.log('SignIn result:', result); // Add this line
-  
       if (result?.error) {
-        // Parse Supabase error messages
-        const errorMessage = result.error.includes('Invalid login credentials')
-          ? 'Invalid username or password'
-          : result.error;
-        throw new Error(errorMessage);
+        // Handle specific error cases
+        const errorMap: Record<string, string> = {
+          'Invalid credentials': 'Invalid username or password',
+          'Database timeout': 'Service is busy, please try again',
+          'Authentication service unavailable': 'Login service is currently unavailable',
+          'Database service unavailable': 'System maintenance in progress'
+        };
+        
+        throw new Error(errorMap[result.error] || 'Login failed. Please try again.');
       }
   
-      if (!result?.ok) {
-        throw new Error('Authentication failed without error');
+      if (result?.ok) {
+        handleClose();
+        router.refresh();
       }
-  
-      handleClose();
     } catch (error) {
-      console.error('Login error:', error);
       setFormErrors({
-        submit: error instanceof Error ? error.message : 'Authentication failed'
+        submit: error instanceof Error ? error.message : 'Login failed'
       });
     } finally {
       setIsSubmitting(false);

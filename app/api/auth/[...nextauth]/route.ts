@@ -1,8 +1,26 @@
-// app/api/auth/[...nextauth]/route.ts
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { supabase } from '../../../lib/supabase';
+
+// Health check function (run once at startup)
+async function checkDatabaseHealth() {
+  try {
+    const { data, error } = await supabase.rpc('health');
+    if (error) throw error;
+    console.log('Database health check:', data);
+    return true;
+  } catch (error) {
+    console.error('Database health check failed:', error);
+    return false;
+  }
+}
+
+// Initialize health status
+let isDatabaseHealthy = false;
+checkDatabaseHealth().then(healthy => {
+  isDatabaseHealthy = healthy;
+});
 
 const handler = NextAuth({
   providers: [
@@ -26,159 +44,106 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        // Validate input
+        if (!credentials?.username?.trim() || !credentials?.password) {
+          throw new Error("Username and password are required");
+        }
+
         try {
-          // Validate credentials
-          if (!credentials?.username || !credentials?.password) {
-            throw new Error("Both username and password are required");
+          // Check database health
+          if (!isDatabaseHealthy) {
+            const recheck = await checkDatabaseHealth();
+            if (!recheck) throw new Error("Service temporarily unavailable");
+            isDatabaseHealthy = true;
           }
-    
-          console.log('Attempting login for username:', credentials.username);
-          
-          // 1. Find user by username with enhanced debugging
+
+          // Case-insensitive username search (using the index we created)
           const { data: userData, error: userError } = await supabase
             .from('users')
             .select('id, email, auth_user_id')
-            .eq('username', credentials.username)
+            .ilike('username', credentials.username.trim()) // Uses the index
             .maybeSingle();
-    
-          console.log('User lookup results:', { userData, userError });
-    
+
           if (userError) {
-            console.error('Database error:', userError);
+            console.error('User lookup error:', userError);
             throw new Error("Service temporarily unavailable");
           }
-    
+
           if (!userData) {
-            console.warn('No user found for username:', credentials.username);
-            throw new Error("Invalid username or password");
+            // Generic error to prevent username enumeration
+            throw new Error("Invalid credentials");
           }
-    
+
           if (!userData.email) {
-            console.error('User record missing email:', userData);
+            console.error('User missing email:', userData);
             throw new Error("Account configuration error");
           }
-    
-          // 2. Authenticate with Supabase
-          console.log('Attempting authentication for email:', userData.email);
-          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email: userData.email,
-            password: credentials.password,
-          });
-    
-          console.log('Authentication results:', { authData, authError });
-    
+
+          // Authenticate with retry logic
+          let authData = null;
+          let authError = null;
+          
+          for (let attempt = 0; attempt < 2; attempt++) {
+            const result = await supabase.auth.signInWithPassword({
+              email: userData.email,
+              password: credentials.password,
+            });
+            
+            authData = result.data;
+            authError = result.error;
+            
+            if (!authError) break;
+            if (attempt === 0) await new Promise(r => setTimeout(r, 500)); // Short delay before retry
+          }
+
           if (authError) {
-            // Handle specific Supabase auth errors
             if (authError.message.includes('Invalid login credentials')) {
-              throw new Error("Invalid username or password");
+              throw new Error("Invalid credentials");
             }
-            throw new Error(`Authentication failed: ${authError.message}`);
+            console.error('Auth error:', authError);
+            throw new Error("Authentication service unavailable");
           }
-    
+
           if (!authData?.user) {
-            throw new Error("Authentication failed - no user data returned");
+            throw new Error("Authentication failed");
           }
-    
-          // 3. Verify user IDs match if using separate tables
+
+          // Verify user ID consistency if using separate tables
           if (userData.auth_user_id && userData.auth_user_id !== authData.user.id) {
-            console.error('User ID mismatch:', {
-              localId: userData.auth_user_id,
+            console.error('ID mismatch:', {
+              storedId: userData.auth_user_id,
               authId: authData.user.id
             });
             throw new Error("Account verification failed");
           }
-    
+
           return {
             id: authData.user.id,
             email: authData.user.email,
-            name: credentials.username,
+            name: credentials.username.trim(),
             image: authData.user.user_metadata?.avatar_url
           };
-    
+
         } catch (error) {
-          console.error("Authentication error:", error);
-          throw error; // Rethrow to show error in UI
+          console.error("Auth error:", {
+            error,
+            username: credentials.username,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Return sanitized error messages
+          if (error instanceof Error) {
+            // Preserve specific auth errors
+            if (error.message === "Invalid credentials") throw error;
+            // Generic error for others
+            throw new Error("Authentication service unavailable");
+          }
+          throw new Error("Unexpected error occurred");
         }
       }
     }),
   ],
-  callbacks: {
-    async signIn({ user, account }) {
-      console.log("Sign in attempt:", { user, provider: account?.provider });
-      
-      if (account?.provider === 'google') {
-        try {
-          // Existing Google OAuth flow remains unchanged
-          const { data, error: checkError } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-              queryParams: {
-                access_type: 'offline',
-                prompt: 'consent',
-              },
-            }
-          });
-
-          const existingUser = null;
-          
-          if (checkError) {
-            try {
-              const response = await fetch(`${process.env.NEXTAUTH_URL}/api/signup`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  username: user.name,
-                  email: user.email,
-                  password: '',
-                  wallet_address: null,
-                  agreedToTerms: true,
-                  profile_image_url: user.image,
-                  isGoogleSignup: true
-                }),
-              });
-              
-              if (!response.ok) {
-                console.error("Signup API error:", await response.text());
-                return false;
-              }
-            } catch (error) {
-              console.error("Detailed error in Google signup callback:", error);
-              return false;
-            }
-          }
-          
-          return true;
-        } catch (error) {
-          console.error("Error during Google auth:", error);
-          return false;
-        }
-      }
-      return true;
-    },
-    async session({ session, token }) {
-      if (token && token.sub) {
-        session.user = {
-          ...session.user,
-          id: token.sub
-        };
-      }
-      return session;
-    },
-    async jwt({ token, user }) {
-      if (user) {
-        token.sub = user.id;
-      }
-      return token;
-    }
-  },
-  pages: {
-    signIn: '/',
-    error: '/',
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-  session: {
-    strategy: 'jwt',
-  }
+  // ... (keep your existing callbacks, pages, and session config)
 });
 
 export { handler as GET, handler as POST };
