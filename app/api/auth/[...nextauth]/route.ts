@@ -1,4 +1,3 @@
-// app/api/auth/[...nextauth]/route.ts
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -46,60 +45,53 @@ const handler = NextAuth({
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
+        if (!credentials?.username?.trim() || !credentials?.password) {
+          throw new Error('Username and password are required');
+        }
+
+        if (!isDatabaseHealthy) {
+          throw new Error('Database service unavailable');
+        }
+
         try {
-          // 1. Validate input
-          if (!credentials?.username?.trim() || !credentials?.password) {
-            console.log('[Auth] Missing credentials');
-            throw new Error('Username and password are required');
-          }
-
-          // 2. Check database health
-          if (!isDatabaseHealthy) {
-            throw new Error('Database service unavailable');
-          }
-
-          // 3. Find user (case-sensitive exact match)
-          console.log(`[Auth] Searching for user: "${credentials.username.trim()}"`);
+          // 1. Verify user exists
           const { data: user, error } = await supabase
             .from('users')
             .select('*')
             .eq('username', credentials.username.trim())
-            .maybeSingle();
+            .single();
 
           if (error || !user) {
-            console.log('[Auth] User not found');
-            throw new Error('Invalid credentials');
+            console.error('[DB] User lookup error:', error);
+            throw new Error('Invalid username or password');
           }
 
-          // 4. Debug password comparison
-          console.log('[Auth] Comparing passwords...');
-          console.log('Input password:', credentials.password);
-          console.log('Stored hash:', user.password_hash);
-          
-          // 5. Verify password
+          // 2. Validate hash structure
+          if (!user.password_hash.startsWith('$2a$') && !user.password_hash.startsWith('$2b$')) {
+            throw new Error('Invalid password hash format');
+          }
+
+          // 3. Compare password
           const isValid = await bcrypt.compare(
-            credentials.password.trim(), // Important: trim whitespace
+            credentials.password.trim(),
             user.password_hash
           );
 
-          console.log('[Auth] Password match:', isValid);
-
           if (!isValid) {
-            console.log('[Auth] Password mismatch');
-            throw new Error('Invalid credentials');
+            throw new Error('Invalid username or password');
           }
 
-          // 6. Return user data
-          console.log('[Auth] Authentication successful for:', user.username);
+          // 4. Return the user session object
           return {
             id: user.user_id,
             email: user.email,
-            name: user.username
+            name: user.username,
+            image: user.avatar_url ?? null // if you have avatar_url field
           };
 
         } catch (error) {
-          console.error('[Auth Error]', error);
-          throw new Error('Invalid credentials');
+          console.error('[Authorize][Failure]', error);
+          throw new Error('Invalid username or password');
         }
       }
     })
