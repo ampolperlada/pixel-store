@@ -3,118 +3,113 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { supabase } from '../../../lib/supabase';
 
-// Health check function (run once at startup)
+// Health check function (run once and at intervals)
 async function checkDatabaseHealth() {
   try {
     const { data, error } = await supabase.rpc('health');
     if (error) throw error;
-    console.log('Database health check:', data);
+    console.log('[HealthCheck] Database is healthy:', data);
     return true;
   } catch (error) {
-    console.error('Database health check failed:', error);
+    console.error('[HealthCheck] Database check failed:', error);
     return false;
   }
 }
 
-// Initialize health status
+// Initialize and keep refreshing health status every 5 minutes
 let isDatabaseHealthy = false;
-checkDatabaseHealth().then(healthy => {
-  isDatabaseHealthy = healthy;
-});
+const refreshHealthStatus = async () => {
+  isDatabaseHealthy = await checkDatabaseHealth();
+};
+refreshHealthStatus();
+setInterval(refreshHealthStatus, 5 * 60 * 1000); // Refresh every 5 minutes
 
 const handler = NextAuth({
   providers: [
+    // Google OAuth Provider
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code",
-          scope: "openid email profile"
+          prompt: 'consent',
+          access_type: 'offline',
+          response_type: 'code',
+          scope: 'openid email profile'
         }
       }
     }),
 
+    // Credentials Provider (Username/Password)
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" }
+        username: { label: 'Username', type: 'text' },
+        password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        // Validate input
         if (!credentials?.username?.trim() || !credentials?.password) {
-          throw new Error("Username and password are required");
+          throw new Error('Username and password are required');
         }
 
         try {
-          // Check database health
           if (!isDatabaseHealthy) {
             const recheck = await checkDatabaseHealth();
-            if (!recheck) throw new Error("Service temporarily unavailable");
+            if (!recheck) throw new Error('Service temporarily unavailable');
             isDatabaseHealthy = true;
           }
 
-          // Case-insensitive username search (using the index we created)
           const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id, email, auth_user_id')
-            .ilike('username', credentials.username.trim()) // Uses the index
+            .select('user_id, email, id')
+            .ilike('username', credentials.username.trim())
             .maybeSingle();
 
           if (userError) {
-            console.error('User lookup error:', userError);
-            throw new Error("Service temporarily unavailable");
+            console.error('[DB] User lookup error:', userError);
+            throw new Error('Service temporarily unavailable');
           }
 
           if (!userData) {
-            // Generic error to prevent username enumeration
-            throw new Error("Invalid credentials");
+            throw new Error('Invalid credentials');
           }
 
           if (!userData.email) {
-            console.error('User missing email:', userData);
-            throw new Error("Account configuration error");
+            console.error('[DB] User missing email:', userData);
+            throw new Error('Account configuration error');
           }
 
-          // Authenticate with retry logic
+          // Try authenticating (with one retry on failure)
           let authData = null;
           let authError = null;
-          
+
           for (let attempt = 0; attempt < 2; attempt++) {
             const result = await supabase.auth.signInWithPassword({
               email: userData.email,
-              password: credentials.password,
+              password: credentials.password
             });
-            
+
             authData = result.data;
             authError = result.error;
-            
-            if (!authError) break;
-            if (attempt === 0) await new Promise(r => setTimeout(r, 500)); // Short delay before retry
-          }
 
-          if (authError) {
-            if (authError.message.includes('Invalid login credentials')) {
-              throw new Error("Invalid credentials");
-            }
-            console.error('Auth error:', authError);
-            throw new Error("Authentication service unavailable");
+            if (!authError && authData?.user) break;
+            if (attempt === 0) await new Promise(r => setTimeout(r, 500));
           }
 
           if (!authData?.user) {
-            throw new Error("Authentication failed");
+            if (authError?.message?.includes('Invalid login credentials')) {
+              throw new Error('Invalid credentials');
+            }
+            console.error('[Auth] No user returned or unknown error:', authError);
+            throw new Error('Authentication service unavailable');
           }
 
-          // Verify user ID consistency if using separate tables
-          if (userData.auth_user_id && userData.auth_user_id !== authData.user.id) {
-            console.error('ID mismatch:', {
-              storedId: userData.auth_user_id,
+          if (userData.id && userData.id !== authData.user.id) {
+            console.error('[Security] ID mismatch:', {
+              storedId: userData.id,
               authId: authData.user.id
             });
-            throw new Error("Account verification failed");
+            throw new Error('Account verification failed');
           }
 
           return {
@@ -125,25 +120,32 @@ const handler = NextAuth({
           };
 
         } catch (error) {
-          console.error("Auth error:", {
+          console.error('[Auth][Failure]', {
             error,
             username: credentials.username,
             timestamp: new Date().toISOString()
           });
-          
-          // Return sanitized error messages
+
           if (error instanceof Error) {
-            // Preserve specific auth errors
-            if (error.message === "Invalid credentials") throw error;
-            // Generic error for others
-            throw new Error("Authentication service unavailable");
+            if (error.message === 'Invalid credentials') throw error;
+            throw new Error('Authentication service unavailable');
           }
-          throw new Error("Unexpected error occurred");
+          throw new Error('Unexpected error occurred');
         }
       }
-    }),
+    })
   ],
-  // ... (keep your existing callbacks, pages, and session config)
+
+  session: {
+    strategy: 'jwt'
+  },
+
+  callbacks: {
+    async session({ session, token }) {
+      session.user.id = token.sub;
+      return session;
+    }
+  }
 });
 
 export { handler as GET, handler as POST };
