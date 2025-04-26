@@ -62,12 +62,18 @@ const handler = NextAuth({
             isDatabaseHealthy = true;
           }
 
+          // Inside your authorize function, add these logs:
+          console.log('[Auth] Looking up user:', credentials.username.trim());
+
           // Fetch user data including password hash
           const { data, error: userError } = await supabase
             .from('users')
             .select('user_id, email, password_hash, username')
             .ilike('username', credentials.username.trim())
             .maybeSingle();
+
+          // After fetching user data:
+          console.log('[Auth] User lookup result:', data ? 'Found' : 'Not found');
 
           if (userError) {
             console.error('[DB] User lookup error:', userError);
@@ -86,17 +92,23 @@ const handler = NextAuth({
             throw new Error('Account configuration error');
           }
 
+          // Before password comparison:
+          console.log('[Auth] Attempting password comparison');
+
           // Compare password
           const isValidPassword = await bcrypt.compare(
             credentials.password,
             userData.password_hash
           );
 
-      // Improve error handling
-if (!isValidPassword) {
-  console.log('[Auth] Password mismatch for:', userData.username);
-  throw new Error('Invalid credentials'); // Make sure this matches what your frontend expects
-}
+          // After password comparison:
+          console.log('[Auth] Password comparison result:', isValidPassword ? 'Success' : 'Failed');
+
+          // Improve error handling
+          if (!isValidPassword) {
+            console.log('[Auth] Password mismatch for:', userData.username);
+            throw new Error('Invalid credentials'); // Make sure this matches what your frontend expects
+          }
 
           // ✅ Login success
           return {
@@ -111,8 +123,6 @@ if (!isValidPassword) {
             username: credentials.username,
             timestamp: new Date().toISOString()
           });
-
-         
 
           if (error instanceof Error) {
             if (error.message === 'Invalid credentials') throw error;

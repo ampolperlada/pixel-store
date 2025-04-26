@@ -88,6 +88,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
         password: formData.password,
         redirect: false,
       });
+      
+      console.log('[Login] SignIn result:', {
+        ok: result?.ok,
+        error: result?.error,
+        status: result?.status
+      });
 
       if (result?.error) {
         console.error("Actual error from server:", result.error);
