@@ -48,89 +48,112 @@ const handler = NextAuth({
         username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' }
       },
-      async authorize(credentials) {
-        if (!credentials?.username?.trim() || !credentials?.password) {
-          throw new Error('Username and password are required');
-        }
+     // In your NextAuth authorize function, add these additional debug steps:
 
-        let userData = null;
+async authorize(credentials) {
+  if (!credentials?.username?.trim() || !credentials?.password) {
+    throw new Error('Username and password are required');
+  }
 
-        try {
-          if (!isDatabaseHealthy) {
-            const recheck = await checkDatabaseHealth();
-            if (!recheck) throw new Error('Service temporarily unavailable');
-            isDatabaseHealthy = true;
-          }
+  let userData = null;
 
-          // Inside your authorize function, add these logs:
-          console.log('[Auth] Looking up user:', credentials.username.trim());
+  try {
+    if (!isDatabaseHealthy) {
+      const recheck = await checkDatabaseHealth();
+      if (!recheck) throw new Error('Service temporarily unavailable');
+      isDatabaseHealthy = true;
+    }
 
-          // Fetch user data including password hash
-          const { data, error: userError } = await supabase
-            .from('users')
-            .select('user_id, email, password_hash, username')
-            .ilike('username', credentials.username.trim())
-            .maybeSingle();
+    // Debug: Get all usernames from the database for comparison
+    const { data: allUsers, error: listError } = await supabase
+      .from('users')
+      .select('username')
+      .limit(10);
+    
+    console.log('[Debug] Available usernames in database:', 
+      allUsers?.map(u => `"${u.username}"`).join(', '));
+    console.log('[Debug] Looking for username:', `"${credentials.username.trim()}"`);
+    
+    // Try using exact match instead of ilike
+    console.log('[Debug] Trying exact match query');
+    const { data: exactMatch, error: exactError } = await supabase
+      .from('users')
+      .select('user_id, email, password_hash, username')
+      .eq('username', credentials.username.trim())
+      .maybeSingle();
+      
+    console.log('[Debug] Exact match result:', exactMatch ? 'Found' : 'Not found');
+    
+    // Original ilike query
+    console.log('[Auth] Looking up user (with ilike):', credentials.username.trim());
+    const { data, error: userError } = await supabase
+      .from('users')
+      .select('user_id, email, password_hash, username')
+      .ilike('username', credentials.username.trim())
+      .maybeSingle();
 
-          // After fetching user data:
-          console.log('[Auth] User lookup result:', data ? 'Found' : 'Not found');
+    console.log('[Auth] User lookup result:', data ? 'Found' : 'Not found');
 
-          if (userError) {
-            console.error('[DB] User lookup error:', userError);
-            throw new Error('Service temporarily unavailable');
-          }
+    if (userError) {
+      console.error('[DB] User lookup error:', userError);
+      throw new Error('Service temporarily unavailable');
+    }
 
-          if (!data) {
-            console.log('[Auth] No user found');
-            throw new Error('Invalid credentials');
-          }
+    // Use the exact match if available, otherwise use ilike result
+    const finalUserData = exactMatch || data;
+    
+    if (!finalUserData) {
+      console.log('[Auth] No user found with either query method');
+      throw new Error('Invalid credentials');
+    }
 
-          userData = data;
+    userData = finalUserData;
+    console.log('[Debug] Found user:', userData.username);
 
-          if (!userData?.password_hash) {
-            console.error('[Auth] Missing password hash for user:', userData);
-            throw new Error('Account configuration error');
-          }
+    if (!userData?.password_hash) {
+      console.error('[Auth] Missing password hash for user:', userData);
+      throw new Error('Account configuration error');
+    }
 
-          // Before password comparison:
-          console.log('[Auth] Attempting password comparison');
+    // Before password comparison:
+    console.log('[Auth] Attempting password comparison');
 
-          // Compare password
-          const isValidPassword = await bcrypt.compare(
-            credentials.password,
-            userData.password_hash
-          );
+    // Compare password
+    const isValidPassword = await bcrypt.compare(
+      credentials.password,
+      userData.password_hash
+    );
 
-          // After password comparison:
-          console.log('[Auth] Password comparison result:', isValidPassword ? 'Success' : 'Failed');
+    // After password comparison:
+    console.log('[Auth] Password comparison result:', isValidPassword ? 'Success' : 'Failed');
 
-          // Improve error handling
-          if (!isValidPassword) {
-            console.log('[Auth] Password mismatch for:', userData.username);
-            throw new Error('Invalid credentials'); // Make sure this matches what your frontend expects
-          }
+    // Improve error handling
+    if (!isValidPassword) {
+      console.log('[Auth] Password mismatch for:', userData.username);
+      throw new Error('Invalid credentials');
+    }
 
-          // ✅ Login success
-          return {
-            id: userData.user_id,
-            email: userData.email,
-            name: userData.username
-          };
+    // ✅ Login success
+    return {
+      id: userData.user_id,
+      email: userData.email,
+      name: userData.username
+    };
 
-        } catch (error) {
-          console.error('[Auth][Failure]', {
-            error,
-            username: credentials.username,
-            timestamp: new Date().toISOString()
-          });
+  } catch (error) {
+    console.error('[Auth][Failure]', {
+      error,
+      username: credentials.username,
+      timestamp: new Date().toISOString()
+    });
 
-          if (error instanceof Error) {
-            if (error.message === 'Invalid credentials') throw error;
-            throw new Error('Authentication service unavailable');
-          }
-          throw new Error('Unexpected error occurred');
-        }
-      }
+    if (error instanceof Error) {
+      if (error.message === 'Invalid credentials') throw error;
+      throw new Error('Authentication service unavailable');
+    }
+    throw new Error('Unexpected error occurred');
+  }
+}
     })
   ],
 
