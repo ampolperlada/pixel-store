@@ -51,51 +51,55 @@ const handler = NextAuth({
         if (!credentials?.username?.trim() || !credentials?.password) {
           throw new Error('Username and password are required');
         }
-
+      
+        // ✅ Declare these outside so they can be accessed in the catch block
+        let userData = null;
+        let authData = null;
+        let authError = null;
+      
         try {
           if (!isDatabaseHealthy) {
             const recheck = await checkDatabaseHealth();
             if (!recheck) throw new Error('Service temporarily unavailable');
             isDatabaseHealthy = true;
           }
-
-          const { data: userData, error: userError } = await supabase
+      
+          const { data, error: userError } = await supabase
             .from('users')
-            .select('user_id, email, id')
+            .select('user_id, email')
             .ilike('username', credentials.username.trim())
             .maybeSingle();
-
+      
+          userData = data;
+      
           if (userError) {
             console.error('[DB] User lookup error:', userError);
             throw new Error('Service temporarily unavailable');
           }
-
+      
           if (!userData) {
             throw new Error('Invalid credentials');
           }
-
+      
           if (!userData.email) {
             console.error('[DB] User missing email:', userData);
             throw new Error('Account configuration error');
           }
-
+      
           // Try authenticating (with one retry on failure)
-          let authData = null;
-          let authError = null;
-
           for (let attempt = 0; attempt < 2; attempt++) {
             const result = await supabase.auth.signInWithPassword({
               email: userData.email,
               password: credentials.password
             });
-
+      
             authData = result.data;
             authError = result.error;
-
+      
             if (!authError && authData?.user) break;
             if (attempt === 0) await new Promise(r => setTimeout(r, 500));
           }
-
+      
           if (!authData?.user) {
             if (authError?.message?.includes('Invalid login credentials')) {
               throw new Error('Invalid credentials');
@@ -103,29 +107,37 @@ const handler = NextAuth({
             console.error('[Auth] No user returned or unknown error:', authError);
             throw new Error('Authentication service unavailable');
           }
-
-          if (userData.id && userData.id !== authData.user.id) {
+      
+          if (userData.user_id && userData.user_id !== authData.user.id) {
             console.error('[Security] ID mismatch:', {
-              storedId: userData.id,
+              storedId: userData.user_id,
               authId: authData.user.id
             });
             throw new Error('Account verification failed');
           }
-
+      
           return {
             id: authData.user.id,
             email: authData.user.email,
             name: credentials.username.trim(),
             image: authData.user.user_metadata?.avatar_url
           };
-
+      
         } catch (error) {
           console.error('[Auth][Failure]', {
             error,
             username: credentials.username,
             timestamp: new Date().toISOString()
           });
-
+      
+          // ✅ Debug output with declared vars
+          console.log('🧪 Debug info:', {
+            credentials,
+            userData,
+            authData,
+            authError
+          });
+      
           if (error instanceof Error) {
             if (error.message === 'Invalid credentials') throw error;
             throw new Error('Authentication service unavailable');
