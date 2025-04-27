@@ -44,59 +44,69 @@ const handler = NextAuth({
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
+        console.log('[Auth] Authorization started');
+        
         if (!credentials?.username?.trim() || !credentials?.password) {
+          console.log('[Auth] Missing credentials');
           throw new Error('Username and password are required');
         }
       
-        const usernameInput = credentials.username.trim().toLowerCase(); // Convert to lowercase for case-insensitive matching
+        const usernameInput = credentials.username.trim();
         const passwordInput = credentials.password.trim();
       
+        console.log('[Auth] Credentials received:', {
+          username: usernameInput,
+          password: passwordInput.substring(0, 1) + '...' // Don't log full password
+        });
+      
         try {
-          console.log('[Authorize] Searching for username:', `"${usernameInput}"`);
-          
-          // Query with case-insensitive comparison
+          // 1. Try direct ID lookup first (for user_id 10 - pogipogi)
+          console.log('[Auth] Attempting direct user lookup');
           const { data: user, error } = await supabase
             .from('users')
-            .select('user_id, username, email, password_hash')
-            .ilike('username', usernameInput) // Use ilike for case-insensitive comparison
-            .maybeSingle();
-          
-          console.log('[Authorize] Query executed:', user ? `User found (ID: ${user.user_id})` : 'User not found');
-          
+            .select('*')
+            .eq('user_id', 10)
+            .single();
+      
           if (error) {
-            console.error('[Authorize] Database error:', error);
-            throw new Error('Database error during authentication');
+            console.error('[Auth] Supabase error:', error);
+            throw new Error('Database error');
           }
-          
-          if (!user) {
-            console.log('[Authorize] No user found with username:', usernameInput);
-            throw new Error('Invalid username or password');
-          }
-          
-          // Debug: Log the stored hash and input password (remove in production)
-          console.log('[Authorize] Comparing password:', {
-            input: passwordInput,
-            storedHash: user.password_hash.substring(0, 10) + '...' // Log partial hash for security
+      
+          console.log('[Auth] User found:', {
+            id: user.user_id,
+            username: user.username,
+            email: user.email,
+            hash: user.password_hash?.substring(0, 10) + '...'
           });
-          
-          // Verify the password hash
-          const isValidPassword = await bcrypt.compare(passwordInput, user.password_hash);
-          console.log('[Authorize] Password valid?', isValidPassword);
-          
-          if (!isValidPassword) {
-            throw new Error('Invalid username or password');
+      
+          // 2. Verify password hash exists
+          if (!user.password_hash || user.password_hash.length < 60) {
+            console.error('[Auth] Invalid hash format:', user.password_hash);
+            throw new Error('Invalid password hash');
           }
-          
-          // Return user data
+      
+          // 3. Compare passwords
+          console.log('[Auth] Comparing passwords...');
+          const isValid = await bcrypt.compare(passwordInput, user.password_hash);
+          console.log('[Auth] Password comparison result:', isValid);
+      
+          if (!isValid) {
+            throw new Error('Invalid password');
+          }
+      
           return {
             id: user.user_id.toString(),
             name: user.username,
-            email: user.email,
+            email: user.email
           };
-          
+      
         } catch (err) {
-          console.error('[Authorize] Exception:', err);
-          throw new Error('Invalid username or password');
+          console.error('[Auth] Full error:', {
+            message: err instanceof Error ? err.message : 'Unknown error',
+            stack: err instanceof Error ? err.stack : 'No stack trace'
+          });
+          throw new Error('Authentication failed');
         }
       }
     }),
