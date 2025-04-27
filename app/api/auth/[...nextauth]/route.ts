@@ -89,10 +89,12 @@ const handler = NextAuth({
           // 3. Compare passwords
           console.log('[Auth] Comparing passwords...');
           const isValid = await bcrypt.compare(passwordInput, user.password_hash);
-          console.log('[Auth] Password comparison result:', isValid);
-      
           if (!isValid) {
-            throw new Error('Invalid password');
+            console.error('Password mismatch', {
+              input: passwordInput,
+              storedHash: user.password_hash.substring(0, 10) + '...'
+            });
+            throw new Error('Invalid credentials');
           }
       
           return {
@@ -112,7 +114,13 @@ const handler = NextAuth({
     }),
   ],
   session: {
-    strategy: 'jwt'
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // 24 hours
+  },
+  jwt: {
+    secret: process.env.NEXTAUTH_SECRET,
+    maxAge: 30 * 24 * 60 * 60,
   },
   callbacks: {
     async session({ session, token }) {

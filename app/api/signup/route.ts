@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           { error: 'Password must be at least 8 characters' },
           { status: 400 }
-        )
+        );
+        
       }
 
       // Verify reCAPTCHA token
@@ -64,6 +65,11 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         )
       }
+
+      const sanitizeInput = (input: string) => input.trim().replace(/[^\w\s]/gi, '');
+
+// Usage:
+const cleanUsername = sanitizeInput(username);
 
       try {
         const recaptchaRes = await fetch(
