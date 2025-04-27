@@ -16,7 +16,7 @@ async function checkDatabaseHealth() {
   }
 }
 
-let isDatabaseHealthy = false;
+let isDatabaseHealthy = true; // Assume healthy at startup
 const refreshHealthStatus = async () => {
   isDatabaseHealthy = await checkDatabaseHealth();
 };
@@ -47,58 +47,75 @@ const handler = NextAuth({
         if (!credentials?.username?.trim() || !credentials?.password) {
           throw new Error('Username and password are required');
         }
-      
+    
         const usernameInput = credentials.username.trim();
         const passwordInput = credentials.password.trim();
-      
-        if (!isDatabaseHealthy) {
-          throw new Error('Database service unavailable');
-        }
-      
+    
         try {
-          // 1. Fetch user by username
-          const { data: user, error } = await supabase
+          // Looking at your schema, let's try the correct table
+          console.log('[Authorize] Looking up user:', usernameInput);
+          
+          // Try the main users table first
+          let { data: user, error } = await supabase
             .from('users')
             .select('*')
             .eq('username', usernameInput)
-            .single();
-      
-          console.log('[DEBUG] Username looked for:', usernameInput);
-          console.log('[DEBUG] Supabase user found:', user);
-      
-          if (error || !user) {
-            console.error('[DB] User lookup error:', error);
+            .maybeSingle();
+          
+          // Debug logging
+          console.log('[Authorize] Username lookup result:', user ? 'Found' : 'Not found');
+          
+          if (error) {
+            console.error('[Authorize] User lookup error:', error);
+            throw new Error('Database error during authentication');
+          }
+    
+          if (!user) {
+            console.error('[Authorize] User not found with username:', usernameInput);
             throw new Error('Invalid username or password');
           }
-      
-          if (!user.password_hash.startsWith('$2a$') && !user.password_hash.startsWith('$2b$')) {
-            throw new Error('Invalid password hash format');
+    
+          // Check if the password_hash field exists
+          if (!user.password_hash) {
+            console.error('[Authorize] No password hash found for user');
+            throw new Error('Account exists but cannot be accessed with password');
           }
-      
-          const isValidPassword = await bcrypt.compare(
-            passwordInput,
-            user.password_hash
-          );
-      
-          console.log('[DEBUG] Password valid?', isValidPassword);
-      
+    
+          // Validate password hash format
+          if (
+            !(
+              user.password_hash.startsWith('$2a$') ||
+              user.password_hash.startsWith('$2b$') ||
+              user.password_hash.startsWith('$2y$')
+            )
+          ) {
+            console.error('[Authorize] Invalid password hash format');
+            throw new Error('Invalid account configuration');
+          }
+    
+          // Validate password match
+          const isValidPassword = await bcrypt.compare(passwordInput, user.password_hash);
+          console.log('[Authorize] Password valid?', isValidPassword);
+    
           if (!isValidPassword) {
             throw new Error('Invalid username or password');
           }
-      
+    
+          // Identify the correct ID field based on your schema
+          const userId = user.id || user.user_id || user.uuid;
+          
           return {
-            id: user.user_id,
-            name: user.username,
-            email: user.email, // still provide email for NextAuth compatibility
-            image: user.avatar_url ?? null
+            id: userId,
+            name: user.username || user.name || usernameInput,
+            email: user.email || null,
+            image: user.avatar_url || user.avatar || null
           };
-      
+    
         } catch (err) {
-          console.error('[Authorize][Failure]', err);
+          console.error('[Authorize] Exception:', err);
           throw new Error('Invalid username or password');
         }
       }
-      
     })
   ],
   session: {
@@ -114,11 +131,10 @@ const handler = NextAuth({
   },
   pages: {
     signIn: '/login',
-    error: '/login?error=1'
+    error: '/login?error=CredentialsSignin'
   }
-
-  
 });
+
 function debug(...args: any[]) {
   if (process.env.NODE_ENV === 'development') {
     console.log('[DEBUG]', ...args);
