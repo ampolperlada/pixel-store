@@ -16,7 +16,7 @@ async function checkDatabaseHealth() {
   }
 }
 
-let isDatabaseHealthy = true; // Assume healthy at startup
+let isDatabaseHealthy = true;
 const refreshHealthStatus = async () => {
   isDatabaseHealthy = await checkDatabaseHealth();
 };
@@ -48,19 +48,20 @@ const handler = NextAuth({
           throw new Error('Username and password are required');
         }
       
-        const usernameInput = credentials.username.trim();
+        const usernameInput = credentials.username.trim().toLowerCase(); // Convert to lowercase for case-insensitive matching
         const passwordInput = credentials.password.trim();
       
         try {
-          // Query the users table with the exact column names from your schema
+          console.log('[Authorize] Searching for username:', `"${usernameInput}"`);
+          
+          // Query with case-insensitive comparison
           const { data: user, error } = await supabase
             .from('users')
             .select('user_id, username, email, password_hash')
-            .eq('username', usernameInput)
-            .maybeSingle(); // Use maybeSingle instead of single to prevent error when no user found
+            .ilike('username', usernameInput) // Use ilike for case-insensitive comparison
+            .maybeSingle();
           
-          console.log('[Authorize] Username input:', usernameInput);
-          console.log('[Authorize] Query result:', user ? 'User found' : 'User not found');
+          console.log('[Authorize] Query executed:', user ? `User found (ID: ${user.user_id})` : 'User not found');
           
           if (error) {
             console.error('[Authorize] Database error:', error);
@@ -72,6 +73,12 @@ const handler = NextAuth({
             throw new Error('Invalid username or password');
           }
           
+          // Debug: Log the stored hash and input password (remove in production)
+          console.log('[Authorize] Comparing password:', {
+            input: passwordInput,
+            storedHash: user.password_hash.substring(0, 10) + '...' // Log partial hash for security
+          });
+          
           // Verify the password hash
           const isValidPassword = await bcrypt.compare(passwordInput, user.password_hash);
           console.log('[Authorize] Password valid?', isValidPassword);
@@ -80,13 +87,11 @@ const handler = NextAuth({
             throw new Error('Invalid username or password');
           }
           
-          // Return user data with correct field names from your schema
+          // Return user data
           return {
-            id: user.user_id.toString(), // NextAuth expects a string ID
+            id: user.user_id.toString(),
             name: user.username,
             email: user.email,
-            // You don't have avatar_url in your users table based on the schema
-            // If you need profile image, you'll need to join with another table
           };
           
         } catch (err) {
@@ -112,11 +117,5 @@ const handler = NextAuth({
     error: '/login?error=CredentialsSignin'
   }
 });
-
-function debug(...args: any[]) {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[DEBUG]', ...args);
-  }
-}
 
 export { handler as GET, handler as POST };
