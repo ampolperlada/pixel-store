@@ -51,51 +51,52 @@ const handler = NextAuth({
           throw new Error('Username and password are required');
         }
       
-        const usernameInput = credentials.username.trim();
+        const usernameInput = credentials.username.trim().toLowerCase();
         const passwordInput = credentials.password.trim();
       
-        console.log('[Auth] Credentials received:', {
-          username: usernameInput,
-          password: passwordInput.substring(0, 1) + '...' // Don't log full password
-        });
-      
         try {
-          // 1. Try direct ID lookup first (for user_id 10 - pogipogi)
-          console.log('[Auth] Attempting direct user lookup');
-          const { data: user, error } = await supabase
+          // 1. First try with case-insensitive search
+          console.log('[Auth] Trying case-insensitive username search');
+          let { data: users, error } = await supabase
             .from('users')
             .select('*')
-            .eq('user_id', 10)
-            .single();
+            .ilike('username', `%${usernameInput}%`);
       
-          if (error) {
-            console.error('[Auth] Supabase error:', error);
-            throw new Error('Database error');
+          if (error) throw error;
+          
+          // 2. If no results, try direct ID lookup (temporary debug)
+          if (!users || users.length === 0) {
+            console.log('[Auth] Trying direct ID lookup for debugging');
+            const { data: debugUser } = await supabase
+              .from('users')
+              .select('*')
+              .eq('user_id', 10);
+            console.log('[Auth] Debug user lookup result:', debugUser);
+            users = debugUser;
           }
       
-          console.log('[Auth] User found:', {
-            id: user.user_id,
-            username: user.username,
-            email: user.email,
-            hash: user.password_hash?.substring(0, 10) + '...'
-          });
-      
-          // 2. Verify password hash exists
-          if (!user.password_hash || user.password_hash.length < 60) {
-            console.error('[Auth] Invalid hash format:', user.password_hash);
-            throw new Error('Invalid password hash');
-          }
-      
-          // 3. Compare passwords
-          console.log('[Auth] Comparing passwords...');
-          const isValid = await bcrypt.compare(passwordInput, user.password_hash);
-          if (!isValid) {
-            console.error('Password mismatch', {
-              input: passwordInput,
-              storedHash: user.password_hash.substring(0, 10) + '...'
-            });
+          // 3. Verify we found exactly one user
+          if (!users || users.length !== 1) {
+            console.log('[Auth] User not found or multiple users found');
             throw new Error('Invalid credentials');
           }
+      
+          const user = users[0];
+          console.log('[Auth] User found:', { 
+            id: user.user_id,
+            username: user.username 
+          });
+      
+          // 4. Verify password
+          if (!user.password_hash) {
+            console.error('[Auth] No password hash found');
+            throw new Error('Invalid credentials');
+          }
+      
+          const isValid = await bcrypt.compare(passwordInput, user.password_hash);
+          console.log('[Auth] Password comparison result:', isValid);
+          
+          if (!isValid) throw new Error('Invalid credentials');
       
           return {
             id: user.user_id.toString(),
@@ -104,10 +105,7 @@ const handler = NextAuth({
           };
       
         } catch (err) {
-          console.error('[Auth] Full error:', {
-            message: err instanceof Error ? err.message : 'Unknown error',
-            stack: err instanceof Error ? err.stack : 'No stack trace'
-          });
+          console.error('[Auth] Full error:', err);
           throw new Error('Authentication failed');
         }
       }
