@@ -121,17 +121,49 @@ const handler = NextAuth({
     maxAge: 30 * 24 * 60 * 60,
   },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
       }
       return session;
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.sub = user.id;
+      }
+      return token;
+    }
+  },
+  events: {
+    async signIn({ user, account, profile, isNewUser }) {
+      console.log('User signed in:', {
+        userId: user.id,
+        provider: account?.provider,
+        isNewUser
+      });
+    },
+    async signOut({ token, session }) {
+      console.log('User signed out:', { userId: token?.sub });
     }
   },
   pages: {
     signIn: '/login',
     error: '/login?error=CredentialsSignin'
-  }
+  },
+  // Additional recommended configuration
+  theme: {
+    colorScheme: "auto",
+    logo: "/logo.png", // Add your logo path
+  },
+  // Removed 'trustHost' as it is not a valid property of 'AuthOptions'
+  useSecureCookies: process.env.NODE_ENV === 'production'
 });
 
 export { handler as GET, handler as POST };

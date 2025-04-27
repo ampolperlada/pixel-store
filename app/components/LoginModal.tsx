@@ -28,7 +28,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const callbackUrl = searchParams?.get('callbackUrl') || '/';
   const { login } = useAuth();
   const [formData, setFormData] = useState({
-    username: '', // Changed from email to username
+    username: '',
     password: '',
     rememberMe: false,
   });
@@ -59,7 +59,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
-    // Validate username instead of email
     if (!formData.username) {
       errors.username = 'Username is required';
     }
@@ -73,60 +72,62 @@ const LoginModal: React.FC<LoginModalProps> = ({
     return Object.keys(errors).length === 0;
   };
 
-  // Modified handleSubmit to use username/password login
-  // In your handleSubmit function:
- // Replace the handleSubmit function in LoginModal.tsx with this improved version:
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
-const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-  event.preventDefault();
-  if (!validateForm()) return;
+    setIsSubmitting(true);
+    setFormErrors({});
 
-  setIsSubmitting(true);
-  setFormErrors({});
-
-  try {
-    console.log('[Login] Attempting login with username:', formData.username.trim());
-    
-    const result = await signIn('credentials', {
-      username: formData.username.trim(),
-      password: formData.password,
-      redirect: false,
-    });
-    
-    console.log('[Login] SignIn result:', {
-      ok: result?.ok,
-      error: result?.error,
-      status: result?.status
-    });
-
-    if (result?.error) {
-      console.error("Actual error from server:", result.error);
+    try {
+      console.log('[Login] Attempting login with username:', formData.username.trim());
       
-      // Handle specific error cases
-      const errorMap: Record<string, string> = {
-        'Invalid credentials': 'Invalid username or password',
-        'Database timeout': 'Service is busy, please try again',
-        'Authentication service unavailable': 'Login service is currently unavailable',
-        'Database service unavailable': 'System maintenance in progress'
-      };
+      const result = await signIn('credentials', {
+        username: formData.username.trim(),
+        password: formData.password,
+        redirect: false,
+        callbackUrl: callbackUrl
+      });
       
-      throw new Error(errorMap[result.error] || result.error || 'Login failed. Please try again.');
-    }
+      console.log('[Login] SignIn result:', {
+        ok: result?.ok,
+        error: result?.error,
+        status: result?.status
+      });
 
-    if (result?.ok) {
-      console.log('[Login] Login successful, redirecting...');
-      handleClose();
-      router.refresh();
+      if (result?.error) {
+        console.error("Actual error from server:", result.error);
+        
+        const errorMap: Record<string, string> = {
+          'Invalid credentials': 'Invalid username or password',
+          'Database timeout': 'Service is busy, please try again',
+          'Authentication service unavailable': 'Login service is currently unavailable',
+          'Database service unavailable': 'System maintenance in progress'
+        };
+        
+        throw new Error(errorMap[result.error] || result.error || 'Login failed. Please try again.');
+      }
+
+      if (result?.ok) {
+        console.log('[Login] Login successful, redirecting...');
+        if (result.url) {
+          // Use window.location for full page reload to ensure auth state is updated
+          window.location.href = result.url;
+        } else {
+          // Fallback to router if no URL provided
+          router.push(callbackUrl);
+          router.refresh();
+        }
+      }
+    } catch (error) {
+      console.error('[Login] Error during login:', error);
+      setFormErrors({
+        submit: error instanceof Error ? error.message : 'Login failed'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    console.error('[Login] Error during login:', error);
-    setFormErrors({
-      submit: error instanceof Error ? error.message : 'Login failed'
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleGoogleLogin = () => {
     signIn('google', { 
@@ -213,12 +214,12 @@ const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
             <div>
               <label className="block text-cyan-300 text-sm font-medium mb-1">USERNAME</label>
               <input
-                type="text"  // Changed from email to text type
-                name="username"  // Changed from email to username
+                type="text"
+                name="username"
                 value={formData.username}
                 onChange={handleInputChange}
                 className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                placeholder="Enter your username"  // Updated placeholder text
+                placeholder="Enter your username"
               />
               {formErrors.username && (
                 <p className="text-red-400 text-xs mt-1">{formErrors.username}</p>

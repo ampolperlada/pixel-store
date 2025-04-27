@@ -8,21 +8,22 @@ const PROTECTED_ROUTES = ['/explore', '/create'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  // Skip middleware for public routes and API/auth routes
+
+  // Always allow public routes
   if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
-  const token = await getToken({ 
+  // Try to retrieve the session token
+  const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET
   });
 
-  // Redirect to login if trying to access protected route without auth
+  // If trying to access a protected route and not authenticated
   if (PROTECTED_ROUTES.some(route => pathname.startsWith(route)) && !token) {
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
+    loginUrl.searchParams.set('callbackUrl', pathname); // after login, go back here
     return NextResponse.redirect(loginUrl);
   }
 
