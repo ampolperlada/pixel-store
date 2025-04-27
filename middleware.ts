@@ -3,18 +3,26 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+const PUBLIC_ROUTES = ['/login', '/signup', '/api/auth'];
+const PROTECTED_ROUTES = ['/explore', '/create'];
+
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request });
-  const { pathname, search } = request.nextUrl;
+  const { pathname } = request.nextUrl;
+  
+  // Skip middleware for public routes and API/auth routes
+  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
 
-  // Only protect /explore (server redirect), let /create handle it client-side
-  const protectedRoutes = ['/explore'];
-  const isProtected = protectedRoutes.some(route => pathname.startsWith(route));
+  const token = await getToken({ 
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET
+  });
 
-  if (!token && isProtected) {
-    const callbackUrl = `${pathname}${search}`;
+  // Redirect to login if trying to access protected route without auth
+  if (PROTECTED_ROUTES.some(route => pathname.startsWith(route)) && !token) {
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', callbackUrl);
+    loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -22,5 +30,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/explore', '/explore/:path*'], // removed /create
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
