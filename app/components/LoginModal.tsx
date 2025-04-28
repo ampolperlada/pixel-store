@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from './context/AuthContext';
+import Link from 'next/link';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -35,9 +36,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordStatus, setForgotPasswordStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
   const handleClose = () => {
-    router.push(callbackUrl);
+    onClose();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,6 +89,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       const result = await signIn('credentials', {
         username: formData.username.trim(),
         password: formData.password,
+        rememberMe: formData.rememberMe.toString(),
         redirect: false,
         callbackUrl: callbackUrl
       });
@@ -146,6 +151,37 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotPasswordEmail) {
+      setForgotPasswordStatus('error');
+      return;
+    }
+    
+    setForgotPasswordStatus('sending');
+    
+    try {
+      // This is where you would actually implement the password reset functionality
+      // by connecting to your Supabase or other backend service
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: forgotPasswordEmail }),
+      });
+      
+      if (response.ok) {
+        setForgotPasswordStatus('success');
+      } else {
+        setForgotPasswordStatus('error');
+      }
+    } catch (error) {
+      console.error('Error sending password reset:', error);
+      setForgotPasswordStatus('error');
+    }
+  };
+
   useEffect(() => {
     if (callbackUrl && callbackUrl !== '/') {
       console.log(`User is being redirected from: ${callbackUrl}`);
@@ -153,6 +189,85 @@ const LoginModal: React.FC<LoginModalProps> = ({
   }, [callbackUrl]);
 
   if (!isOpen) return null;
+
+  if (showForgotPassword) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div
+          className="absolute inset-0 bg-black/90 backdrop-blur-md transition-opacity duration-300"
+          onClick={() => setShowForgotPassword(false)}
+        ></div>
+        
+        <div className="relative w-full max-w-md bg-gradient-to-br from-gray-900 via-gray-800 to-black p-6 rounded-xl border border-cyan-500 shadow-lg shadow-cyan-500/20">
+          <button
+            onClick={() => setShowForgotPassword(false)}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            aria-label="Close"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          <h2 className="text-2xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+            Reset Password
+          </h2>
+          
+          {forgotPasswordStatus === 'success' ? (
+            <div className="text-center p-4">
+              <p className="text-green-400 mb-4">Password reset link sent!</p>
+              <p className="text-gray-300 mb-6">Check your email for instructions to reset your password.</p>
+              <button
+                onClick={() => setShowForgotPassword(false)}
+                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-2 px-6 rounded-lg font-medium transition-all duration-300"
+              >
+                Back to Login
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <p className="text-gray-300 mb-4">Enter your email address and we'll send you a link to reset your password.</p>
+              
+              <div>
+                <label className="block text-cyan-300 text-sm font-medium mb-1">EMAIL</label>
+                <input
+                  type="email"
+                  value={forgotPasswordEmail}
+                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                  className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+              
+              {forgotPasswordStatus === 'error' && (
+                <p className="text-red-400 text-sm text-center p-2 bg-red-900/20 border border-red-800/50 rounded">
+                  Failed to send reset link. Please try again.
+                </p>
+              )}
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(false)}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg font-medium transition-all duration-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={forgotPasswordStatus === 'sending'}
+                  className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-2 rounded-lg font-medium transition-all duration-300"
+                >
+                  {forgotPasswordStatus === 'sending' ? 'Sending...' : 'Send Reset Link'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -245,16 +360,21 @@ const LoginModal: React.FC<LoginModalProps> = ({
               <div className="flex items-center">
                 <input
                   type="checkbox"
+                  id="rememberMe"
                   name="rememberMe"
                   checked={formData.rememberMe}
                   onChange={handleInputChange}
                   className="w-4 h-4 border border-gray-600 rounded bg-gray-700 focus:ring-2 focus:ring-cyan-500"
                 />
-                <label className="ml-2 text-cyan-300">Remember me</label>
+                <label htmlFor="rememberMe" className="ml-2 text-cyan-300">Remember me</label>
               </div>
-              <a href="#" className="text-cyan-400 hover:underline">
+              <button 
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-cyan-400 hover:underline"
+              >
                 Forgot Password?
-              </a>
+              </button>
             </div>
 
             <div className="mt-4">
