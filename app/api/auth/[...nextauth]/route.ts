@@ -41,7 +41,8 @@ const handler = NextAuth({
       name: 'Credentials',
       credentials: {
         username: { label: 'Username', type: 'text' },
-        password: { label: 'Password', type: 'password' }
+        password: { label: 'Password', type: 'password' },
+        rememberMe: { label: 'Remember Me', type: 'checkbox' }
       },
       async authorize(credentials) {
         console.log('[Auth] Authorization started');
@@ -53,6 +54,7 @@ const handler = NextAuth({
       
         const usernameInput = credentials.username.trim().toLowerCase();
         const passwordInput = credentials.password.trim();
+        const rememberMe = credentials.rememberMe === 'true';
       
         try {
           // 1. First try with case-insensitive search
@@ -97,11 +99,24 @@ const handler = NextAuth({
           console.log('[Auth] Password comparison result:', isValid);
           
           if (!isValid) throw new Error('Invalid credentials');
+          
+          // 5. Update last_login_at timestamp
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ last_login_at: new Date().toISOString() })
+            .eq('user_id', user.user_id);
+            
+          if (updateError) {
+            console.error('[Auth] Failed to update last_login_at:', updateError);
+          } else {
+            console.log('[Auth] Updated last_login_at for user:', user.user_id);
+          }
       
           return {
             id: user.user_id.toString(),
             name: user.username,
-            email: user.email
+            email: user.email,
+            rememberMe: rememberMe
           };
       
         } catch (err) {
@@ -113,12 +128,12 @@ const handler = NextAuth({
   ],
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60, // 30 days by default
     updateAge: 24 * 60 * 60, // 24 hours
   },
   jwt: {
     secret: process.env.NEXTAUTH_SECRET,
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 30 * 24 * 60 * 60, // 30 days by default
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
@@ -137,6 +152,12 @@ const handler = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
+        
+        // Set custom token expiry based on rememberMe
+        if ((user as any).rememberMe === false) {
+          // If not "remember me", set to 1 day instead of 30
+          token.exp = Math.floor(Date.now() / 1000) + (24 * 60 * 60);
+        }
       }
       return token;
     }
@@ -148,6 +169,24 @@ const handler = NextAuth({
         provider: account?.provider,
         isNewUser
       });
+      
+      // Update last_login_at for social logins too
+      if (account?.provider === 'google') {
+        try {
+          const { error } = await supabase
+            .from('users')
+            .update({ last_login_at: new Date().toISOString() })
+            .eq('email', user.email);
+            
+          if (error) {
+            console.error('[Auth] Failed to update last_login_at for social login:', error);
+          } else {
+            console.log('[Auth] Updated last_login_at for social login user:', user.email);
+          }
+        } catch (err) {
+          console.error('[Auth] Error updating last_login_at for social login:', err);
+        }
+      }
     },
     async signOut({ token, session }) {
       console.log('User signed out:', { userId: token?.sub });
@@ -162,10 +201,7 @@ const handler = NextAuth({
     colorScheme: "auto",
     logo: "/logo.png", // Add your logo path
   },
-  // Removed 'trustHost' as it is not a valid property of 'AuthOptions'
   useSecureCookies: process.env.NODE_ENV === 'production'
 });
 
 export { handler as GET, handler as POST };
-
-
