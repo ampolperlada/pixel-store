@@ -194,16 +194,18 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
+  
+
   // Handle navigating to signup page
   const handleSwitchToSignup = () => {
+    // Always use the modal approach
     if (onSwitchToSignup) {
-      // If the parent component provided a callback, use it
       onSwitchToSignup();
     } else {
-      // Otherwise, use router navigation
-      router.push('/signup');
+      // Optional: Add a fallback that doesn't use routes
+      console.warn("No onSwitchToSignup callback provided");
+      // You could alternatively set up a modal context here
     }
-    // Close the current modal
     handleClose();
   };
 
@@ -451,15 +453,17 @@ const LoginModal: React.FC<LoginModalProps> = ({
           </button>
           
           <div className="mt-6 text-center md:hidden">
-            <p className="text-sm text-gray-500">
-              Don't have an account?{' '}
-              <button 
-                onClick={handleSwitchToSignup} 
-                className="text-cyan-400 hover:underline font-medium"
-              >
-                Sign up
-              </button>
-            </p>
+          <p className="text-sm text-gray-400 text-center mt-4">
+  Don't have an account?{" "}
+  <button
+    type="button"
+    onClick={handleSwitchToSignup}
+    className="text-cyan-400 hover:underline hover:text-cyan-300 transition-colors"
+  >
+    Sign up
+  </button>
+</p>
+
           </div>
         </div>
       </div>

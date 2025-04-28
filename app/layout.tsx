@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import "./globals.css";
 
 // Global context providers
@@ -12,10 +12,10 @@ import { SessionProvider } from 'next-auth/react';
 // Import your LoginModal component
 import LoginModal from './components/LoginModal';
 
+
 interface LayoutProps {
   children: ReactNode;
 }
-
 
 
 // Wrap this separately so we can access hooks
