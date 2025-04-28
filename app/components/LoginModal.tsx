@@ -41,6 +41,16 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [forgotPasswordStatus, setForgotPasswordStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
   const handleClose = () => {
+    // Clear form state
+    setFormData({
+      username: '',
+      password: '',
+      rememberMe: false,
+    });
+    setFormErrors({});
+    setCaptchaToken(null);
+    
+    // Call the provided onClose function
     onClose();
   };
 
@@ -154,15 +164,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotPasswordEmail) {
-      setForgotPasswordStatus('error');
+      setFormErrors({ forgotPasswordEmail: 'Email is required' });
       return;
     }
     
     setForgotPasswordStatus('sending');
     
     try {
-      // This is where you would actually implement the password reset functionality
-      // by connecting to your Supabase or other backend service
+      // Connect to your backend API route for password reset
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: {
@@ -171,15 +180,31 @@ const LoginModal: React.FC<LoginModalProps> = ({
         body: JSON.stringify({ email: forgotPasswordEmail }),
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
         setForgotPasswordStatus('success');
       } else {
+        console.error('Error response:', data);
         setForgotPasswordStatus('error');
       }
     } catch (error) {
       console.error('Error sending password reset:', error);
       setForgotPasswordStatus('error');
     }
+  };
+
+  // Handle navigating to signup page
+  const handleSwitchToSignup = () => {
+    if (onSwitchToSignup) {
+      // If the parent component provided a callback, use it
+      onSwitchToSignup();
+    } else {
+      // Otherwise, use router navigation
+      router.push('/signup');
+    }
+    // Close the current modal
+    handleClose();
   };
 
   useEffect(() => {
@@ -315,7 +340,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
             <p className="text-sm text-gray-500">
               Don't have an account?{' '}
               <button 
-                onClick={onSwitchToSignup} 
+                onClick={handleSwitchToSignup} 
                 className="text-cyan-400 hover:underline font-medium"
               >
                 Sign up
@@ -429,7 +454,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
             <p className="text-sm text-gray-500">
               Don't have an account?{' '}
               <button 
-                onClick={onSwitchToSignup} 
+                onClick={handleSwitchToSignup} 
                 className="text-cyan-400 hover:underline font-medium"
               >
                 Sign up
