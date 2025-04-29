@@ -23,6 +23,13 @@ async function getUserById(id) {
   });
 }
 
+// In models/User.js
+const userSchema = new mongoose.Schema({
+  // ... your existing fields ...
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
+});
+
 // Compare password function
 async function comparePassword(inputPassword, hashedPassword) {
   return await bcrypt.compare(inputPassword, hashedPassword);

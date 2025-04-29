@@ -30,6 +30,19 @@ const testTransport = async (transporter) => {
   }
 };
 
+export const sendPasswordResetEmail = async (email, resetToken) => {
+  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+  const subject = "Password Reset Request";
+  const html = `
+    <p>You requested a password reset for your Pixel Store account.</p>
+    <p>Click this link to reset your password (expires in 1 hour):</p>
+    <a href="${resetUrl}">${resetUrl}</a>
+    <p>If you didn't request this, please ignore this email.</p>
+  `;
+
+  return sendEmail(email, subject, html);
+};
+
 export const sendEmail = async (to, subject, html) => {
   try {
     // Validate configuration first
@@ -50,6 +63,8 @@ export const sendEmail = async (to, subject, html) => {
       logger: process.env.NODE_ENV === 'development',
       debug: process.env.NODE_ENV === 'development'
     });
+
+    
 
     // Test connection before sending
     if (!await testTransport(transporter)) {
