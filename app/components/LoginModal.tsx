@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from './context/AuthContext';
 import Link from 'next/link';
-import { useModal } from '../components/context/ModalContext';
 
 
 interface LoginModalProps {
@@ -16,7 +15,6 @@ interface LoginModalProps {
   onSwitchToSignup?: () => void;
 }
 
-const { openSignupModal, closeAllModals } = useModal();
 
 
 const GoogleReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {
@@ -203,10 +201,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   // Handle navigating to signup page
   const handleSwitchToSignup = () => {
-    closeAllModals();
-    openSignupModal();
+    if (onSwitchToSignup) {
+      onSwitchToSignup();
+    } else {
+      router.push('/signup');
+    }
   };
-
   
   
 

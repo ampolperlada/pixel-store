@@ -21,14 +21,13 @@ interface SignupModalProps {
   onSwitchToLogin?: () => void; // Add this prop to handle switching to login
 }
 
-const { openLoginModal, closeAllModals } = useModal();
 
 const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLogin }) => {
   const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    password: '',
+    password: '', 
     confirmPassword: '',
     agreeToTerms: false,
   });
