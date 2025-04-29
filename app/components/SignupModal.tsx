@@ -16,9 +16,10 @@ import { useRouter } from 'next/navigation';
 interface SignupModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSwitchToLogin?: () => void; // Add this prop to handle switching to login
 }
 
-const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
+const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLogin }) => {
   const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
@@ -163,47 +164,47 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
   };
 
   // In your SignupModal component
-const handleSignupSuccess = async () => {
-  // This should be passed from your auth context
-  // Replace with your actual user refresh logic or remove if unnecessary
-  console.warn('refreshUser function is not defined. Implement user refresh logic here if needed.');
-  onClose(); // Close the modal
-};
+  const handleSignupSuccess = async () => {
+    // This should be passed from your auth context
+    // Replace with your actual user refresh logic or remove if unnecessary
+    console.warn('refreshUser function is not defined. Implement user refresh logic here if needed.');
+    onClose(); // Close the modal
+  };
 
- // In your SignupModal.tsx component
- const handleGoogleSignup = async () => {
-  try {
-    if (!formData.agreeToTerms) {
-      setFormErrors({
-        agreeToTerms: 'You must agree to the Terms and Conditions'
+  // In your SignupModal.tsx component
+  const handleGoogleSignup = async () => {
+    try {
+      if (!formData.agreeToTerms) {
+        setFormErrors({
+          agreeToTerms: 'You must agree to the Terms and Conditions'
+        });
+        return;
+      }
+      
+      setIsSubmitting(true);
+      
+      // Sign in with Google via NextAuth
+      const result = await signIn('google', { 
+        redirect: false,
+        callbackUrl: window.location.origin 
       });
-      return;
+      
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      
+      // Close the modal if successful
+      if (!result?.error) {
+        onClose();
+      }
+    } catch (error) {
+      console.error('Error initiating Google signup:', error);
+      setFormErrors({ 
+        submit: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
+      });
+      setIsSubmitting(false);
     }
-    
-    setIsSubmitting(true);
-    
-    // Sign in with Google via NextAuth
-    const result = await signIn('google', { 
-      redirect: false,
-      callbackUrl: window.location.origin 
-    });
-    
-    if (result?.error) {
-      throw new Error(result.error);
-    }
-    
-    // Close the modal if successful
-    if (!result?.error) {
-      onClose();
-    }
-  } catch (error) {
-    console.error('Error initiating Google signup:', error);
-    setFormErrors({ 
-      submit: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
-    });
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleCaptchaChange = (token: string | null) => {
     setCaptchaToken(token);
@@ -214,6 +215,31 @@ const handleSignupSuccess = async () => {
         return newErrors;
       });
     }
+  };
+
+  // Handle switching to login modal
+  const handleSwitchToLogin = () => {
+    // Reset form state before switching
+    setFormData({
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      agreeToTerms: false,
+    });
+    setFormErrors({});
+    setCaptchaToken(null);
+    
+    // If onSwitchToLogin is provided, call it
+    if (onSwitchToLogin) {
+      onSwitchToLogin();
+    } else {
+      // Optional: Add a fallback that doesn't use routes
+      console.warn("No onSwitchToLogin callback provided");
+    }
+    
+    // Close this modal
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -373,7 +399,7 @@ const handleSignupSuccess = async () => {
 
               <div className="flex justify-center mt-4">
                 <GoogleReCAPTCHA
-                  sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                  sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
                   onChange={handleCaptchaChange}
                   theme="dark"
                 />
@@ -430,7 +456,13 @@ const handleSignupSuccess = async () => {
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-500">
                   Already have an account?{' '}
-                  <button className="text-cyan-400 hover:underline font-medium">Sign in</button>
+                  <button 
+                    type="button"
+                    onClick={handleSwitchToLogin} 
+                    className="text-cyan-400 hover:underline hover:text-cyan-300 transition-colors font-medium"
+                  >
+                    Sign in
+                  </button>
                 </p>
               </div>
             </div>
