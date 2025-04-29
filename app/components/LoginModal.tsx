@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from './context/AuthContext';
 import Link from 'next/link';
+import { useModal } from '../components/context/ModalContext';
+
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -13,6 +15,9 @@ interface LoginModalProps {
   triggerReason?: string;
   onSwitchToSignup?: () => void;
 }
+
+const { openSignupModal, closeAllModals } = useModal();
+
 
 const GoogleReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {
   ssr: false,
@@ -198,16 +203,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   // Handle navigating to signup page
   const handleSwitchToSignup = () => {
-    // Always use the modal approach
-    if (onSwitchToSignup) {
-      onSwitchToSignup();
-    } else {
-      // Optional: Add a fallback that doesn't use routes
-      console.warn("No onSwitchToSignup callback provided");
-      // You could alternatively set up a modal context here
-    }
-    handleClose();
+    closeAllModals();
+    openSignupModal();
   };
+
+  
+  
 
   useEffect(() => {
     if (callbackUrl && callbackUrl !== '/') {

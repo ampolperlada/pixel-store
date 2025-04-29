@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { signIn } from 'next-auth/react';
+import { useModal } from '../components/context/ModalContext';
+
 
 declare global {
   interface Window {
@@ -18,6 +20,8 @@ interface SignupModalProps {
   onClose: () => void;
   onSwitchToLogin?: () => void; // Add this prop to handle switching to login
 }
+
+const { openLoginModal, closeAllModals } = useModal();
 
 const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLogin }) => {
   const router = useRouter();
