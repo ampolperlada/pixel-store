@@ -1,27 +1,32 @@
-// services/email.js
-import { Resend } from 'resend';
-import dotenv from 'dotenv';
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 dotenv.config();
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendEmail = async (to, subject, html) => {
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'Your App Name <your@verifieddomain.com>',
-      to,
-      subject,
-      html,
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT),
+      secure: false, // true for port 465, false for 587
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
     });
 
-    if (error) {
-      console.error('Email send error:', error);
-      return { success: false, error };
-    }
+    console.log("Sending email to:", to, subject);
 
-    return { success: true, data };
-  } catch (err) {
-    console.error('Unexpected error:', err);
-    return { success: false, error: err };
+    const info = await transporter.sendMail({
+      from: `"Pixel Store" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html
+    });
+
+    console.log("Message sent: %s", info.messageId);
+    return { success: true, data: info };
+  } catch (error) {
+    console.error("❌ Failed to send email:", error);
+    return { success: false, error };
   }
 };
