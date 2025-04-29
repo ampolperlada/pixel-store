@@ -1,45 +1,45 @@
 // app/api/auth/forgot-password/route.ts
+
 import { NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase'; // Adjust the import path as necessary
+import { supabase } from '../../../lib/supabase'; // Use alias path if configured in tsconfig.json
 import { randomUUID } from 'crypto';
 
+// POST /api/auth/forgot-password
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json();
-    
+    const body = await request.json();
+    const email: string = body.email;
+
     if (!email) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
-    
-    // First check if the user exists
+
+    // Check if user exists
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('user_id, email')
       .eq('email', email)
       .single();
-    
+
+    // Always return success regardless of whether the user exists, for security
     if (userError || !user) {
-      // For security reasons, don't tell the client whether the email exists or not
-      // Just return success either way
       return NextResponse.json({ success: true });
     }
-    
-    // Generate a token and store it in the password_reset_tokens table
+
+    // Generate token and expiration
     const token = randomUUID();
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1); // Token valid for 1 hour
-    
+    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiration
+
+    // Store token
     const { error: tokenError } = await supabase
       .from('password_reset_tokens')
       .insert({
         user_id: user.user_id,
-        token: token,
+        token,
         expires_at: expiresAt.toISOString()
       });
-    
+
     if (tokenError) {
       console.error('Error creating password reset token:', tokenError);
       return NextResponse.json(
@@ -47,17 +47,14 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-    
-    // Here you would send an email with a link like:
-    // https://yourdomain.com/reset-password?token={token}
-    // In a real application, you would use a service like SendGrid, AWS SES, etc.
-    
-    // Log for development purposes
-    console.log(`Password reset link for ${email}: https://yourdomain.com/reset-password?token=${token}`);
-    
-    // For production, you'd replace the above with actual email sending code:
-    // await sendPasswordResetEmail(user.email, token);
-    
+
+    // For development/debugging
+    const resetLink = `https://yourdomain.com/reset-password?token=${token}`;
+    console.log(`Password reset link for ${email}: ${resetLink}`);
+
+    // TODO: Send email using email service (e.g., SendGrid, Resend, AWS SES, etc.)
+    // await sendPasswordResetEmail(user.email, resetLink);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error in forgot password:', error);

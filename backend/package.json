@@ -30,6 +30,7 @@
     "next-auth": "^4.24.11",
     "node-cron": "^3.0.3",
     "passport-google-oauth20": "^2.0.0",
+    "resend": "^4.4.1",
     "socket.io": "^4.8.1",
     "winston": "^3.17.0"
   },
