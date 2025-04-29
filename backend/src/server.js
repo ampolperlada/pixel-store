@@ -1,4 +1,3 @@
-// server.js
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -12,7 +11,7 @@ import { connectPostgres, connectMongoDB, shutdown } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import nftRoutes from './routes/nftRoutes.js';
 import gameRoutes from './routes/gameRoutes.js';
-import emailRoute from '../routes/emailRoute.js'; // Import the email route
+import emailRoute from './routes/emailRoute.js';
 import errorHandler from './middleware/errorMiddleware.js';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
@@ -27,10 +26,6 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 5001;
 const httpServer = createServer(app);
-
-import dotenv from 'dotenv';
-dotenv.config();
-
 
 // Socket.IO setup
 const io = new Server(httpServer, {
@@ -52,16 +47,18 @@ app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
 
 // Rate limiting
-app.use('/api/', rateLimit({
+const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-}));
+  message: 'Too many requests from this IP, please try again later'
+});
+app.use('/api/', limiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/nfts', nftRoutes);
 app.use('/api/games', gameRoutes);
-app.use('/api', emailRoute); // Add the email route
+app.use('/api/email', emailRoute); // Changed to more specific path
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -72,6 +69,9 @@ app.get('/api/health', async (req, res) => {
       postgres: true,
       mongodb: mongoAlive,
     },
+    services: {
+      email: true
+    }
   });
 });
 
@@ -106,30 +106,29 @@ io.on('connection', (socket) => {
   });
 });
 
-// Server instance variable
-let server;
+// Server management
+const startServer = async () => {
+  try {
+    console.log('⏳ Connecting to databases...');
+    await connectPostgres();
+    await connectMongoDB();
 
-// Connection state monitoring
-const monitorConnections = () => {
-  setInterval(() => {
-    const mongoState = mongoose.connection.readyState;
-    console.log(`Database Status - PostgreSQL: Connected | MongoDB: ${
-      mongoState === 0 ? 'Disconnected' :
-      mongoState === 1 ? 'Connected' :
-      mongoState === 2 ? 'Connecting' : 'Disconnecting'
-    }`);
-  }, 60000);
+    httpServer.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`PostgreSQL: Connected ✅ | MongoDB: ${
+        mongoose.connection.readyState === 1 ? 'Connected ✅' : 'Connecting...'
+      }`);
+    });
+  } catch (error) {
+    console.error('Server startup failed:', error);
+    process.exit(1);
+  }
 };
 
-// Enhanced cleanup function
+// Cleanup function
 const cleanup = async () => {
   console.log('\n🛑 Shutting down gracefully...');
   try {
-    if (server) {
-      server.close(() => {
-        console.log('HTTP server closed');
-      });
-    }
     await shutdown();
     process.exit(0);
   } catch (err) {
@@ -138,63 +137,7 @@ const cleanup = async () => {
   }
 };
 
-// Database connection and server startup
-const startServer = async () => {
-  try {
-    console.log('⏳ Connecting to databases...');
-
-    await connectPostgres();
-    await connectMongoDB();
-
-    monitorConnections();
-
-    // Start server
-    server = httpServer.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log('Socket.IO ready for connections');
-      console.log(`PostgreSQL: Connected ✅ | MongoDB: ${
-        mongoose.connection.readyState === 1 ? 'Connected ✅' : 'Connecting...'
-      }`);
-    });
-
-    server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use`);
-      } else {
-        console.error('Server error:', err);
-      }
-      process.exit(1);
-    });
-
-  } catch (error) {
-    console.error('Server startup failed:', error);
-    await cleanup();
-  }
-};
-
-// Trending data function
-async function fetchTrendingData(period) {
-  try {
-    return [
-      {
-        id: '1',
-        name: 'Bored Ape Yacht Club',
-        floorPrice: 12.5,
-        floorChange: 2.3,
-        volume: 150.75,
-        volumeChange: 5.6,
-        items: 10000,
-        owners: 6500,
-        isVerified: true,
-      },
-    ];
-  } catch (err) {
-    console.error('Failed to fetch trending data:', err);
-    throw err;
-  }
-}
-
-// Handle process termination
+// Process handlers
 process.on('SIGTERM', cleanup);
 process.on('SIGINT', cleanup);
 process.on('uncaughtException', (err) => {
@@ -206,5 +149,5 @@ process.on('unhandledRejection', (err) => {
   cleanup();
 });
 
-// Start the application
+// Start the server
 startServer();
