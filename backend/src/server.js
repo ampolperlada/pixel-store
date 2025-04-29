@@ -28,6 +28,10 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const httpServer = createServer(app);
 
+import dotenv from 'dotenv';
+dotenv.config();
+
+
 // Socket.IO setup
 const io = new Server(httpServer, {
   cors: {

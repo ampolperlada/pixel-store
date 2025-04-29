@@ -26,6 +26,7 @@ app.use(morgan("dev"));
   await connectMongoDB();
 })();
 
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/nfts", nftRoutes);
