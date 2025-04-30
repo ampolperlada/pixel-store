@@ -12,7 +12,7 @@ import { connectPostgres, connectMongoDB, shutdown } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import nftRoutes from './routes/nftRoutes.js';
 import gameRoutes from './routes/gameRoutes.js';
-import emailRoute from '../routes/emailRoute.js'; // Import the email route
+import emailRoute from './routes/emailRoute.js'; // Fixed path to email route
 import errorHandler from './middleware/errorMiddleware.js';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
@@ -27,10 +27,6 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 5001;
 const httpServer = createServer(app);
-
-import dotenv from 'dotenv';
-dotenv.config();
-
 
 // Socket.IO setup
 const io = new Server(httpServer, {
@@ -208,5 +204,3 @@ process.on('unhandledRejection', (err) => {
 
 // Start the application
 startServer();
-
-
