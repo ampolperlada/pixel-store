@@ -1,53 +1,37 @@
+// src/routes/emailRoute.js
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { sendEmail } from '../../services/email.js';
+// Or import from your rate limit middleware
+// import { apiLimiter } from '../middleware/rateLimit.js';
 
 const router = express.Router();
 
-// Add rate limiting specifically for emails
+// Email-specific rate limiter
 const emailLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 email requests per windowMs
-  message: 'Too many email attempts, please try again later'
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // Limit each IP to 5 email requests per hour
+  message: 'Too many email requests from this IP, please try again after an hour'
 });
 
-router.post('/send-email', emailLimiter, async (req, res) => {
-  const { to, subject, html } = req.body;
+// Apply rate limiter to all routes in this file
+router.use(emailLimiter);
 
-  // Enhanced validation
-  if (!to || !subject || !html) {
-    return res.status(400).json({ 
-      error: 'Missing required fields',
-      required: ['to', 'subject', 'html']
-    });
-  }
-
-  // Validate email format
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
-    return res.status(400).json({ error: 'Invalid email format' });
-  }
-
+// Route to send a contact form email
+router.post('/contact', async (req, res) => {
+  const { name, email, subject, message } = req.body;
+  
   try {
-    const result = await sendEmail(to, subject, html);
-    if (result.success) {
-      res.status(200).json({ 
-        message: 'Email sent successfully',
-        data: {
-          to: result.data.accepted,
-          messageId: result.data.messageId
-        }
-      });
-    } else {
-      res.status(500).json({ 
-        error: 'Failed to send email',
-        details: result.error
-      });
-    }
+    await sendEmail(
+      process.env.CONTACT_EMAIL, // Your contact email address
+      `Contact Form: ${subject}`,
+      `Name: ${name}\nEmail: ${email}\nMessage: ${message}`
+    );
+    
+    res.status(200).json({ success: true, message: 'Email sent successfully' });
   } catch (error) {
     console.error('Error sending email:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
-    });
+    res.status(500).json({ success: false, message: 'Failed to send email' });
   }
 });
 

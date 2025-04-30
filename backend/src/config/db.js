@@ -1,3 +1,4 @@
+// src/config/db.js
 import mongoose from "mongoose";
 import { PrismaClient } from '@prisma/client';
 import dotenv from "dotenv";
