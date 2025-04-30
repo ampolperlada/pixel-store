@@ -1,15 +1,15 @@
-// src/routes/nftRoutes.js
+// src/routes/gameRoutes.js
 import express from 'express';
 const router = express.Router();
 
-// GET all NFTs
+// GET all games
 router.get('/', async (req, res) => {
   try {
     res.status(200).json({ 
-      message: 'NFT routes working', 
+      message: 'Game routes working', 
       data: [
-        { id: 1, name: 'Pixel Art #1', price: 0.5 },
-        { id: 2, name: 'Pixel Art #2', price: 0.7 }
+        { id: 1, name: 'Pixel Adventure', genre: 'Adventure' },
+        { id: 2, name: 'Crypto Quest', genre: 'RPG' }
       ] 
     });
   } catch (error) {
@@ -17,26 +17,31 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET a single NFT by ID
+// GET a single game by ID
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     res.status(200).json({ 
-      message: `NFT ${id} details`, 
-      data: { id: parseInt(id), name: `Pixel Art #${id}`, price: 0.5 * parseInt(id) } 
+      message: `Game ${id} details`, 
+      data: { 
+        id: parseInt(id), 
+        name: id === '1' ? 'Pixel Adventure' : 'Crypto Quest', 
+        genre: id === '1' ? 'Adventure' : 'RPG',
+        description: 'A blockchain-based game where players can earn NFTs.'
+      } 
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// POST create a new NFT
+// POST create a new game
 router.post('/', async (req, res) => {
   try {
-    const nftData = req.body;
+    const gameData = req.body;
     res.status(201).json({ 
-      message: 'NFT created successfully', 
-      data: { id: Math.floor(Math.random() * 1000), ...nftData } 
+      message: 'Game created successfully', 
+      data: { id: Math.floor(Math.random() * 1000), ...gameData } 
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
