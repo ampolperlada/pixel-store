@@ -1,7 +1,8 @@
+// src/routes/authRoutes.js
 import express from 'express';
 import crypto from 'crypto';
 import { sendPasswordResetEmail } from '../../services/email.js';
-import User from '../models/User.js'; // Your User model
+import User from '../models/User.js'; // Mongoose User model
 
 const router = express.Router();
 
@@ -27,6 +28,7 @@ router.post('/forgot-password', async (req, res) => {
 
     res.status(200).json({ message: "Password reset link sent" });
   } catch (error) {
+    console.error("Password reset error:", error);
     res.status(500).json({ error: "Error processing request" });
   }
 });
@@ -47,16 +49,18 @@ router.post('/reset-password', async (req, res) => {
     }
 
     // 2. Update password
-    user.password = newPassword; // Your model should hash this automatically
+    user.password = newPassword; // Will be hashed by pre-save hook
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
 
     // 3. Optional: Send confirmation email
-    await sendEmail(user.email, "Password Changed", "Your password was updated successfully");
+    // Uncomment if you have this function implemented
+    // await sendEmail(user.email, "Password Changed", "Your password was updated successfully");
 
     res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
+    console.error("Reset password error:", error);
     res.status(500).json({ error: "Error resetting password" });
   }
 });

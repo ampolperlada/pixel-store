@@ -1,39 +1,47 @@
-import prisma from "../config/prisma.js";
+// src/models/User.js
+import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-// Create a new user with hashed password
-async function createUser(email, password) {
-  const hashedPassword = await bcrypt.hash(password, 12);
-  return await prisma.user.create({
-    data: { email, password: hashedPassword },
-  });
-}
-
-// Find user by email
-async function getUserByEmail(email) {
-  return await prisma.user.findUnique({
-    where: { email },
-  });
-}
-
-// Find user by ID (Added this function to fix the error)
-async function getUserById(id) {
-  return await prisma.user.findUnique({
-    where: { id },
-  });
-}
-
-// In models/User.js
+// Define the User schema for MongoDB
 const userSchema = new mongoose.Schema({
-  // ... your existing fields ...
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
   resetPasswordToken: String,
-  resetPasswordExpires: Date
+  resetPasswordExpires: Date,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
-// Compare password function
-async function comparePassword(inputPassword, hashedPassword) {
-  return await bcrypt.compare(inputPassword, hashedPassword);
-}
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+  // Only hash the password if it's modified (or new)
+  if (!this.isModified('password')) return next();
+  
+  try {
+    const salt = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
-// Export all functions
-export { createUser, getUserByEmail, getUserById, comparePassword };
+// Method to compare passwords
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Create and export the User model
+const User = mongoose.model('User', userSchema);
+export default User;
