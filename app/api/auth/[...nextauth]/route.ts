@@ -105,12 +105,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             
             // 5. Update last_login_at with explicit timestamp
             const { error: updateError } = await supabase
-              .from('users')
-              .update({ 
-                last_login_at: new Date().toISOString(),
-                updated_at: new Date().toISOString() 
-              })
-              .eq('user_id', user.user_id);
+            .from('users')
+            .update({ 
+              last_login_at: new Date().toISOString(),
+              updated_at: new Date().toISOString() 
+            })
+            .eq('user_id', user.user_id);
               
             if (updateError) {
               console.error('[Auth] Failed to update last_login_at:', updateError);
