@@ -18,8 +18,6 @@ const GoogleReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {
   ssr: false,
 });
 
-const [serverErrorType, setServerErrorType] = useState<'auth' | 'server' | 'network' | null>(null);
-
 const LoginModal: React.FC<LoginModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -42,6 +40,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [serverErrorType, setServerErrorType] = useState<'auth' | 'server' | 'network' | null>(null);
   
   // Forgot password states
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
@@ -71,6 +70,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setForgotPasswordEmail('');
     setForgotPasswordStatus('idle');
     setForgotPasswordError('');
+    setServerErrorType(null);
     
     onClose();
   };
@@ -96,6 +96,16 @@ const LoginModal: React.FC<LoginModalProps> = ({
       setFieldErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[name];
+        return newErrors;
+      });
+    }
+
+    // Clear any server errors when the user starts typing again
+    if (serverErrorType) {
+      setServerErrorType(null);
+      setFormErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.submit;
         return newErrors;
       });
     }
@@ -185,6 +195,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setIsSubmitting(true);
     setFormErrors({});
     setFieldErrors({});
+    setServerErrorType(null);
 
     try {
       const result = await signIn('credentials', {
@@ -196,38 +207,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
       });
 
       if (result?.error) {
-        // Map backend errors to user-friendly messages
-        const errorMap: Record<string, { message: string, field?: string }> = {
-          'Invalid credentials': { 
-            message: 'Invalid username or password', 
-            field: 'password'  // Highlight the password field specifically
-          },
-          'Username and password are required': { 
-            message: 'Both username and password are required' 
-          },
-          'Database timeout': { 
-            message: 'Service is busy, please try again in a moment' 
-          },
-          'Authentication service unavailable': { 
-            message: 'Login service is currently unavailable' 
-          },
-          'Database service unavailable': { 
-            message: 'System maintenance in progress' 
-          }
-        };
-        
-        const errorInfo = errorMap[result.error] || { 
-          message: result.error || 'Login failed. Please try again.' 
-        };
-        
-        setFormErrors({ submit: errorInfo.message });
-        
-        // Set field-specific error if applicable
-        if (errorInfo.field) {
-          setFieldErrors({ [errorInfo.field]: 'Incorrect password' });
-        }
-        
-        throw new Error(errorInfo.message);
+        handleAuthError(result.error);
+        throw new Error(result.error);
       }
 
       if (result?.ok) {
@@ -239,7 +220,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         }
       }
     } catch (error) {
-      // Error is already handled above
+      // Error is already handled in handleAuthError
       console.error('Login error:', error);
     } finally {
       setIsSubmitting(false);
@@ -309,6 +290,70 @@ const LoginModal: React.FC<LoginModalProps> = ({
       console.log(`User is being redirected from: ${callbackUrl}`);
     }
   }, [callbackUrl]);
+
+  // Function to get error message styling based on error type
+  const getErrorStylesByType = (type: 'auth' | 'server' | 'network' | null) => {
+    switch (type) {
+      case 'auth':
+        return {
+          bgColor: 'bg-red-900/20',
+          borderColor: 'border-red-800/50',
+          textColor: 'text-red-400',
+          icon: (
+            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path>
+            </svg>
+          )
+        };
+      case 'server':
+        return {
+          bgColor: 'bg-yellow-900/20',
+          borderColor: 'border-yellow-800/50',
+          textColor: 'text-yellow-400',
+          icon: (
+            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path>
+            </svg>
+          )
+        };
+      case 'network':
+        return {
+          bgColor: 'bg-blue-900/20',
+          borderColor: 'border-blue-800/50',
+          textColor: 'text-blue-400',
+          icon: (
+            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" clipRule="evenodd"></path>
+            </svg>
+          )
+        };
+      default:
+        return {
+          bgColor: 'bg-red-900/20',
+          borderColor: 'border-red-800/50',
+          textColor: 'text-red-400',
+          icon: (
+            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path>
+            </svg>
+          )
+        };
+    }
+  };
+
+  // Function to get helpful suggestions based on error type
+  const getErrorHelpText = (type: 'auth' | 'server' | 'network' | null) => {
+    switch (type) {
+      case 'auth':
+        return "Double-check your credentials and try again.";
+      case 'server':
+        return "This isn't your fault. Please try again later.";
+      case 'network':
+        return "Check your internet connection and try again.";
+      default:
+        return "";
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -432,13 +477,25 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
           ) : (
             <>
-              {/* Show a clear authentication error message at the top if present */}
+              {/* Enhanced error message with colored indicators and helpful text based on error type */}
               {formErrors.submit && (
-                <div className="mb-4 text-red-400 text-sm p-3 bg-red-900/20 border border-red-800/50 rounded-lg flex items-center">
-                  <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path>
-                  </svg>
-                  <span>{formErrors.submit}</span>
+                <div>
+                  {(() => {
+                    const styles = getErrorStylesByType(serverErrorType);
+                    const helpText = getErrorHelpText(serverErrorType);
+                    
+                    return (
+                      <div className={`mb-4 ${styles.textColor} text-sm p-3 ${styles.bgColor} border ${styles.borderColor} rounded-lg`}>
+                        <div className="flex items-center">
+                          {styles.icon}
+                          <span className="font-medium">{formErrors.submit}</span>
+                        </div>
+                        {helpText && (
+                          <p className="mt-1 ml-7 text-xs opacity-80">{helpText}</p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             
