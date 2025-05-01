@@ -18,6 +18,8 @@ const GoogleReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {
   ssr: false,
 });
 
+const [serverErrorType, setServerErrorType] = useState<'auth' | 'server' | 'network' | null>(null);
+
 const LoginModal: React.FC<LoginModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -51,13 +53,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   useEffect(() => {
     const error = searchParams?.get('error');
     if (error === 'CredentialsSignin') {
-      setFormErrors({
-        submit: 'Invalid username or password'
-      });
-      // Highlight the password field specifically since that's most often the issue
-      setFieldErrors({
-        password: 'Incorrect password'
-      });
+      handleAuthError('CredentialsSignin');
     }
   }, [searchParams]);
 
@@ -126,6 +122,60 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setFormErrors(errors);
     setFieldErrors(field_errors);
     return Object.keys(errors).length === 0;
+  };
+
+
+  const handleAuthError = (error: string) => {
+    // Map backend errors to user-friendly messages
+    const errorMap: Record<string, { 
+      message: string, 
+      field?: string,
+      type: 'auth' | 'server' | 'network'
+    }> = {
+      'Invalid credentials': { 
+        message: 'The username or password you entered is incorrect', 
+        field: 'password',
+        type: 'auth'
+      },
+      'User not found': {
+        message: 'No account found with this username',
+        field: 'username',
+        type: 'auth'
+      },
+      'CredentialsSignin': {
+        message: 'Invalid login credentials',
+        type: 'auth'
+      },
+      'Database timeout': { 
+        message: 'Our servers are busy right now. Please try again in a moment.', 
+        type: 'server'
+      },
+      'Authentication service unavailable': { 
+        message: 'Login service is currently undergoing maintenance', 
+        type: 'server'
+      },
+      'Database service unavailable': { 
+        message: 'System maintenance in progress. Please try again later.', 
+        type: 'server'
+      },
+      'Network error': {
+        message: 'Unable to connect to our servers. Please check your internet connection.',
+        type: 'network'
+      }
+    };
+    
+    const errorInfo = errorMap[error] || { 
+      message: 'Login failed. Please try again.',
+      type: 'server'
+    };
+    
+    setServerErrorType(errorInfo.type);
+    setFormErrors({ submit: errorInfo.message });
+    
+    // Set field-specific error if applicable
+    if (errorInfo.field) {
+      setFieldErrors({ [errorInfo.field]: errorInfo.message });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
