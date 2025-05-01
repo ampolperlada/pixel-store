@@ -3,7 +3,20 @@ import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { supabase } from '../../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { NextApiRequest, NextApiResponse } from 'next';
+
+// Create an admin client that bypasses RLS
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || (() => { throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined'); })(),
+  process.env.SUPABASE_SERVICE_ROLE_KEY || (() => { throw new Error('SUPABASE_SERVICE_ROLE_KEY is not defined'); })(),
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+);
 
 // Database health check (keep your existing implementation)
 async function checkDatabaseHealth() {
@@ -103,17 +116,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             
             if (!isValid) throw new Error('Invalid credentials');
             
-            // 5. Update last_login_at with explicit timestamp
-            const { error: updateError } = await supabase
-            .from('users')
-            .update({ 
-              last_login_at: new Date().toISOString(),
-              updated_at: new Date().toISOString() 
-            })
-            .eq('user_id', user.user_id);
+            // 5. Update last_login_at with explicit timestamp using admin client
+            const updateResult = await supabaseAdmin
+              .from('users')
+              .update({ 
+                last_login_at: new Date().toISOString(),
+                updated_at: new Date().toISOString() 
+              })
+              .eq('user_id', user.user_id);
               
-            if (updateError) {
-              console.error('[Auth] Failed to update last_login_at:', updateError);
+            console.log('[Auth] Update query result:', JSON.stringify(updateResult));
+            
+            if (updateResult.error) {
+              console.error('[Auth] Failed to update last_login_at:', updateResult.error);
               throw new Error('Login timestamp update failed');
             }
         
@@ -185,7 +200,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         // Update last_login_at for social logins too
         if (account?.provider === 'google') {
           try {
-            const { error } = await supabase
+            const updateResult = await supabaseAdmin
               .from('users')
               .update({ 
                 last_login_at: new Date().toISOString(),
@@ -193,8 +208,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               })
               .eq('email', user.email);
               
-            if (error) {
-              console.error('[Auth] Failed to update last_login_at for social login:', error);
+            console.log('[Auth] Social login update result:', JSON.stringify(updateResult));
+            
+            if (updateResult.error) {
+              console.error('[Auth] Failed to update last_login_at for social login:', updateResult.error);
             } else {
               console.log('[Auth] Updated last_login_at for social login user:', user.email);
             }

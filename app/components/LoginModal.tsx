@@ -37,6 +37,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   });
   
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   
@@ -46,6 +47,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [forgotPasswordStatus, setForgotPasswordStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [forgotPasswordError, setForgotPasswordError] = useState('');
 
+  // Check for error in URL params (for when users are redirected back after failed auth)
+  useEffect(() => {
+    const error = searchParams?.get('error');
+    if (error === 'CredentialsSignin') {
+      setFormErrors({
+        submit: 'Invalid username or password'
+      });
+      // Highlight the password field specifically since that's most often the issue
+      setFieldErrors({
+        password: 'Incorrect password'
+      });
+    }
+  }, [searchParams]);
+
   const handleClose = () => {
     // Reset all states
     setFormData({
@@ -54,6 +69,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       rememberMe: false,
     });
     setFormErrors({});
+    setFieldErrors({});
     setCaptchaToken(null);
     setForgotPasswordMode(false);
     setForgotPasswordEmail('');
@@ -78,16 +94,37 @@ const LoginModal: React.FC<LoginModalProps> = ({
         return newErrors;
       });
     }
+    
+    // Also clear field-specific errors
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
+    const field_errors: Record<string, string> = {};
 
-    if (!formData.username) errors.username = 'Username is required';
-    if (!formData.password) errors.password = 'Password is required';
-    if (!captchaToken && !forgotPasswordMode) errors.captcha = 'Please complete the CAPTCHA';
+    if (!formData.username.trim()) {
+      errors.username = 'Username is required';
+      field_errors.username = 'Please enter your username';
+    }
+    
+    if (!formData.password) {
+      errors.password = 'Password is required';
+      field_errors.password = 'Please enter your password';
+    }
+    
+    if (!captchaToken && !forgotPasswordMode) {
+      errors.captcha = 'Please complete the CAPTCHA';
+    }
 
     setFormErrors(errors);
+    setFieldErrors(field_errors);
     return Object.keys(errors).length === 0;
   };
 
@@ -97,6 +134,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
     setIsSubmitting(true);
     setFormErrors({});
+    setFieldErrors({});
 
     try {
       const result = await signIn('credentials', {
@@ -108,14 +146,38 @@ const LoginModal: React.FC<LoginModalProps> = ({
       });
 
       if (result?.error) {
-        const errorMap: Record<string, string> = {
-          'Invalid credentials': 'Invalid username or password',
-          'Database timeout': 'Service is busy, please try again',
-          'Authentication service unavailable': 'Login service is currently unavailable',
-          'Database service unavailable': 'System maintenance in progress'
+        // Map backend errors to user-friendly messages
+        const errorMap: Record<string, { message: string, field?: string }> = {
+          'Invalid credentials': { 
+            message: 'Invalid username or password', 
+            field: 'password'  // Highlight the password field specifically
+          },
+          'Username and password are required': { 
+            message: 'Both username and password are required' 
+          },
+          'Database timeout': { 
+            message: 'Service is busy, please try again in a moment' 
+          },
+          'Authentication service unavailable': { 
+            message: 'Login service is currently unavailable' 
+          },
+          'Database service unavailable': { 
+            message: 'System maintenance in progress' 
+          }
         };
         
-        throw new Error(errorMap[result.error] || result.error || 'Login failed. Please try again.');
+        const errorInfo = errorMap[result.error] || { 
+          message: result.error || 'Login failed. Please try again.' 
+        };
+        
+        setFormErrors({ submit: errorInfo.message });
+        
+        // Set field-specific error if applicable
+        if (errorInfo.field) {
+          setFieldErrors({ [errorInfo.field]: 'Incorrect password' });
+        }
+        
+        throw new Error(errorInfo.message);
       }
 
       if (result?.ok) {
@@ -127,9 +189,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
         }
       }
     } catch (error) {
-      setFormErrors({
-        submit: error instanceof Error ? error.message : 'Login failed'
-      });
+      // Error is already handled above
+      console.error('Login error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -321,6 +382,16 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
           ) : (
             <>
+              {/* Show a clear authentication error message at the top if present */}
+              {formErrors.submit && (
+                <div className="mb-4 text-red-400 text-sm p-3 bg-red-900/20 border border-red-800/50 rounded-lg flex items-center">
+                  <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path>
+                  </svg>
+                  <span>{formErrors.submit}</span>
+                </div>
+              )}
+            
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div>
                   <label className="block text-cyan-300 text-sm font-medium mb-1">USERNAME</label>
@@ -329,7 +400,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     name="username"
                     value={formData.username}
                     onChange={handleInputChange}
-                    className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    className={`w-full bg-gray-700/50 text-white border ${fieldErrors.username ? 'border-red-500' : 'border-gray-600'} rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
                     placeholder="Enter your username"
                   />
                   {formErrors.username && (
@@ -344,10 +415,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                    className={`w-full bg-gray-700/50 text-white border ${fieldErrors.password ? 'border-red-500' : 'border-gray-600'} rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
                     placeholder="••••••••"
                   />
-                  {formErrors.password && (
+                  {fieldErrors.password && (
+                    <p className="text-red-400 text-xs mt-1">{fieldErrors.password}</p>
+                  )}
+                  {formErrors.password && !fieldErrors.password && (
                     <p className="text-red-400 text-xs mt-1">{formErrors.password}</p>
                   )}
                 </div>
@@ -386,12 +460,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     <p className="text-red-400 text-xs text-center mt-1">{formErrors.captcha}</p>
                   )}
                 </div>
-                
-                {formErrors.submit && (
-                  <p className="text-red-400 text-sm text-center p-2 bg-red-900/20 border border-red-800/50 rounded">
-                    {formErrors.submit}
-                  </p>
-                )}
                 
                 <button
                   type="submit"
