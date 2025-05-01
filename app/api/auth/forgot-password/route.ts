@@ -1,7 +1,5 @@
-// app/api/auth/forgot-password/route.ts
-
 import { NextResponse } from 'next/server';
-import { supabase } from '../../../lib/supabase'; // Use alias path if configured in tsconfig.json
+import { supabase } from '../../../lib/supabase';
 import { randomUUID } from 'crypto';
 
 // POST /api/auth/forgot-password
@@ -17,12 +15,13 @@ export async function POST(request: Request) {
     // Check if user exists
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('user_id, email')
+      .select('id, email')
       .eq('email', email)
       .single();
 
     // Always return success regardless of whether the user exists, for security
     if (userError || !user) {
+      console.warn(`No user found with email: ${email}`);
       return NextResponse.json({ success: true });
     }
 
@@ -31,24 +30,24 @@ export async function POST(request: Request) {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiration
 
-    // Store token
-    const { error: tokenError } = await supabase
-      .from('password_reset_tokens')
-      .insert({
-        user_id: user.user_id,
-        token,
-        expires_at: expiresAt.toISOString()
-      });
+    // Update the users table with the reset token and expiration
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        reset_token: token,
+        reset_token_expires_at: expiresAt.toISOString(),
+      })
+      .eq('id', user.id);
 
-    if (tokenError) {
-      console.error('Error creating password reset token:', tokenError);
+    if (updateError) {
+      console.error('Error updating reset token:', updateError);
       return NextResponse.json(
         { error: 'Failed to create password reset token' },
         { status: 500 }
       );
     }
 
-    // For development/debugging
+    // Generate reset link
     const resetLink = `https://yourdomain.com/reset-password?token=${token}`;
     console.log(`Password reset link for ${email}: ${resetLink}`);
 

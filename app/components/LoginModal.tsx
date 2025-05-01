@@ -252,7 +252,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       setForgotPasswordError('Email is required');
       return;
     }
-
+  
     setForgotPasswordStatus('sending');
     
     try {
@@ -266,14 +266,19 @@ const LoginModal: React.FC<LoginModalProps> = ({
       });
       
       if (!response.ok) {
-        throw new Error('Failed to send reset link');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to send reset link');
       }
       
       setForgotPasswordStatus('success');
     } catch (error) {
       console.error('Forgot password error:', error);
       setForgotPasswordStatus('error');
-      setForgotPasswordError('Failed to send reset link. Please try again.');
+      setForgotPasswordError(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred. Please try again.'
+      );
     }
   };
 
