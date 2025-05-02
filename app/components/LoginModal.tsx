@@ -260,6 +260,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setForgotPasswordStatus('sending');
     
     try {
+      // Replace with your actual API endpoint
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: {
@@ -297,7 +298,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           : 'An unexpected error occurred. Please try again.'
       );
     }
-  };  
+  };
 
   const handleSwitchToSignup = () => {
     if (onSwitchToSignup) {
