@@ -260,7 +260,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setForgotPasswordStatus('sending');
     
     try {
-      // Replace with your actual API endpoint
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: {
@@ -269,11 +268,25 @@ const LoginModal: React.FC<LoginModalProps> = ({
         body: JSON.stringify({ email: forgotPasswordEmail }),
       });
       
+      // First check if response is OK
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to send reset link');
+        // Try to parse as JSON, but fall back to text if parsing fails
+        let errorText;
+        try {
+          const errorData = await response.json();
+          errorText = errorData.message || 'Failed to send reset link';
+        } catch (parseError) {
+          // If JSON parsing fails, get the text instead
+          errorText = await response.text();
+          console.error('Response parsing error:', parseError);
+          console.log('Raw response:', errorText);
+          errorText = 'Server returned an invalid response. Please try again later.';
+        }
+        throw new Error(errorText);
       }
       
+      // If we got here, the response was OK
+      const data = await response.json();
       setForgotPasswordStatus('success');
     } catch (error) {
       console.error('Forgot password error:', error);
@@ -284,7 +297,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           : 'An unexpected error occurred. Please try again.'
       );
     }
-  };
+  };  
 
   const handleSwitchToSignup = () => {
     if (onSwitchToSignup) {
