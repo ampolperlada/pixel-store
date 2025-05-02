@@ -48,6 +48,14 @@ export async function POST(request: Request) {
     const resetLink = `https://yourdomain.com/reset-password?token=${token}`;
 
     try {
+      if (!resend) {
+        console.error('Resend instance is null');
+        return NextResponse.json(
+          { error: 'Email service is unavailable' },
+          { status: 500 }
+        );
+      }
+
       const emailResponse = await resend.emails.send({
         from: 'no-reply@onboarding.resend.dev',
         to: email,
