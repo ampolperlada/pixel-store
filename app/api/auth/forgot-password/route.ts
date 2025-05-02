@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
+import { resend } from '../../../lib/resend'; // Import the Resend client
 import { randomUUID } from 'crypto';
 
 // POST /api/auth/forgot-password
@@ -49,10 +50,27 @@ export async function POST(request: Request) {
 
     // Generate reset link
     const resetLink = `https://yourdomain.com/reset-password?token=${token}`;
-    console.log(`Password reset link for ${email}: ${resetLink}`);
 
-    // TODO: Send email using email service (e.g., SendGrid, Resend, AWS SES, etc.)
-    // await sendPasswordResetEmail(user.email, resetLink);
+    // Send the email using Resend's sandbox domain
+    try {
+      const emailResponse = await resend.emails.send({
+        from: 'no-reply@onboarding.resend.dev', // Use Resend's sandbox domain
+        to: email,
+        subject: 'Password Reset Request',
+        html: `
+          <p>You requested a password reset. Click the link below to reset your password:</p>
+          <p><a href="${resetLink}">${resetLink}</a></p>
+        `,
+      });
+
+      console.log('Email sent successfully:', emailResponse);
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+      return NextResponse.json(
+        { error: 'Failed to send password reset email' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
