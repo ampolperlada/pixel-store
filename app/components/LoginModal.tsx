@@ -136,6 +136,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
 
   const handleAuthError = (error: string) => {
+    console.log('Handling auth error:', error);
+    
     // Map backend errors to user-friendly messages
     const errorMap: Record<string, { 
       message: string, 
@@ -174,9 +176,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
       }
     };
     
+    // Look up the error message. If not found in our map, default to an auth issue
     const errorInfo = errorMap[error] || { 
-      message: 'Login failed. Please try again.',
-      type: 'server'
+      message: 'Login failed. Please check your credentials and try again.',
+      type: 'auth'
     };
     
     setServerErrorType(errorInfo.type);
@@ -207,6 +210,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       });
 
       if (result?.error) {
+        console.log('Raw auth error received:', result.error);
         handleAuthError(result.error);
         throw new Error(result.error);
       }
