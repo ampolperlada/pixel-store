@@ -1,37 +1,34 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
-import { resend } from '../../../lib/resend'; // Import the Resend client
+import { resend } from '../../../lib/resend';
 import { randomUUID } from 'crypto';
 
-// POST /api/auth/forgot-password
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log('Request body:', body);
+
     const email: string = body.email;
 
     if (!email) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    // Check if user exists
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, email')
       .eq('email', email)
       .single();
 
-    // Always return success regardless of whether the user exists, for security
     if (userError || !user) {
       console.warn(`No user found with email: ${email}`);
       return NextResponse.json({ success: true });
     }
 
-    // Generate token and expiration
     const token = randomUUID();
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiration
+    expiresAt.setHours(expiresAt.getHours() + 1);
 
-    // Update the users table with the reset token and expiration
     const { error: updateError } = await supabase
       .from('users')
       .update({
@@ -48,21 +45,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate reset link
     const resetLink = `https://yourdomain.com/reset-password?token=${token}`;
 
-    // Send the email using Resend's sandbox domain
     try {
       const emailResponse = await resend.emails.send({
-        from: 'no-reply@onboarding.resend.dev', // Use Resend's sandbox domain
+        from: 'no-reply@onboarding.resend.dev',
         to: email,
         subject: 'Password Reset Request',
-        html: `
-          <p>You requested a password reset. Click the link below to reset your password:</p>
-          <p><a href="${resetLink}">${resetLink}</a></p>
-        `,
+        html: `<p>Click the link below to reset your password:</p><p><a href="${resetLink}">${resetLink}</a></p>`,
       });
-
       console.log('Email sent successfully:', emailResponse);
     } catch (emailError) {
       console.error('Error sending email:', emailError);
