@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     
     const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: 'noreply@yourdomain.com',
+      from: 'onboarding@resend.dev',
       to: email,
       subject: 'Reset your password',
       html: `
