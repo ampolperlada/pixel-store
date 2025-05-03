@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resend } from '@/app/lib/resend';
-import { supabase } from '../../../lib/supabase'; // Adjust the import path as necessary
+import { supabase } from '../../../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: NextRequest) {
@@ -73,19 +73,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Send email
+    // Send email with Resend's default domain
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     
     const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: 'onboarding@resend.dev', // Using Resend's default domain
       to: email,
       subject: 'Reset your password',
       html: `
-        <h1>Password Reset</h1>
-        <p>Hello ${user.username},</p>
-        <p>Someone requested a password reset for your account. If this was you, click the link below to reset your password. If you didn't request this, you can ignore this email.</p>
-        <p><a href="${resetUrl}">Reset Password</a></p>
-        <p>This link will expire in 1 hour.</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Password Reset</h2>
+          
+          <p>Hello ${user.username},</p>
+          
+          <p>Someone requested a password reset for your account. If this was you, click the link below to reset your password. If you didn't request this, you can ignore this email.</p>
+          
+          <a href="${resetUrl}" style="display: inline-block; background-color: #0284c7; color: white; padding: 12px 20px; text-decoration: none; border-radius: 4px; margin: 20px 0;">Reset Password</a>
+          
+          <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
+        </div>
       `
     });
 
