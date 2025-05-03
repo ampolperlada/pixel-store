@@ -73,11 +73,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Send email with Resend's default domain
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     
+    // Check if we're in development/testing mode
+    const isDev = process.env.NODE_ENV === 'development';
+    const ownerEmail = 'ampolperlada@gmail.com'; // Your verified email with Resend
+    
+    // Only attempt to send email if it's to the owner email or we're in production with a verified domain
+    if (isDev && email !== ownerEmail) {
+      console.log(`[DEV MODE] Would send reset link to ${email}: ${resetUrl}`);
+      console.log('In development, emails can only be sent to the verified owner email.');
+      
+      // Return success even though we didn't send the email
+      // This is for development purposes only
+      return NextResponse.json(
+        { 
+          message: 'Password reset link generated (Dev mode - email not sent)',
+          devInfo: { token, resetUrl } // Only include this in development
+        },
+        { status: 200 }
+      );
+    }
+    
+    // Send email (will only work in production, or to owner email in development)
     const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: 'onboarding@resend.dev', // Using Resend's default domain
+      from: 'onboarding@resend.dev',
       to: email,
       subject: 'Reset your password',
       html: `
@@ -97,6 +117,19 @@ export async function POST(req: NextRequest) {
 
     if (emailError) {
       console.error('Email sending error:', emailError);
+      
+      // In development, if we can't send the email because of restrictions,
+      // we'll still return the token for testing purposes
+      if (isDev) {
+        return NextResponse.json(
+          { 
+            message: 'Email sending failed but token was generated',
+            devInfo: { token, resetUrl } // Only include this in development
+          },
+          { status: 200 }
+        );
+      }
+      
       return NextResponse.json(
         { message: 'Error sending email' },
         { status: 500 }
