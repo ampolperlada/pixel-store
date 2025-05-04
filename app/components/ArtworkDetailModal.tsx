@@ -385,9 +385,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
       </div>
 
       {/* Login Modal */}
-      {showLoginModal && (
-        <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
-      )}
+      
     </div>
   );
 };
