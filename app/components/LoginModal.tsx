@@ -14,6 +14,12 @@ interface LoginModalProps {
   onSwitchToSignup?: () => void;
 }
 
+interface LoginModalProps { 
+  isOpen: boolean;
+  onClose: () => void;
+  onSignupClick?: () => void; // Add the optional onSignupClick prop
+}
+
 const GoogleReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {
   ssr: false,
 });

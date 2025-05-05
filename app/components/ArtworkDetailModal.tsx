@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import type { ArtworkItem } from "../data/sampleData";
 
 import LoginModal from './LoginModal'; // Import the LoginModal component
 import SignupModal from './SignupModal'; // Import the SignupModal component
-import { useAuth } from './context/AuthContext'; // Import the useAuth hook
 
 interface ArtworkDetailModalProps {
   artwork: ArtworkItem;
@@ -20,13 +20,11 @@ type TabType = 'details' | 'lore' | 'nft';
 const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [showLoginModal, setShowLoginModal] = useState(false); // State to manage login modal visibility
-  const { user } = useAuth(); // Get the authentication state
-  
-  // Check if user is authenticated
-  const isAuthenticated = !!user;
+  const [showSignupModal, setShowSignupModal] = useState(false); // State to manage signup modal visibility
 
   // Handle Add to Cart action
   const handleAddToCart = () => {
+    const isAuthenticated = false; // Replace with actual authentication check
     if (!isAuthenticated) {
       setShowLoginModal(true); // Show login modal if not authenticated
     } else {
@@ -37,6 +35,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
 
   // Handle Contact Gallery action
   const handleContactGallery = () => {
+    const isAuthenticated = false; // Replace with actual authentication check
     if (!isAuthenticated) {
       setShowLoginModal(true); // Show login modal if not authenticated
     } else {
@@ -46,8 +45,19 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
   };
 
   // Close login modal
-  const handleCloseLoginModal = () => {
+  const closeLoginModal = () => {
     setShowLoginModal(false);
+  };
+
+  // Open signup modal from login
+  const openSignupFromLogin = () => {
+    setShowLoginModal(false);
+    setShowSignupModal(true);
+  };
+
+  // Close signup modal
+  const closeSignupModal = () => {
+    setShowSignupModal(false);
   };
 
   // If modal is not open, don't render anything
@@ -365,6 +375,18 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
               )}
             </div>
             
+            {/* Explore More Link */}
+            <Link 
+              href="/explore" 
+              className="flex items-center justify-end text-cyan-400 hover:text-cyan-300 transition-colors mb-4 text-sm"
+            >
+              Explore more artworks
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </Link>
+            
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
               <button 
@@ -376,7 +398,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
                   <circle cx="20" cy="21" r="1"></circle>
                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                 </svg>
-                Buy
+                Buy Now
               </button>
               <button 
                 onClick={handleContactGallery}
@@ -393,12 +415,17 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
       </div>
 
       {/* Login Modal */}
-      {showLoginModal && (
-        <LoginModal 
+      <LoginModal 
           isOpen={showLoginModal} 
-          onClose={handleCloseLoginModal} 
+          onClose={closeLoginModal} 
+          onSignupClick={openSignupFromLogin}
         />
-      )}
+
+      {/* Signup Modal */}
+      <SignupModal 
+          isOpen={showSignupModal} 
+          onClose={closeSignupModal} 
+        />
     </div>
   );
 };
