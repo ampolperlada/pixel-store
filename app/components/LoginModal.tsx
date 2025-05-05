@@ -62,6 +62,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }
   }, [searchParams]);
 
+  const handleModalContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+  
   const handleClose = () => {
     // Reset all states
     setFormData({
