@@ -5,8 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { ArtworkItem } from "../data/sampleData";
 
-import LoginModal from './LoginModal'; // Import the LoginModal component
-import SignupModal from './SignupModal'; // Import the SignupModal component
+import LoginModal from './LoginModal';
+import SignupModal from './SignupModal';
 
 interface ArtworkDetailModalProps {
   artwork: ArtworkItem;
@@ -14,53 +14,44 @@ interface ArtworkDetailModalProps {
   onClose: () => void;
 }
 
-// Tab options
 type TabType = 'details' | 'lore' | 'nft';
 
 const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('details');
-  const [showLoginModal, setShowLoginModal] = useState(false); // State to manage login modal visibility
-  const [showSignupModal, setShowSignupModal] = useState(false); // State to manage signup modal visibility
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
 
-  // Handle Add to Cart action
   const handleAddToCart = () => {
-    const isAuthenticated = false; // Replace with actual authentication check
+    const isAuthenticated = false;
     if (!isAuthenticated) {
-      setShowLoginModal(true); // Show login modal if not authenticated
+      setShowLoginModal(true);
     } else {
-      // Proceed with adding to cart
       console.log("Adding to cart:", artwork.title);
     }
   };
 
-  // Handle Contact Gallery action
   const handleContactGallery = () => {
-    const isAuthenticated = false; // Replace with actual authentication check
+    const isAuthenticated = false;
     if (!isAuthenticated) {
-      setShowLoginModal(true); // Show login modal if not authenticated
+      setShowLoginModal(true);
     } else {
-      // Proceed with contacting gallery
       console.log("Contacting gallery for:", artwork.title);
     }
   };
 
-  // Close login modal
   const closeLoginModal = () => {
     setShowLoginModal(false);
   };
 
-  // Open signup modal from login
   const openSignupFromLogin = () => {
     setShowLoginModal(false);
     setShowSignupModal(true);
   };
 
-  // Close signup modal
   const closeSignupModal = () => {
     setShowSignupModal(false);
   };
 
-  // If modal is not open, don't render anything
   if (!isOpen) return null;
 
   return (
@@ -414,18 +405,42 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
         </div>
       </div>
 
-      {/* Login Modal */}
-      <LoginModal 
-          isOpen={showLoginModal} 
-          onClose={closeLoginModal} 
-          onSignupClick={openSignupFromLogin}
-        />
+      {/* Login Modal - Modified to include click propagation fix */}
+      {showLoginModal && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={closeLoginModal}
+        >
+          <div 
+            className="bg-gray-800 rounded-xl max-w-md w-full p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <LoginModal 
+              isOpen={showLoginModal} 
+              onClose={closeLoginModal} 
+              onSignupClick={openSignupFromLogin}
+            />
+          </div>
+        </div>
+      )}
 
-      {/* Signup Modal */}
-      <SignupModal 
-          isOpen={showSignupModal} 
-          onClose={closeSignupModal} 
-        />
+      {/* Signup Modal - Modified to include click propagation fix */}
+      {showSignupModal && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={closeSignupModal}
+        >
+          <div 
+            className="bg-gray-800 rounded-xl max-w-md w-full p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SignupModal 
+              isOpen={showSignupModal} 
+              onClose={closeSignupModal} 
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
