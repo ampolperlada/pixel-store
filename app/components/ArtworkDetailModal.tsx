@@ -6,6 +6,7 @@ import type { ArtworkItem } from "../data/sampleData";
 
 import LoginModal from './LoginModal'; // Import the LoginModal component
 import SignupModal from './SignupModal'; // Import the SignupModal component
+import { useAuth } from './context/AuthContext'; // Import the useAuth hook
 
 interface ArtworkDetailModalProps {
   artwork: ArtworkItem;
@@ -19,10 +20,13 @@ type TabType = 'details' | 'lore' | 'nft';
 const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [showLoginModal, setShowLoginModal] = useState(false); // State to manage login modal visibility
+  const { user } = useAuth(); // Get the authentication state
+  
+  // Check if user is authenticated
+  const isAuthenticated = !!user;
 
   // Handle Add to Cart action
   const handleAddToCart = () => {
-    const isAuthenticated = false; // Replace with actual authentication check
     if (!isAuthenticated) {
       setShowLoginModal(true); // Show login modal if not authenticated
     } else {
@@ -33,13 +37,17 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
 
   // Handle Contact Gallery action
   const handleContactGallery = () => {
-    const isAuthenticated = false; // Replace with actual authentication check
     if (!isAuthenticated) {
       setShowLoginModal(true); // Show login modal if not authenticated
     } else {
       // Proceed with contacting gallery
       console.log("Contacting gallery for:", artwork.title);
     }
+  };
+
+  // Close login modal
+  const handleCloseLoginModal = () => {
+    setShowLoginModal(false);
   };
 
   // If modal is not open, don't render anything
@@ -385,7 +393,12 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
       </div>
 
       {/* Login Modal */}
-      
+      {showLoginModal && (
+        <LoginModal 
+          isOpen={showLoginModal} 
+          onClose={handleCloseLoginModal} 
+        />
+      )}
     </div>
   );
 };
