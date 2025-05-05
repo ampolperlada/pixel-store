@@ -91,6 +91,11 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
     return Object.keys(errors).length === 0;
   };
 
+  const handleModalContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+  
+
   const handleConnectWallet = async () => {
     try {
       setWalletState({ address: null, status: 'connecting' });
