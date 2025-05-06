@@ -12,12 +12,16 @@ interface LoginModalProps {
   onClose: () => void;
   triggerReason?: string;
   onSwitchToSignup?: () => void;
+  onLoginSuccess?: () => void; // Add 
+  
+
 }
 
 interface LoginModalProps { 
   isOpen: boolean;
   onClose: () => void;
   onSignupClick?: () => void; // Add the optional onSignupClick prop
+  onLoginSuccess?: () => void; // Add the optional onLoginSuccess prop
 }
 
 const GoogleReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {
@@ -28,7 +32,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
   isOpen, 
   onClose, 
   triggerReason,
-  onSwitchToSignup 
+  onSwitchToSignup,
+  onLoginSuccess
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -65,7 +70,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const handleModalContentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
-  
+
   const handleClose = () => {
     // Reset all states
     setFormData({
@@ -226,6 +231,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
       }
 
       if (result?.ok) {
+        // Call the onLoginSuccess callback before redirecting
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        }
+
         if (result.url) {
           window.location.href = result.url;
         } else {
