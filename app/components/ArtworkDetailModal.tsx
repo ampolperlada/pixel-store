@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react'; // Import useSession hook
 
 import LoginModal from './LoginModal';
 import SignupModal from './SignupModal';
+import CartPage from './CartPage'; // Import CartPage component
 
 interface ArtworkDetailModalProps {
   artwork: ArtworkItem;
@@ -21,6 +22,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [showCartPage, setShowCartPage] = useState(false); // New state for cart page
   
   // Use Next.js session to check authentication status
   const { data: session, status } = useSession();
@@ -30,8 +32,8 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
     if (!isAuthenticated) {
       setShowLoginModal(true);
     } else {
-      console.log("Adding to cart:", artwork.title);
-      // Implement your add to cart logic here
+      // Show cart page instead of logging
+      setShowCartPage(true);
     }
   };
 
@@ -57,13 +59,36 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
     setShowSignupModal(false);
   };
 
+  const closeCartPage = () => {
+    setShowCartPage(false);
+  };
+
+  const handleCheckoutSuccess = () => {
+    setShowCartPage(false);
+    // You could add additional logic here such as showing a success message
+    // or redirecting to a "thank you" page
+    onClose(); // Close the entire modal after successful checkout
+  };
+
   // Handle successful login
   const handleLoginSuccess = () => {
     closeLoginModal();
-    // No need to manually update isAuthenticated since useSession will handle that
+    // If user was trying to buy, show cart page immediately after login
+    setShowCartPage(true);
   };
 
   if (!isOpen) return null;
+
+  // If cart page is active, show it instead of the main modal content
+  if (showCartPage) {
+    return (
+      <CartPage 
+        artwork={artwork} 
+        onClose={closeCartPage} 
+        onCheckout={handleCheckoutSuccess} 
+      />
+    );
+  }
 
   return (
     <div 
