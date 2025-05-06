@@ -23,8 +23,9 @@ const StickyNavbar = () => {
   const [isSticky, setIsSticky] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignupOpen, setIsSignupOpen] = useState(false);
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, refreshUser } = useAuth(); // Add refreshUser from AuthContext
   const [hasMounted, setHasMounted] = useState(false);
+  const [walletConnecting, setWalletConnecting] = useState(false); // Add loading state for wallet connection
 
   useEffect(() => {
     setHasMounted(true);
@@ -40,6 +41,8 @@ const StickyNavbar = () => {
 
   const handleConnectWallet = async () => {
     try {
+      setWalletConnecting(true); // Show loading state
+
       if (!window.ethereum) throw new Error("Ethereum wallet not detected");
       const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
 
@@ -52,10 +55,20 @@ const StickyNavbar = () => {
       });
 
       if (!response.ok) throw new Error("Failed to save wallet address");
+      
+      // Refresh user data after successful wallet connection
+      if (refreshUser) {
+        await refreshUser();
+      } else {
+        // If you don't have a refreshUser function, reload the page as a fallback
+        window.location.reload();
+      }
 
       alert("Wallet connected successfully!");
     } catch (error) {
       alert(`Wallet connection failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setWalletConnecting(false); // Hide loading state
     }
   };
 
@@ -108,18 +121,26 @@ const StickyNavbar = () => {
                 <div className="h-8 w-8 rounded-full bg-gray-700 animate-pulse" />
               ) : user ? (
                 <>
-                  {!user.wallet_address ? (
-                    <button
-                      onClick={handleConnectWallet}
-                      className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-lg shadow-lg hover:from-purple-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-105"
-                    >
-                      Connect Wallet
-                    </button>
-                  ) : (
-                    <div className="px-4 py-2 bg-gray-800 text-green-400 rounded-lg font-mono text-sm">
+                  {/* Show wallet address with indicator if connected */}
+                  {user.wallet_address && (
+                    <div className="px-4 py-2 bg-gray-800 text-green-400 rounded-lg font-mono text-sm flex items-center">
+                      <span className="inline-block h-2 w-2 rounded-full bg-green-400 mr-2"></span>
                       {user.wallet_address.slice(0, 6)}...{user.wallet_address.slice(-4)}
                     </div>
                   )}
+
+                  {/* Connect wallet button with loading state */}
+                  {!user.wallet_address ? (
+                    <button
+                      onClick={handleConnectWallet}
+                      disabled={walletConnecting}
+                      className={`px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-lg shadow-lg hover:from-purple-500 hover:to-pink-500 transition-all duration-300 transform hover:scale-105 ${
+                        walletConnecting ? "opacity-75 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      {walletConnecting ? "Connecting..." : "Connect Wallet"}
+                    </button>
+                  ) : null}
 
                   <Link
                     href="/profile"
