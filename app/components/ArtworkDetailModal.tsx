@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ArtworkItem } from "../data/sampleData";
+import { useSession } from 'next-auth/react'; // Import useSession hook
 
 import LoginModal from './LoginModal';
 import SignupModal from './SignupModal';
@@ -20,22 +21,26 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  
+  // Use Next.js session to check authentication status
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === 'authenticated';
 
   const handleAddToCart = () => {
-    const isAuthenticated = false;
     if (!isAuthenticated) {
       setShowLoginModal(true);
     } else {
       console.log("Adding to cart:", artwork.title);
+      // Implement your add to cart logic here
     }
   };
 
   const handleContactGallery = () => {
-    const isAuthenticated = false;
     if (!isAuthenticated) {
       setShowLoginModal(true);
     } else {
       console.log("Contacting gallery for:", artwork.title);
+      // Implement your contact gallery logic here
     }
   };
 
@@ -50,6 +55,12 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
 
   const closeSignupModal = () => {
     setShowSignupModal(false);
+  };
+
+  // Handle successful login
+  const handleLoginSuccess = () => {
+    closeLoginModal();
+    // No need to manually update isAuthenticated since useSession will handle that
   };
 
   if (!isOpen) return null;
@@ -419,6 +430,7 @@ const ArtworkDetailModal: React.FC<ArtworkDetailModalProps> = ({ artwork, isOpen
               isOpen={showLoginModal} 
               onClose={closeLoginModal} 
               onSignupClick={openSignupFromLogin}
+              onLoginSuccess={handleLoginSuccess} // Add this prop
             />
           </div>
         </div>
