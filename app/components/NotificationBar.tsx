@@ -1,12 +1,74 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, createContext, useContext } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "./context/AuthContext";
 import LoginModal from "./LoginModal";
 import SignupModal from "./SignupModal";
 
+// Toast Context
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+interface ToastItem {
+  id: string;
+  message: string;
+  type: ToastType;
+}
+
+interface ToastContextValue {
+  showToast: (message: string, type?: ToastType, duration?: number) => void;
+}
+
+const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+
+function Toast({ message, type }: { message: string; type: ToastType }) {
+  const backgroundColor = 
+    type === 'success' ? 'bg-green-500' :
+    type === 'error' ? 'bg-red-500' :
+    type === 'warning' ? 'bg-yellow-500' : 
+    'bg-blue-500';
+  
+  return (
+    <div className={`${backgroundColor} text-white px-4 py-2 rounded-md shadow-lg max-w-md transform transition-all duration-300 ease-out translate-y-0 opacity-100`}>
+      <p>{message}</p>
+    </div>
+  );
+}
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  
+  const showToast = (message: string, type: ToastType = 'success', duration: number = 3000) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+    
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, duration);
+  };
+  
+  return (
+    <ToastContext.Provider value={{ showToast }}>
+      {children}
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+        {toasts.map((toast) => (
+          <Toast key={toast.id} message={toast.message} type={toast.type} />
+        ))}
+      </div>
+    </ToastContext.Provider>
+  );
+}
+
+export function useToast(): ToastContextValue {
+  const context = useContext(ToastContext);
+  if (context === undefined) {
+    throw new Error('useToast must be used within a ToastProvider');
+  }
+  return context;
+}
+
+// Notification Bar Component
 const NotificationBar = () => {
   return (
     <div className="w-full bg-gradient-to-r from-pink-600 via-purple-600 to-cyan-500 p-2 text-center relative overflow-hidden">
@@ -19,13 +81,15 @@ const NotificationBar = () => {
   );
 };
 
+// Sticky Navbar Component
 const StickyNavbar = () => {
   const [isSticky, setIsSticky] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignupOpen, setIsSignupOpen] = useState(false);
-  const { user, loading, logout, refreshUser } = useAuth(); // Add refreshUser from AuthContext
+  const { user, loading, logout, refreshUser } = useAuth();
   const [hasMounted, setHasMounted] = useState(false);
-  const [walletConnecting, setWalletConnecting] = useState(false); // Add loading state for wallet connection
+  const [walletConnecting, setWalletConnecting] = useState(false);
+  const { showToast } = useToast(); // Use the toast hook
 
   useEffect(() => {
     setHasMounted(true);
@@ -41,12 +105,19 @@ const StickyNavbar = () => {
 
   const handleConnectWallet = async () => {
     try {
-      setWalletConnecting(true); // Show loading state
+      setWalletConnecting(true);
 
-      if (!window.ethereum) throw new Error("Ethereum wallet not detected");
+      if (!window.ethereum) {
+        showToast('Ethereum wallet not detected', 'error');
+        throw new Error("Ethereum wallet not detected");
+      }
+      
       const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
 
-      if (!user) throw new Error("User must be logged in to connect wallet");
+      if (!user) {
+        showToast('You must be logged in to connect a wallet', 'warning');
+        throw new Error("User must be logged in to connect wallet");
+      }
 
       const response = await fetch("/api/connect-wallet", {
         method: "POST",
@@ -54,21 +125,24 @@ const StickyNavbar = () => {
         body: JSON.stringify({ wallet_address: accounts[0], user_id: user.id }),
       });
 
-      if (!response.ok) throw new Error("Failed to save wallet address");
+      if (!response.ok) {
+        showToast('Failed to save wallet address', 'error');
+        throw new Error("Failed to save wallet address");
+      }
       
       // Refresh user data after successful wallet connection
       if (refreshUser) {
         await refreshUser();
+        showToast('Wallet connected successfully!', 'success');
       } else {
         // If you don't have a refreshUser function, reload the page as a fallback
         window.location.reload();
       }
-
-      alert("Wallet connected successfully!");
     } catch (error) {
-      alert(`Wallet connection failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      // Error was already shown via toast, no need for alert
+      console.error("Wallet connection error:", error);
     } finally {
-      setWalletConnecting(false); // Hide loading state
+      setWalletConnecting(false);
     }
   };
 
@@ -107,7 +181,10 @@ const StickyNavbar = () => {
             <div className="flex items-center space-x-3">
               {/* Notification Icon */}
               <div className="relative">
-                <button className="text-cyan-400 hover:text-cyan-300">
+                <button 
+                  className="text-cyan-400 hover:text-cyan-300"
+                  onClick={() => showToast('You have 3 new notifications', 'info')}
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -150,7 +227,10 @@ const StickyNavbar = () => {
                   </Link>
 
                   <button
-                    onClick={logout}
+                    onClick={() => {
+                      logout();
+                      showToast('Logged out successfully', 'success');
+                    }}
                     className="text-white hover:text-pink-400 transition-colors"
                   >
                     Sign Out
@@ -185,17 +265,26 @@ const StickyNavbar = () => {
       </nav>
 
       {/* Auth Modals */}
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-      <SignupModal isOpen={isSignupOpen} onClose={() => setIsSignupOpen(false)} />
+      <LoginModal 
+        isOpen={isLoginOpen} 
+        onClose={() => setIsLoginOpen(false)} 
+      />
+      <SignupModal 
+        isOpen={isSignupOpen} 
+        onClose={() => setIsSignupOpen(false)} 
+      />
     </>
   );
 };
 
+// Main Header Component
 const Header = () => (
-  <header className="relative">
-    <NotificationBar />
-    <StickyNavbar />
-  </header>
+  <ToastProvider>
+    <header className="relative">
+      <NotificationBar />
+      <StickyNavbar />
+    </header>
+  </ToastProvider>
 );
 
 export default Header;
