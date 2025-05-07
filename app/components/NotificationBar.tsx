@@ -102,32 +102,43 @@ const StickyNavbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
   const handleConnectWallet = async () => {
     try {
       setWalletConnecting(true);
-
+  
       if (!window.ethereum) {
-        showToast('Ethereum wallet not detected', 'error');
-        throw new Error("Ethereum wallet not detected");
+        showToast('Ethereum wallet not detected. Please install MetaMask or another Ethereum wallet.', 'error');
+        setWalletConnecting(false);
+        return;
       }
       
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" }).catch((err) => {
+        // Handle case where user rejects the connection request
+        if (err.code === 4001) {
+          showToast('Wallet connection rejected by user', 'warning');
+        } else {
+          showToast('Failed to connect wallet: ' + err.message, 'error');
+        }
+        throw err;
+      });
+  
       if (!user) {
         showToast('You must be logged in to connect a wallet', 'warning');
-        throw new Error("User must be logged in to connect wallet");
+        setWalletConnecting(false);
+        return;
       }
-
+  
       const response = await fetch("/api/connect-wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wallet_address: accounts[0], user_id: user.id }),
       });
-
+  
       if (!response.ok) {
-        showToast('Failed to save wallet address', 'error');
-        throw new Error("Failed to save wallet address");
+        const errorData = await response.json().catch(() => ({}));
+        showToast(errorData.message || 'Failed to save wallet address', 'error');
+        setWalletConnecting(false);
+        return;
       }
       
       // Refresh user data after successful wallet connection
@@ -138,9 +149,11 @@ const StickyNavbar = () => {
         // If you don't have a refreshUser function, reload the page as a fallback
         window.location.reload();
       }
-    } catch (error) {
-      // Error was already shown via toast, no need for alert
-      console.error("Wallet connection error:", error);
+    } catch (error: any) {
+      // Skip logging user-rejected errors since we already showed a toast
+      if (error?.code !== 4001) {
+        console.error("Wallet connection error:", error);
+      }
     } finally {
       setWalletConnecting(false);
     }
