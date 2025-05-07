@@ -180,6 +180,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           }
         }
 
+        
+
         // Handle session updates
         if (trigger === "update" && session?.user) {
           token.name = session.user.name;
