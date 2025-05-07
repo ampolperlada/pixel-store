@@ -141,9 +141,9 @@ export async function DELETE(req: NextRequest) {
 }
 
 // Get wallet connection status
+// Get wallet connection status
 export async function GET(req: NextRequest) {
   try {
-    // Get the user's session
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
