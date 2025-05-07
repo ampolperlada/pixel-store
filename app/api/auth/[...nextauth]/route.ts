@@ -18,7 +18,7 @@ const supabaseAdmin = createClient(
   }
 );
 
-// Database health check (keep your existing implementation)
+// Database health check
 async function checkDatabaseHealth() {
   try {
     const { data, error } = await supabase.rpc('health');
@@ -134,11 +134,26 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         
             console.log('[Auth] Updated last_login_at for user:', user.user_id);
         
+            // Fetch wallet connection information, if any
+            const { data: walletData, error: walletError } = await supabase
+              .from('user_wallets')
+              .select('wallet_address, is_connected')
+              .eq('user_id', user.user_id)
+              .maybeSingle();
+            
+            console.log('[Auth] Wallet data for user:', walletData);
+            
+            if (walletError) {
+              console.error('[Auth] Error fetching wallet data:', walletError);
+            }
+        
             return {
               id: user.user_id.toString(),
               name: user.username,
               email: user.email,
-              rememberMe: rememberMe
+              rememberMe: rememberMe,
+              walletAddress: walletData?.wallet_address || null,
+              isWalletConnected: walletData?.is_connected || false
             };
         
           } catch (err) {
@@ -166,12 +181,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       async session({ session, token }) {
         if (token.sub && session.user) {
           session.user.id = token.sub;
+          // Add wallet information to the session
+          session.user.walletAddress = token.walletAddress as string || null;
+          session.user.isWalletConnected = token.isWalletConnected as boolean || false;
         }
         return session;
       },
       async jwt({ token, user, trigger, session }) {
         if (user) {
           token.sub = user.id;
+          
+          // Save wallet information in the token
+          token.walletAddress = (user as any).walletAddress || null;
+          token.isWalletConnected = (user as any).isWalletConnected || false;
           
           // Set custom token expiry based on rememberMe
           if ((user as any).rememberMe === false) {
@@ -180,12 +202,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           }
         }
 
-        
-
         // Handle session updates
         if (trigger === "update" && session?.user) {
           token.name = session.user.name;
           token.email = session.user.email;
+          
+          // Update wallet information if provided in the session update
+          if (session.user.walletAddress !== undefined) {
+            token.walletAddress = session.user.walletAddress;
+          }
+          if (session.user.isWalletConnected !== undefined) {
+            token.isWalletConnected = session.user.isWalletConnected;
+          }
         }
 
         return token;
@@ -202,6 +230,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         // Update last_login_at for social logins too
         if (account?.provider === 'google') {
           try {
+            // First update the user's login timestamp
             const updateResult = await supabaseAdmin
               .from('users')
               .update({ 
@@ -217,6 +246,37 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             } else {
               console.log('[Auth] Updated last_login_at for social login user:', user.email);
             }
+            
+            // Now fetch wallet information for the Google user
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('user_id')
+              .eq('email', user.email)
+              .maybeSingle();
+              
+            if (userError || !userData) {
+              console.error('[Auth] Error finding user by email:', userError);
+            } else {
+              // Fetch wallet connection data
+              const { data: walletData, error: walletError } = await supabase
+                .from('user_wallets')
+                .select('wallet_address, is_connected')
+                .eq('user_id', userData.user_id)
+                .maybeSingle();
+                
+              if (walletError) {
+                console.error('[Auth] Error fetching wallet data for Google user:', walletError);
+              } else if (walletData) {
+                // Add wallet data to the user object (will be used in JWT)
+                (user as any).walletAddress = walletData.wallet_address;
+                (user as any).isWalletConnected = walletData.is_connected;
+                
+                console.log('[Auth] Added wallet data to Google user:', {
+                  walletAddress: walletData.wallet_address,
+                  isConnected: walletData.is_connected
+                });
+              }
+            }
           } catch (err) {
             console.error('[Auth] Error updating last_login_at for social login:', err);
           }
@@ -229,7 +289,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     pages: {
       signIn: '/login',
       error: '/login?error=CredentialsSignin'
-      // Remove signUp entry since you're using a component
     },
     cookies: {
       sessionToken: {
