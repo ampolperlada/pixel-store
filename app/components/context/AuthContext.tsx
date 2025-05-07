@@ -27,7 +27,7 @@ type AuthContextType = {
   register: (credentials: { email: string; password: string }) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<CustomUser | null>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,8 +39,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Get NextAuth session
   const { data: nextAuthSession, status: nextAuthStatus } = useSession();
 
-  // This function gets user data from Supabase
+  // Updated refreshUser implementation per the requirements
   const refreshUser = async () => {
+    try {
+      // Fetch user data from API endpoint
+      const response = await fetch("/api/auth/me");
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        return userData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to refresh user data:", error);
+      return null;
+    }
+  };
+
+  // This function gets user data from Supabase
+  const refreshUserFromSupabase = async () => {
     setLoading(true);
     try {
       const { data: { user: supabaseUser }, error } = await supabase.auth.getUser();
