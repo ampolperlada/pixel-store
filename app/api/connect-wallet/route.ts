@@ -5,9 +5,8 @@ import { authOptions } from '../../api/auth/[...nextauth]/route';
 
 export async function POST(req: NextRequest) {
   try {
-    // Get the wallet address from the request body
     const { walletAddress } = await req.json();
-    
+
     if (!walletAddress) {
       return NextResponse.json(
         { success: false, message: 'Wallet address is required' },
@@ -15,9 +14,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get the user's session
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, message: 'User not authenticated' },
@@ -75,8 +73,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Update the session with the new wallet information
-    // The session will need to be refreshed on the client side
     return NextResponse.json({
       success: true,
       message: 'Wallet connected successfully',
@@ -93,6 +89,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
 
 export async function DELETE(req: NextRequest) {
   try {
