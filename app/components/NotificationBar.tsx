@@ -8,7 +8,7 @@ import LoginModal from "./LoginModal";
 import SignupModal from "./SignupModal";
 import { signIn, signOut, useSession } from 'next-auth/react';
 
-// Toast Context
+// Toast Context (unchanged)
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface ToastItem {
@@ -69,7 +69,7 @@ export function useToast(): ToastContextValue {
   return context;
 }
 
-// Notification Bar Component
+// Notification Bar Component (unchanged)
 const NotificationBar = () => {
   return (
     <div className="w-full bg-gradient-to-r from-pink-600 via-purple-600 to-cyan-500 p-2 text-center relative overflow-hidden">
@@ -120,7 +120,6 @@ const StickyNavbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-// Replace the handleConnectWallet function in your StickyNavbar component
 
 const handleConnectWallet = async () => {
   try {
@@ -138,11 +137,10 @@ const handleConnectWallet = async () => {
       throw new Error("User must be logged in to connect wallet");
     }
 
-    // Fix parameter name to match API expectations
     const response = await fetch("/api/connect-wallet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ walletAddress: accounts[0] }), // Changed from wallet_address to walletAddress
+      body: JSON.stringify({ walletAddress: accounts[0] }),
     });
 
     if (!response.ok) {
@@ -151,13 +149,10 @@ const handleConnectWallet = async () => {
       throw new Error("Failed to save wallet address");
     }
     
-    // Get the updated user data from the response
     const responseData = await response.json();
     
-    // Refresh user data and session after successful wallet connection
     if (refreshUser) await refreshUser();
     
-    // Update session with new wallet data
     await signIn('credentials', { 
       redirect: false,
       callbackUrl: window.location.href
@@ -165,7 +160,6 @@ const handleConnectWallet = async () => {
     
     showToast('Wallet connected successfully!', 'success');
     
-    // Force page refresh to ensure all components update with new wallet status
     window.location.reload();
   } catch (error) {
     console.error("Wallet connection error:", error);
@@ -306,7 +300,7 @@ const handleConnectWallet = async () => {
   );
 };
 
-// Main Header Component
+// Main Header Component (unchanged)
 const Header = () => (
   <ToastProvider>
     <header className="relative">
