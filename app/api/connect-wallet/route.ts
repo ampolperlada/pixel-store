@@ -1,6 +1,6 @@
 // app/api/connect-wallet/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../lib/supabase'; // Adjust import path as needed
+import { supabase } from '../../lib/supabase';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../api/auth/[...nextauth]/route';
 
@@ -11,6 +11,14 @@ export async function POST(req: NextRequest) {
     if (!walletAddress) {
       return NextResponse.json(
         { success: false, message: 'Wallet address is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate wallet address format (simple check for ethereum address)
+    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid wallet address format' },
         { status: 400 }
       );
     }
@@ -26,6 +34,23 @@ export async function POST(req: NextRequest) {
 
     const userId = session.user.id;
     console.log(`Connecting wallet for user ${userId}: ${walletAddress}`);
+
+    // Check if the wallet is already connected to another user
+    const { data: existingUserWithWallet, error: walletCheckError } = await supabase
+      .from('user_wallets')
+      .select('user_id')
+      .eq('wallet_address', walletAddress) // Make sure this matches your actual column name
+      .neq('user_id', userId)
+      .maybeSingle();
+
+    if (walletCheckError) {
+      console.error('Error checking wallet availability:', walletCheckError);
+    } else if (existingUserWithWallet) {
+      return NextResponse.json(
+        { success: false, message: 'This wallet is already connected to another account' },
+        { status: 409 }
+      );
+    }
 
     // Check if a wallet connection already exists for this user
     const { data: existingWallet, error: fetchError } = await supabase
@@ -49,7 +74,7 @@ export async function POST(req: NextRequest) {
       result = await supabase
         .from('user_wallets')
         .update({
-          wallet_adress: walletAddress, // Changed from wallet_address to wallet_adress
+          wallet_address: walletAddress, // Make sure this matches your actual column name
           is_connected: true,
           updated_at: new Date().toISOString()
         })
@@ -59,7 +84,7 @@ export async function POST(req: NextRequest) {
         .from('user_wallets')
         .insert({
           user_id: userId,
-          wallet_adress: walletAddress, // Changed from wallet_address to wallet_adress
+          wallet_address: walletAddress, // Make sure this matches your actual column name
           is_connected: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -69,7 +94,7 @@ export async function POST(req: NextRequest) {
     if (result.error) {
       console.error('Error connecting wallet:', result.error);
       return NextResponse.json(
-        { success: false, message: 'Failed to connect wallet' },
+        { success: false, message: 'Failed to connect wallet', error: result.error.message },
         { status: 500 }
       );
     }
@@ -85,6 +110,8 @@ export async function POST(req: NextRequest) {
 
     if (userUpdateResult.error) {
       console.error('Error updating user with wallet:', userUpdateResult.error);
+      // Continue execution even if this fails - we'll consider the operation successful
+      // as long as the user_wallets table is updated
     }
 
     return NextResponse.json({
@@ -98,7 +125,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Wallet connection error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { 
+        success: false, 
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

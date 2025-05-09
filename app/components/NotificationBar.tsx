@@ -133,7 +133,15 @@ const StickyNavbar = () => {
       }
       
       console.log('Requesting wallet accounts');
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      let accounts;
+      try {
+        accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        console.log('Received accounts:', accounts);
+      } catch (ethError) {
+        console.error('Error requesting Ethereum accounts:', ethError);
+        showToast('Failed to connect to wallet: ' + ((ethError as Error).message || 'Unknown error'), 'error');
+        throw ethError;
+      }
       
       if (!accounts || accounts.length === 0) {
         const errorMsg = 'No accounts found in wallet';
@@ -150,21 +158,31 @@ const StickyNavbar = () => {
       }
   
       console.log('Connecting wallet:', accounts[0]);
-      const response = await fetch("/api/connect-wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: accounts[0] }),
-      });
+      let response;
+      try {
+        response = await fetch("/api/connect-wallet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletAddress: accounts[0] }),
+        });
+        
+        console.log('API response status:', response.status);
+      } catch (fetchError) {
+        console.error('Fetch operation failed:', fetchError);
+        showToast('Network error while connecting wallet', 'error');
+        throw fetchError;
+      }
   
       if (!response.ok) {
         let errorData;
         try {
           errorData = await response.json();
-        } catch (e) {
-          console.error('Failed to parse error response:', e);
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorData = { message: 'Could not parse error response' };
         }
         
-        const errorMsg = errorData?.message || 'Failed to save wallet address';
+        const errorMsg = errorData?.message || `Failed to save wallet address (Status: ${response.status})`;
         console.error('Wallet connection failed:', {
           status: response.status,
           error: errorMsg,
@@ -174,29 +192,53 @@ const StickyNavbar = () => {
         throw new Error(errorMsg);
       }
       
-      const responseData = await response.json();
-      console.log('Wallet connection successful:', responseData);
+      let responseData;
+      try {
+        responseData = await response.json();
+        console.log('Wallet connection successful:', responseData);
+      } catch (parseError) {
+        console.error('Failed to parse success response:', parseError);
+        showToast('Connected wallet but received invalid response', 'warning');
+        // Continue with execution since the connection might still be ok
+      }
       
       if (refreshUser) {
         console.log('Refreshing user data');
-        await refreshUser();
+        try {
+          await refreshUser();
+        } catch (refreshError) {
+          console.error('Error refreshing user data:', refreshError);
+          showToast('Connected wallet but failed to refresh user data', 'warning');
+          // Continue execution since wallet connection itself might be ok
+        }
       }
       
       console.log('Refreshing session');
-      await signIn('credentials', { 
-        redirect: false,
-        callbackUrl: window.location.href
-      });
+      try {
+        await signIn('credentials', { 
+          redirect: false,
+          callbackUrl: window.location.href
+        });
+      } catch (signInError) {
+        console.error('Error during session refresh:', signInError);
+        showToast('Connected wallet but session refresh failed', 'warning');
+        // Continue execution as the wallet might still be connected
+      }
       
       showToast('Wallet connected successfully!', 'success');
       console.log('Reloading page to update state');
       window.location.reload();
     } catch (error) {
-      console.error('Full wallet connection error:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        user: user?.id
+      // Improved error logging with explicit error object stringification
+      console.error('Full wallet connection error:', error);
+      console.error('Error details:', { 
+        message: (error as Error)?.message || 'Unknown error',
+        name: (error as Error)?.name,
+        stack: (error as Error)?.stack,
+        userId: user?.id
       });
+      // Show a more specific error message to the user
+      showToast(`Wallet connection failed: ${(error as Error)?.message || 'Unknown error'}`, 'error');
     } finally {
       setWalletConnecting(false);
     }
