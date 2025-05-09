@@ -41,42 +41,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: nextAuthSession, status: nextAuthStatus } = useSession();
 
   // Helper function to fetch wallet data
-  const fetchUserWallet = async (userId: string) => {
-    if (!userId) {
-      console.warn('No user ID provided for wallet fetch');
-      return {
-        wallet_address: null,
-        is_connected: false
-      };
+  // Fixed fetchUserWallet function for AuthContext
+
+const fetchUserWallet = async (userId: string) => {
+  if (!userId) {
+    console.warn('No user ID provided for wallet fetch');
+    return {
+      wallet_address: null,
+      is_connected: false
+    };
+  }
+
+  try {
+    console.log(`Fetching wallet for user ${userId}`);
+    
+    // Use consistent column naming - checking both possible column names
+    const { data, error } = await supabase
+      .from('user_wallets')
+      .select('wallet_address, is_connected')  // 'wallet_address' is the correct column name
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Detailed Supabase wallet fetch error:', error);
+      throw error;
     }
-  
-    try {
-      console.log(`Fetching wallet for user ${userId}`);
-      const { data, error } = await supabase
+
+    // If no data found, try the alternate column name (wallet_adress)
+    if (!data) {
+      console.log('No wallet found with wallet_address, trying wallet_adress column');
+      const { data: altData, error: altError } = await supabase
         .from('user_wallets')
-        .select('wallet_address, is_connected')  // Fixed: was 'wallet_adress'
+        .select('wallet_adress, is_connected')  // Try the misspelled column if it exists
         .eq('user_id', userId)
         .maybeSingle();
-  
-      if (error) {
-        console.error('Detailed Supabase wallet fetch error:', error);  // Log the full error object
-        throw error;
+        
+      if (altError) {
+        console.error('Error trying alternate column name:', altError);
+      } else if (altData) {
+        console.log('Found wallet data with alternate column name');
+        return {
+          wallet_address: altData.wallet_adress || null,
+          is_connected: altData.is_connected || false
+        };
       }
-  
-      console.log('Wallet data retrieved:', data);
-      return {
-        wallet_address: data?.wallet_address || null,  // Fixed: was 'wallet_adress'
-        is_connected: data?.is_connected || false
-      };
-    } catch (error) {
-      console.error('Unexpected error in fetchUserWallet:', error);  // Log the full error object
-      return {
-        wallet_address: null,
-        is_connected: false
-      };
     }
-  };
 
+    console.log('Wallet data retrieved:', data);
+    return {
+      wallet_address: data?.wallet_address || null,
+      is_connected: data?.is_connected || false
+    };
+  } catch (error) {
+    console.error('Unexpected error in fetchUserWallet:', error);
+    return {
+      wallet_address: null,
+      is_connected: false
+    };
+  }
+};
   
 
   const refreshUser = async () => {
