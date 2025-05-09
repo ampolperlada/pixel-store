@@ -120,59 +120,60 @@ const StickyNavbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+// Replace the handleConnectWallet function in your StickyNavbar component
 
-  const handleConnectWallet = async () => {
-    try {
-      setWalletConnecting(true);
-  
-      if (!window.ethereum) {
-        showToast('Ethereum wallet not detected', 'error');
-        throw new Error("Ethereum wallet not detected");
-      }
-      
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-  
-      if (!user) {
-        showToast('You must be logged in to connect a wallet', 'warning');
-        throw new Error("User must be logged in to connect wallet");
-      }
-  
-      // Fix parameter name to match API expectations
-      const response = await fetch("/api/connect-wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: accounts[0] }), // Changed from wallet_address to walletAddress
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        showToast(errorData.message || 'Failed to save wallet address', 'error');
-        throw new Error("Failed to save wallet address");
-      }
-      
-      // Get the updated user data from the response
-      const responseData = await response.json();
-      
-      // Refresh user data and session after successful wallet connection
-      if (refreshUser) await refreshUser();
-      
-      // Update session with new wallet data
-      await signIn('credentials', { 
-        redirect: false,
-        callbackUrl: window.location.href
-      });
-      
-      showToast('Wallet connected successfully!', 'success');
-      
-      // Force page refresh to ensure all components update with new wallet status
-      window.location.reload();
-    } catch (error) {
-      console.error("Wallet connection error:", error);
-    } finally {
-      setWalletConnecting(false);
+const handleConnectWallet = async () => {
+  try {
+    setWalletConnecting(true);
+
+    if (!window.ethereum) {
+      showToast('Ethereum wallet not detected', 'error');
+      throw new Error("Ethereum wallet not detected");
     }
-  };
-  
+    
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+
+    if (!user) {
+      showToast('You must be logged in to connect a wallet', 'warning');
+      throw new Error("User must be logged in to connect wallet");
+    }
+
+    // Fix parameter name to match API expectations
+    const response = await fetch("/api/connect-wallet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ walletAddress: accounts[0] }), // Changed from wallet_address to walletAddress
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      showToast(errorData.message || 'Failed to save wallet address', 'error');
+      throw new Error("Failed to save wallet address");
+    }
+    
+    // Get the updated user data from the response
+    const responseData = await response.json();
+    
+    // Refresh user data and session after successful wallet connection
+    if (refreshUser) await refreshUser();
+    
+    // Update session with new wallet data
+    await signIn('credentials', { 
+      redirect: false,
+      callbackUrl: window.location.href
+    });
+    
+    showToast('Wallet connected successfully!', 'success');
+    
+    // Force page refresh to ensure all components update with new wallet status
+    window.location.reload();
+  } catch (error) {
+    console.error("Wallet connection error:", error);
+  } finally {
+    setWalletConnecting(false);
+  }
+};
+
   if (!hasMounted) return null;
 
   return (

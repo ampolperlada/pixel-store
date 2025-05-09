@@ -1,3 +1,4 @@
+// app/api/connect-wallet/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../lib/supabase'; // Adjust import path as needed
 import { getServerSession } from 'next-auth';
@@ -73,6 +74,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Also update the user's record in the database with the wallet address
+    const userUpdateResult = await supabase
+      .from('users')
+      .update({
+        wallet_address: walletAddress,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+
+    if (userUpdateResult.error) {
+      console.error('Error updating user with wallet:', userUpdateResult.error);
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Wallet connected successfully',
@@ -83,102 +97,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('Wallet connection error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-
-export async function DELETE(req: NextRequest) {
-  try {
-    // Get the user's session
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, message: 'User not authenticated' },
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
-    console.log(`Disconnecting wallet for user ${userId}`);
-
-    // Update the wallet record to mark it as disconnected
-    const { error } = await supabase
-      .from('user_wallets')
-      .update({
-        is_connected: false,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('Error disconnecting wallet:', error);
-      return NextResponse.json(
-        { success: false, message: 'Failed to disconnect wallet' },
-        { status: 500 }
-      );
-    }
-
-    // The session will need to be refreshed on the client side
-    return NextResponse.json({
-      success: true,
-      message: 'Wallet disconnected successfully',
-      data: {
-        isConnected: false
-      }
-    });
-  } catch (error) {
-    console.error('Wallet disconnection error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-// Get wallet connection status
-// Get wallet connection status
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, message: 'User not authenticated' },
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
-
-    // Get the wallet connection status
-    const { data, error } = await supabase
-      .from('user_wallets')
-      .select('wallet_address, is_connected')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error fetching wallet status:', error);
-      return NextResponse.json(
-        { success: false, message: 'Database error' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        walletAddress: data?.wallet_address || null,
-        isConnected: data?.is_connected || false
-      }
-    });
-  } catch (error) {
-    console.error('Error getting wallet status:', error);
     return NextResponse.json(
       { success: false, message: 'Internal server error' },
       { status: 500 }
