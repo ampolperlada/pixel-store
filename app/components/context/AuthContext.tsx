@@ -38,66 +38,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CustomUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  // Get NextAuth session
   const { data: nextAuthSession, status: nextAuthStatus } = useSession();
 
-  // Updated refreshUser implementation to fetch wallet data properly
+  // Helper function to fetch wallet data
+  const fetchUserWallet = async (userId: string) => {
+    if (!userId) {
+      console.warn('No user ID provided for wallet fetch');
+      return {
+        wallet_address: null,
+        is_connected: false
+      };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('user_wallets')
+        .select('wallet_adress, is_connected')  // Note: wallet_adress with one 'd'
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Supabase wallet fetch error:', {
+          message: error.message,
+          code: error.code,
+          details: error.details
+        });
+        return {
+          wallet_address: null,
+          is_connected: false
+        };
+      }
+
+      return {
+        wallet_address: data?.wallet_adress || null,
+        is_connected: data?.is_connected || false
+      };
+    } catch (error) {
+      console.error('Unexpected error fetching wallet:', error);
+      return {
+        wallet_address: null,
+        is_connected: false
+      };
+    }
+  };
+
   const refreshUser = async () => {
     try {
       setLoading(true);
       
-      // First try to fetch user data from API endpoint
       const response = await fetch("/api/auth/me");
       
       if (response.ok) {
         const userData = await response.json();
+        const { wallet_address, is_connected } = await fetchUserWallet(userData.id);
         
-        // Now fetch wallet data specifically
-        const { data: walletData, error: walletError } = await supabase
-          .from('user_wallets')
-          .select('wallet_address, is_connected')
-          .eq('user_id', userData.id)
-          .maybeSingle();
-          
-        if (walletError) {
-          console.error('Error fetching wallet data:', walletError);
-        }
-        
-        // Combine user data with wallet data, prioritizing user_wallets table data
         const updatedUser = {
           ...userData,
-          wallet_address: walletData?.wallet_address || userData.wallet_address || null,
-          is_wallet_connected: walletData?.is_connected || false
+          wallet_address,
+          is_wallet_connected: is_connected
         };
         
         setUser(updatedUser);
         return updatedUser;
       }
       
-      // If API endpoint fails, try Supabase directly
       const { data: { user: supabaseUser }, error } = await supabase.auth.getUser();
       
       if (error) throw error;
       
       if (supabaseUser) {
-        // Get wallet data from user_wallets table
-        const { data: walletData, error: walletError } = await supabase
-          .from('user_wallets')
-          .select('wallet_address, is_connected')
-          .eq('user_id', supabaseUser.id)
-          .maybeSingle();
-          
-        if (walletError) {
-          console.error('Error fetching wallet data:', walletError);
-        }
+        const { wallet_address, is_connected } = await fetchUserWallet(supabaseUser.id);
         
         const updatedUser = {
           id: supabaseUser.id,
           email: supabaseUser.email ?? '',
           name: supabaseUser.user_metadata?.name,
           avatar: supabaseUser.user_metadata?.avatar_url,
-          wallet_address: walletData?.wallet_address || supabaseUser.user_metadata?.wallet_address || null,
-          is_wallet_connected: walletData?.is_connected || false
+          wallet_address: wallet_address || supabaseUser.user_metadata?.wallet_address || null,
+          is_wallet_connected: is_connected
         };
         
         setUser(updatedUser);
@@ -113,7 +131,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // This function gets user data from Supabase with wallet info
   const refreshUserFromSupabase = async () => {
     setLoading(true);
     try {
@@ -122,24 +139,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       
       if (supabaseUser) {
-        // Get wallet data from user_wallets table
-        const { data: walletData, error: walletError } = await supabase
-          .from('user_wallets')
-          .select('wallet_address, is_connected')
-          .eq('user_id', supabaseUser.id)
-          .maybeSingle();
-          
-        if (walletError) {
-          console.error('Error fetching wallet data:', walletError);
-        }
+        const { wallet_address, is_connected } = await fetchUserWallet(supabaseUser.id);
         
         setUser({
           id: supabaseUser.id,
           email: supabaseUser.email ?? '',
           name: supabaseUser.user_metadata?.name,
           avatar: supabaseUser.user_metadata?.avatar_url,
-          wallet_address: walletData?.wallet_address || supabaseUser.user_metadata?.wallet_address || null,
-          is_wallet_connected: walletData?.is_connected || false
+          wallet_address: wallet_address || supabaseUser.user_metadata?.wallet_address || null,
+          is_wallet_connected: is_connected
         });
       } else {
         setUser(null);
@@ -155,51 +163,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = async () => {
     setLoading(true);
     try {
-      // Check Supabase session
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) throw error;
       
       if (session?.user) {
-        // Get wallet data from user_wallets table
-        const { data: walletData, error: walletError } = await supabase
-          .from('user_wallets')
-          .select('wallet_address, is_connected')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-          
-        if (walletError) {
-          console.error('Error fetching wallet data:', walletError);
-        }
+        const { wallet_address, is_connected } = await fetchUserWallet(session.user.id);
         
         setUser({
           id: session.user.id,
           email: session.user.email ?? '',
           name: session.user.user_metadata?.name,
           avatar: session.user.user_metadata?.avatar_url,
-          wallet_address: walletData?.wallet_address || session.user.user_metadata?.wallet_address || null,
-          is_wallet_connected: walletData?.is_connected || false
+          wallet_address: wallet_address || session.user.user_metadata?.wallet_address || null,
+          is_wallet_connected: is_connected
         });
       } else if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
-        // If no Supabase session but NextAuth session exists, use NextAuth data
-        // And fetch wallet data
-        const { data: walletData, error: walletError } = await supabase
-          .from('user_wallets')
-          .select('wallet_address, is_connected')
-          .eq('user_id', nextAuthSession.user.id)
-          .maybeSingle();
-          
-        if (walletError) {
-          console.error('Error fetching wallet data:', walletError);
-        }
+        const { wallet_address, is_connected } = await fetchUserWallet(nextAuthSession.user.id);
         
         setUser({
           id: nextAuthSession.user.id || '',
           email: nextAuthSession.user.email || '',
           name: nextAuthSession.user.name || '',
           avatar: nextAuthSession.user.image || '',
-          wallet_address: walletData?.wallet_address || null,
-          is_wallet_connected: walletData?.is_connected || false
+          wallet_address,
+          is_wallet_connected: is_connected
         });
       } else {
         setUser(null);
@@ -212,64 +200,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Effect to watch for NextAuth session changes
   useEffect(() => {
     if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
-      // When NextAuth authenticates, update our user state
-      // Also fetch wallet data
       (async () => {
-        const { data: walletData, error: walletError } = await supabase
-          .from('user_wallets')
-          .select('wallet_address, is_connected')
-          .eq('user_id', nextAuthSession.user.id)
-          .maybeSingle();
-          
-        if (walletError) {
-          console.error('Error fetching wallet data:', walletError);
-        }
+        const { wallet_address, is_connected } = await fetchUserWallet(nextAuthSession.user.id);
         
         setUser({
           id: nextAuthSession.user.id || '',
           email: nextAuthSession.user.email || '',
           name: nextAuthSession.user.name || '',
           avatar: nextAuthSession.user.image || '',
-          wallet_address: walletData?.wallet_address || null,
-          is_wallet_connected: walletData?.is_connected || false
+          wallet_address,
+          is_wallet_connected: is_connected
         });
         
         setLoading(false);
       })();
     } else if (nextAuthStatus === 'unauthenticated') {
-      // Only set user to null if there's no Supabase session either
       checkAuth();
     }
   }, [nextAuthStatus, nextAuthSession]);
 
-  // Effect to watch for Supabase auth changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        // Get wallet data from user_wallets table
-        const { data: walletData, error: walletError } = await supabase
-          .from('user_wallets')
-          .select('wallet_address, is_connected')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-          
-        if (walletError) {
-          console.error('Error fetching wallet data:', walletError);
-        }
+        const { wallet_address, is_connected } = await fetchUserWallet(session.user.id);
         
         setUser({
           id: session.user.id,
           email: session.user.email ?? '',
           name: session.user.user_metadata?.name,
           avatar: session.user.user_metadata?.avatar_url,
-          wallet_address: walletData?.wallet_address || session.user.user_metadata?.wallet_address || null,
-          is_wallet_connected: walletData?.is_connected || false
+          wallet_address: wallet_address || session.user.user_metadata?.wallet_address || null,
+          is_wallet_connected: is_connected
         });
       } else {
-        // Only set user to null if there's no NextAuth session
         if (nextAuthStatus !== 'authenticated') {
           setUser(null);
         }
@@ -287,7 +252,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (credentials: { email: string; password: string }) => {
     setLoading(true);
     try {
-      // First authenticate with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
@@ -296,7 +260,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
-        // Then authenticate with NextAuth
         const result = await signIn('credentials', {
           redirect: false,
           email: credentials.email,
@@ -307,28 +270,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn("NextAuth login failed, but Supabase login succeeded:", result.error);
         }
 
-        // Get wallet data
-        const { data: walletData, error: walletError } = await supabase
-          .from('user_wallets')
-          .select('wallet_address, is_connected')
-          .eq('user_id', data.user.id)
-          .maybeSingle();
-          
-        if (walletError) {
-          console.error('Error fetching wallet data:', walletError);
-        }
+        const { wallet_address, is_connected } = await fetchUserWallet(data.user.id);
 
         setUser({
           id: data.user.id,
           email: data.user.email ?? '',
           name: data.user.user_metadata?.name,
           avatar: data.user.user_metadata?.avatar_url,
-          wallet_address: walletData?.wallet_address || data.user.user_metadata?.wallet_address || null,
-          is_wallet_connected: walletData?.is_connected || false
+          wallet_address: wallet_address || data.user.user_metadata?.wallet_address || null,
+          is_wallet_connected: is_connected
         });
         
         router.push('/profile');
-        router.refresh(); // Force refresh to update UI state
+        router.refresh();
       }
     } catch (error) {
       console.error('Login failed:', error);
@@ -346,7 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password: credentials.password,
         options: {
           data: {
-            name: credentials.email.split('@')[0], // Default name
+            name: credentials.email.split('@')[0],
           }
         }
       });
@@ -360,7 +314,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: data.user.user_metadata?.name,
         };
         
-        // Also sign in with NextAuth
         await signIn('credentials', {
           redirect: false,
           email: credentials.email,
@@ -368,7 +321,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         
         setUser(customUser);
-        router.refresh(); // Force refresh to update UI state
+        router.refresh();
         
         return {
           user: customUser,
@@ -391,16 +344,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setLoading(true);
     try {
-      // Sign out from both auth systems
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Sign out from NextAuth
       await signOut({ redirect: false });
       
       setUser(null);
       router.push('/');
-      router.refresh(); // Force refresh to update UI state
+      router.refresh();
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {

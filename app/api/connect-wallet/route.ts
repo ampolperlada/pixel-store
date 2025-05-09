@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       result = await supabase
         .from('user_wallets')
         .update({
-          wallet_address: walletAddress,
+          wallet_adress: walletAddress, // Changed from wallet_address to wallet_adress
           is_connected: true,
           updated_at: new Date().toISOString()
         })
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
         .from('user_wallets')
         .insert({
           user_id: userId,
-          wallet_address: walletAddress,
+          wallet_adress: walletAddress, // Changed from wallet_address to wallet_adress
           is_connected: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
