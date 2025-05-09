@@ -77,6 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  
+
   const refreshUser = async () => {
     try {
       setLoading(true);

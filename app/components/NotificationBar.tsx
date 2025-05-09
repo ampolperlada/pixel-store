@@ -121,6 +121,11 @@ const StickyNavbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  if (walletConnecting) {
+    console.log('Already processing wallet connection. Please wait.');
+    return;
+  }
+  
   const handleConnectWallet = async () => {
     try {
       setWalletConnecting(true);
