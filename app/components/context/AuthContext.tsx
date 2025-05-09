@@ -49,32 +49,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         is_connected: false
       };
     }
-
+  
     try {
+      console.log(`Fetching wallet for user ${userId}`);
       const { data, error } = await supabase
         .from('user_wallets')
-        .select('wallet_adress, is_connected')  // Note: wallet_adress with one 'd'
+        .select('wallet_adress, is_connected')
         .eq('user_id', userId)
         .maybeSingle();
-
+  
       if (error) {
-        console.error('Supabase wallet fetch error:', {
+        console.error('Detailed Supabase wallet fetch error:', {
           message: error.message,
           code: error.code,
-          details: error.details
+          details: error.details,
+          hint: error.hint,
+          status: error.code
         });
-        return {
-          wallet_address: null,
-          is_connected: false
-        };
+        throw error; // Re-throw to be caught by the outer try-catch
       }
-
+  
+      console.log('Wallet data retrieved:', data);
       return {
         wallet_address: data?.wallet_adress || null,
         is_connected: data?.is_connected || false
       };
     } catch (error) {
-      console.error('Unexpected error fetching wallet:', error);
+      console.error('Unexpected error in fetchUserWallet:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        userId
+      });
       return {
         wallet_address: null,
         is_connected: false

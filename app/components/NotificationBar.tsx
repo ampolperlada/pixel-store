@@ -121,52 +121,86 @@ const StickyNavbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-const handleConnectWallet = async () => {
-  try {
-    setWalletConnecting(true);
-
-    if (!window.ethereum) {
-      showToast('Ethereum wallet not detected', 'error');
-      throw new Error("Ethereum wallet not detected");
+  const handleConnectWallet = async () => {
+    try {
+      setWalletConnecting(true);
+  
+      if (!window.ethereum) {
+        const errorMsg = 'MetaMask or other Ethereum wallet not detected';
+        console.error(errorMsg);
+        showToast(errorMsg, 'error');
+        throw new Error(errorMsg);
+      }
+      
+      console.log('Requesting wallet accounts');
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      
+      if (!accounts || accounts.length === 0) {
+        const errorMsg = 'No accounts found in wallet';
+        console.error(errorMsg);
+        showToast(errorMsg, 'error');
+        throw new Error(errorMsg);
+      }
+  
+      if (!user) {
+        const errorMsg = 'You must be logged in to connect a wallet';
+        console.error(errorMsg);
+        showToast(errorMsg, 'warning');
+        throw new Error(errorMsg);
+      }
+  
+      console.log('Connecting wallet:', accounts[0]);
+      const response = await fetch("/api/connect-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: accounts[0] }),
+      });
+  
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          console.error('Failed to parse error response:', e);
+        }
+        
+        const errorMsg = errorData?.message || 'Failed to save wallet address';
+        console.error('Wallet connection failed:', {
+          status: response.status,
+          error: errorMsg,
+          response: errorData
+        });
+        showToast(errorMsg, 'error');
+        throw new Error(errorMsg);
+      }
+      
+      const responseData = await response.json();
+      console.log('Wallet connection successful:', responseData);
+      
+      if (refreshUser) {
+        console.log('Refreshing user data');
+        await refreshUser();
+      }
+      
+      console.log('Refreshing session');
+      await signIn('credentials', { 
+        redirect: false,
+        callbackUrl: window.location.href
+      });
+      
+      showToast('Wallet connected successfully!', 'success');
+      console.log('Reloading page to update state');
+      window.location.reload();
+    } catch (error) {
+      console.error('Full wallet connection error:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        user: user?.id
+      });
+    } finally {
+      setWalletConnecting(false);
     }
-    
-    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-
-    if (!user) {
-      showToast('You must be logged in to connect a wallet', 'warning');
-      throw new Error("User must be logged in to connect wallet");
-    }
-
-    const response = await fetch("/api/connect-wallet", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ walletAddress: accounts[0] }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      showToast(errorData.message || 'Failed to save wallet address', 'error');
-      throw new Error("Failed to save wallet address");
-    }
-    
-    const responseData = await response.json();
-    
-    if (refreshUser) await refreshUser();
-    
-    await signIn('credentials', { 
-      redirect: false,
-      callbackUrl: window.location.href
-    });
-    
-    showToast('Wallet connected successfully!', 'success');
-    
-    window.location.reload();
-  } catch (error) {
-    console.error("Wallet connection error:", error);
-  } finally {
-    setWalletConnecting(false);
-  }
-};
+  };
 
   if (!hasMounted) return null;
 
