@@ -8,7 +8,7 @@ import LoginModal from "./LoginModal";
 import SignupModal from "./SignupModal";
 import { signIn, signOut, useSession } from 'next-auth/react';
 
-// Toast Context (unchanged)
+// Toast Context
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface ToastItem {
@@ -69,7 +69,7 @@ export function useToast(): ToastContextValue {
   return context;
 }
 
-// Notification Bar Component (unchanged)
+// Notification Bar Component
 const NotificationBar = () => {
   return (
     <div className="w-full bg-gradient-to-r from-pink-600 via-purple-600 to-cyan-500 p-2 text-center relative overflow-hidden">
@@ -82,7 +82,7 @@ const NotificationBar = () => {
   );
 };
 
-// Sticky Navbar Component
+// Sticky Navbar Component with improved wallet connection
 const StickyNavbar = () => {
   const [isSticky, setIsSticky] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -93,7 +93,6 @@ const StickyNavbar = () => {
   const [walletConnecting, setWalletConnecting] = useState(false);
   const { showToast } = useToast();
 
-  // Add this function for session refresh
   async function refreshSession() {
     try {
       const response = await signIn('credentials', { 
@@ -120,130 +119,75 @@ const StickyNavbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  if (walletConnecting) {
-    console.log('Already processing wallet connection. Please wait.');
-    return;
-  }
   
   const handleConnectWallet = async () => {
+    if (walletConnecting) {
+      console.log('Already processing wallet connection. Please wait.');
+      return;
+    }
+    
+    setWalletConnecting(true);
+    
     try {
-      setWalletConnecting(true);
-  
-      if (!window.ethereum) {
-        const errorMsg = 'MetaMask or other Ethereum wallet not detected';
-        console.error(errorMsg);
-        showToast(errorMsg, 'error');
-        throw new Error(errorMsg);
+      if (!user) {
+        showToast('You must be logged in to connect a wallet', 'warning');
+        setIsLoginOpen(true);
+        return;
       }
       
-      console.log('Requesting wallet accounts');
+      if (!window.ethereum) {
+        showToast('MetaMask or compatible wallet not detected. Please install MetaMask first.', 'error');
+        return;
+      }
+      
       let accounts;
       try {
-        accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-        console.log('Received accounts:', accounts);
-      } catch (ethError) {
-        console.error('Error requesting Ethereum accounts:', ethError);
-        showToast('Failed to connect to wallet: ' + ((ethError as Error).message || 'Unknown error'), 'error');
-        throw ethError;
+        const accountsPromise = window.ethereum.request({ method: "eth_requestAccounts" });
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Connection request timed out')), 15000)
+        );
+        accounts = await Promise.race([accountsPromise, timeoutPromise]);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('User rejected') || errorMessage.includes('user rejected')) {
+          showToast('You rejected the connection request', 'info');
+        } else {
+          showToast('Failed to connect to wallet: ' + errorMessage, 'error');
+        }
+        return;
       }
       
       if (!accounts || accounts.length === 0) {
-        const errorMsg = 'No accounts found in wallet';
-        console.error(errorMsg);
-        showToast(errorMsg, 'error');
-        throw new Error(errorMsg);
+        showToast('No wallet accounts found or authorized.', 'error');
+        return;
       }
-  
-      if (!user) {
-        const errorMsg = 'You must be logged in to connect a wallet';
-        console.error(errorMsg);
-        showToast(errorMsg, 'warning');
-        throw new Error(errorMsg);
-      }
-  
-      console.log('Connecting wallet:', accounts[0]);
-      let response;
-      try {
-        response = await fetch("/api/connect-wallet", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ walletAddress: accounts[0] }),
-        });
-        
-        console.log('API response status:', response.status);
-      } catch (fetchError) {
-        console.error('Fetch operation failed:', fetchError);
-        showToast('Network error while connecting wallet', 'error');
-        throw fetchError;
-      }
-  
+      
+      const response = await fetch("/api/connect-wallet", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.user?.id || ""}` 
+        },
+        body: JSON.stringify({ walletAddress: accounts[0] }),
+        credentials: 'include'
+      });
+      
       if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
-          errorData = { message: 'Could not parse error response' };
-        }
-        
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         const errorMsg = errorData?.message || `Failed to save wallet address (Status: ${response.status})`;
-        console.error('Wallet connection failed:', {
-          status: response.status,
-          error: errorMsg,
-          response: errorData
-        });
         showToast(errorMsg, 'error');
-        throw new Error(errorMsg);
+        return;
       }
       
-      let responseData;
-      try {
-        responseData = await response.json();
-        console.log('Wallet connection successful:', responseData);
-      } catch (parseError) {
-        console.error('Failed to parse success response:', parseError);
-        showToast('Connected wallet but received invalid response', 'warning');
-        // Continue with execution since the connection might still be ok
-      }
-      
-      if (refreshUser) {
-        console.log('Refreshing user data');
-        try {
-          await refreshUser();
-        } catch (refreshError) {
-          console.error('Error refreshing user data:', refreshError);
-          showToast('Connected wallet but failed to refresh user data', 'warning');
-          // Continue execution since wallet connection itself might be ok
-        }
-      }
-      
-      console.log('Refreshing session');
-      try {
-        await signIn('credentials', { 
-          redirect: false,
-          callbackUrl: window.location.href
-        });
-      } catch (signInError) {
-        console.error('Error during session refresh:', signInError);
-        showToast('Connected wallet but session refresh failed', 'warning');
-        // Continue execution as the wallet might still be connected
-      }
+      if (refreshUser) await refreshUser();
+      await refreshSession();
       
       showToast('Wallet connected successfully!', 'success');
-      console.log('Reloading page to update state');
-      window.location.reload();
+      setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
-      // Improved error logging with explicit error object stringification
-      console.error('Full wallet connection error:', error);
-      console.error('Error details:', { 
-        message: (error as Error)?.message || 'Unknown error',
-        name: (error as Error)?.name,
-        stack: (error as Error)?.stack,
-        userId: user?.id
-      });
-      // Show a more specific error message to the user
-      showToast(`Wallet connection failed: ${(error as Error)?.message || 'Unknown error'}`, 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error connecting wallet';
+      console.error('Wallet connection error:', error);
+      showToast(`Wallet connection failed: ${errorMessage}`, 'error');
     } finally {
       setWalletConnecting(false);
     }
@@ -262,7 +206,6 @@ const StickyNavbar = () => {
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
-            {/* Logo */}
             <Link href="/">
               <div className="flex items-center cursor-pointer">
                 <div className="w-8 h-8 mr-2">
@@ -272,7 +215,6 @@ const StickyNavbar = () => {
               </div>
             </Link>
 
-            {/* Main Nav */}
             <div className="hidden md:flex items-center space-x-6">
               <Link href="/explore" className="text-white hover:text-pink-400 transition-colors">Explore</Link>
               <Link href="/create" className="text-white hover:text-pink-400 transition-colors">Create</Link>
@@ -280,9 +222,7 @@ const StickyNavbar = () => {
               <Link href="/learn" className="text-white hover:text-pink-400 transition-colors">Learn</Link>
             </div>
 
-            {/* Right side */}
             <div className="flex items-center space-x-3">
-              {/* Notification Icon */}
               <div className="relative">
                 <button 
                   className="text-cyan-400 hover:text-cyan-300"
@@ -296,12 +236,10 @@ const StickyNavbar = () => {
                 </button>
               </div>
 
-              {/* Auth Buttons */}
               {loading ? (
                 <div className="h-8 w-8 rounded-full bg-gray-700 animate-pulse" />
               ) : user ? (
                 <>
-                  {/* Show wallet address with indicator if connected */}
                   {user.wallet_address && (
                     <div className="px-4 py-2 bg-gray-800 text-green-400 rounded-lg font-mono text-sm flex items-center">
                       <span className="inline-block h-2 w-2 rounded-full bg-green-400 mr-2"></span>
@@ -309,8 +247,7 @@ const StickyNavbar = () => {
                     </div>
                   )}
 
-                  {/* Connect wallet button with loading state */}
-                  {!user.wallet_address ? (
+                  {!user.wallet_address && (
                     <button
                       onClick={handleConnectWallet}
                       disabled={walletConnecting}
@@ -320,7 +257,7 @@ const StickyNavbar = () => {
                     >
                       {walletConnecting ? "Connecting..." : "Connect Wallet"}
                     </button>
-                  ) : null}
+                  )}
 
                   <Link
                     href="/profile"
@@ -358,7 +295,6 @@ const StickyNavbar = () => {
               )}
             </div>
 
-            {/* Mobile Nav Button */}
             <button className="md:hidden text-white">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -368,20 +304,13 @@ const StickyNavbar = () => {
         </div>
       </nav>
 
-      {/* Auth Modals */}
-      <LoginModal 
-        isOpen={isLoginOpen} 
-        onClose={() => setIsLoginOpen(false)} 
-      />
-      <SignupModal 
-        isOpen={isSignupOpen} 
-        onClose={() => setIsSignupOpen(false)} 
-      />
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <SignupModal isOpen={isSignupOpen} onClose={() => setIsSignupOpen(false)} />
     </>
   );
 };
 
-// Main Header Component (unchanged)
+// Main Header Component
 const Header = () => (
   <ToastProvider>
     <header className="relative">
