@@ -138,7 +138,7 @@ export const authOptions: NextAuthOptions = {
           // Fetch wallet connection information, if any
           const { data: walletData, error: walletError } = await supabase
             .from('user_wallets')
-            .select('wallet_adress, is_connected') // Changed from wallet_address to wallet_adress
+            .select('wallet_address, is_connected')
             .eq('user_id', user.user_id)
             .maybeSingle();
           
@@ -153,7 +153,7 @@ export const authOptions: NextAuthOptions = {
             name: user.username,
             email: user.email,
             rememberMe: rememberMe,
-            walletAddress: walletData?.wallet_adress || null, // Changed from wallet_address to wallet_adress
+            walletAddress: walletData?.wallet_address || null,
             isWalletConnected: walletData?.is_connected || false
           };
       
@@ -261,7 +261,7 @@ export const authOptions: NextAuthOptions = {
             // Fetch wallet connection data
             const { data: walletData, error: walletError } = await supabase
               .from('user_wallets')
-              .select('wallet_adress, is_connected') // Changed from wallet_address to wallet_adress
+              .select('wallet_address, is_connected')
               .eq('user_id', userData.user_id)
               .maybeSingle();
               
@@ -269,11 +269,11 @@ export const authOptions: NextAuthOptions = {
               console.error('[Auth] Error fetching wallet data for Google user:', walletError);
             } else if (walletData) {
               // Add wallet data to the user object (will be used in JWT)
-              (user as any).walletAddress = walletData.wallet_adress; // Changed from wallet_address to wallet_adress
+              (user as any).walletAddress = walletData.wallet_address;
               (user as any).isWalletConnected = walletData.is_connected;
               
               console.log('[Auth] Added wallet data to Google user:', {
-                walletAddress: walletData.wallet_adress, // Changed from wallet_address to wallet_adress
+                walletAddress: walletData.wallet_address,
                 isConnected: walletData.is_connected
               });
             }
