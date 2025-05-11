@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const { data: existingUserWithWallet, error: walletCheckError } = await supabase
       .from('user_wallets')
       .select('user_id')
-      .eq('wallet_address', walletAddress) // Using wallet_address as column name consistently
+      .eq('wallet_address', walletAddress)
       .neq('user_id', userId)
       .maybeSingle();
 
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       result = await supabase
         .from('user_wallets')
         .update({
-          wallet_address: walletAddress, // Using 'wallet_address' consistently
+          wallet_address: walletAddress,
           is_connected: true,
           updated_at: new Date().toISOString()
         })
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         .from('user_wallets')
         .insert({
           user_id: userId,
-          wallet_address: walletAddress, // Using 'wallet_address' consistently
+          wallet_address: walletAddress,
           is_connected: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
