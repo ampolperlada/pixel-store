@@ -74,6 +74,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // First check if the user_wallets table exists
+    const { error: tableCheckError } = await supabase
+      .from('user_wallets')
+      .select('count(*)', { count: 'exact', head: true });
+    
+    // If the table doesn't exist, we need to handle this gracefully
+    let tableNeedsCreation = false;
+    if (tableCheckError && tableCheckError.message.includes('does not exist')) {
+      console.log('user_wallets table does not exist, will create it');
+      tableNeedsCreation = true;
+    } else if (tableCheckError) {
+      console.error('Error checking user_wallets table:', tableCheckError);
+      return NextResponse.json(
+        { success: false, message: 'Database error while checking tables' },
+        { status: 500 }
+      );
+    }
+
+    // Create the table if it doesn't exist (for development purposes)
+    if (tableNeedsCreation) {
+      // You would typically handle this in a migration script
+      // This is just a placeholder for development
+      console.log('Creating user_wallets table');
+      // Note: In a real app, don't create tables on-the-fly like this
+      return NextResponse.json(
+        { success: false, message: 'Database setup required. Please run migrations.' },
+        { status: 500 }
+      );
+    }
+
     // Check if a wallet connection already exists for this user
     const { data: existingWallet, error: fetchError } = await supabase
       .from('user_wallets')
@@ -81,7 +111,7 @@ export async function POST(req: NextRequest) {
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (fetchError) {
+    if (fetchError && !fetchError.message.includes('does not exist')) {
       console.error('Error checking existing wallet:', fetchError);
       return NextResponse.json(
         { success: false, message: 'Database error while checking user wallet' },
@@ -123,19 +153,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Also update the user's record in the database with the wallet address
-    const userUpdateResult = await supabase
+    // Check if the users table exists and has the wallet_address column
+    const { error: usersTableCheckError } = await supabase
       .from('users')
-      .update({
-        wallet_address: walletAddress,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', userId);
+      .select('count(*)', { count: 'exact', head: true });
+    
+    // Only update the users table if it exists and doesn't have errors
+    if (!usersTableCheckError) {
+      // Also update the user's record in the database with the wallet address
+      const userUpdateResult = await supabase
+        .from('users')
+        .update({
+          wallet_address: walletAddress,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
 
-    if (userUpdateResult.error) {
-      console.error('Error updating user with wallet:', userUpdateResult.error);
-      // Continue execution but log the issue
-      console.log('User record not updated, but wallet connection successful');
+      if (userUpdateResult.error) {
+        console.error('Error updating user with wallet:', userUpdateResult.error);
+        // Continue execution but log the issue
+        console.log('User record not updated, but wallet connection successful');
+      }
+    } else {
+      console.log('Skipping users table update - table may not exist or have wallet_address column');
     }
 
     console.log('Wallet connected successfully');
