@@ -59,14 +59,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching wallet data:', error);
+        return {
+          wallet_address: null,
+          is_connected: false
+        };
+      }
+
+      // If no wallet data found, return default values
+      if (!data) {
+        return {
+          wallet_address: null,
+          is_connected: false
+        };
+      }
 
       return {
-        wallet_address: data?.wallet_address || null,
-        is_connected: data?.is_connected || false
+        wallet_address: data.wallet_address || null,
+        is_connected: data.is_connected || false
       };
     } catch (error) {
-      console.error('Error fetching wallet:', error);
+      console.error('Exception fetching wallet:', error);
       return {
         wallet_address: null,
         is_connected: false
@@ -80,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     try {
       if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
+        // Try to get wallet info, but don't fail if it doesn't exist
         const { wallet_address, is_connected } = await fetchUserWallet(nextAuthSession.user.id);
         
         setUser({
@@ -92,17 +107,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           wallet_address,
           is_wallet_connected: is_connected
         });
-        return;
+        return user;
       }
 
       const { data: { user: supabaseUser }, error: supabaseError } = await supabase.auth.getUser();
       
-      if (supabaseError) throw supabaseError;
+      if (supabaseError) {
+        console.error('Supabase auth error:', supabaseError);
+        setUser(null);
+        return null;
+      }
       
       if (supabaseUser) {
+        // Try to get wallet info, but don't fail if it doesn't exist
         const { wallet_address, is_connected } = await fetchUserWallet(supabaseUser.id);
         
-        setUser({
+        const userData = {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
           name: supabaseUser.user_metadata?.name || '',
@@ -111,14 +131,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           profile_image_url: supabaseUser.user_metadata?.avatar_url || '',
           wallet_address,
           is_wallet_connected: is_connected
-        });
+        };
+        
+        setUser(userData);
+        return userData;
       } else {
         setUser(null);
+        return null;
       }
     } catch (err) {
       console.error('Error fetching user data:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
       setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -260,7 +285,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshUser = async () => {
-    return fetchUserData().then(() => user);
+    return fetchUserData();
   };
 
   const connectWallet = async (walletAddress: string) => {
@@ -269,16 +294,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase
-        .from('user_wallets')
-        .upsert({
-          user_id: user.id,
-          wallet_address: walletAddress,
-          is_connected: true
-        }, { onConflict: 'user_id' });
-
-      if (error) throw error;
-
+      // Call the API route directly instead of using Supabase client-side
+      const response = await fetch("/api/connect-wallet", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ walletAddress }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData?.message || `Failed to connect wallet (Status: ${response.status})`);
+      }
+      
+      // Update local state after successful API call
       await fetchUserData();
     } catch (err) {
       console.error('Wallet connection failed:', err);
@@ -304,6 +335,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', user.id);
 
       if (error) throw error;
+
+      // Also update the user's record in the database
+      const userUpdateResult = await supabase
+        .from('users')
+        .update({
+          wallet_address: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (userUpdateResult.error) {
+        console.error('Error updating user record:', userUpdateResult.error);
+      }
 
       await fetchUserData();
     } catch (err) {
