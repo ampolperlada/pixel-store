@@ -131,7 +131,12 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
   
-    if (!validateForm()) return;
+    // Add validation debug
+    console.log('Form validation result:', validateForm()); 
+    if (!validateForm()) {
+      console.log('Validation failed', formErrors);
+      return;
+    }
   
     setIsSubmitting(true);
   
@@ -140,12 +145,14 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
         username: formData.username,
         email: formData.email,
         password: formData.password,
-        wallet_address: walletState.address,
+        wallet_address: walletState.address || null, // Explicit null if empty
         agreedToTerms: formData.agreeToTerms,
         profile_image_url: undefined,
-        captchaToken: captchaToken
+        captchaToken: captchaToken || 'MOCK_TOKEN_FOR_DEBUG' // Temporary for testing
       };
-  
+      
+      console.log('Submitting:', userData); // Debug payload
+
       const response = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -153,23 +160,28 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
       });
       
       const result = await response.json();
+      console.log('API Response:', result); // Debug response
       
       if (!response.ok) {
-        throw new Error(result.message || result.error || 'Signup failed');
+        throw new Error(result.message || result.error || `Signup failed with status ${response.status}`);
       }
       
       console.log('User signed up successfully', result);
       onClose();
       router.refresh();
     } catch (error) {
-      console.error('Error during signup process:', error);
+      console.error('Full error during signup:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       setFormErrors({ 
         submit: error instanceof Error ? error.message : 'An error occurred. Please try again.' 
       });
     } finally {
       setIsSubmitting(false);
     }
-  };
+};
 
   // In your SignupModal component
   const handleSignupSuccess = async () => {
