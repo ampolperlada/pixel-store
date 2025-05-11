@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { useSession, signIn, signOut } from 'next-auth/react';
+import { AuthSessionMissingError } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -67,7 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
       }
 
-      // If no wallet data found, return default values
       if (!data) {
         return {
           wallet_address: null,
@@ -93,8 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     
     try {
+      // First try with NextAuth session
       if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
-        // Try to get wallet info, but don't fail if it doesn't exist
         const { wallet_address, is_connected } = await fetchUserWallet(nextAuthSession.user.id);
         
         setUser({
@@ -110,16 +110,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return user;
       }
 
-      const { data: { user: supabaseUser }, error: supabaseError } = await supabase.auth.getUser();
+      // Fallback to Supabase session
+      const { data: { session: supabaseSession }, error: sessionError } = await supabase.auth.getSession();
       
-      if (supabaseError) {
-        console.error('Supabase auth error:', supabaseError);
+      if (sessionError || !supabaseSession) {
+        setUser(null);
+        return null;
+      }
+
+      const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('Supabase auth error:', userError);
         setUser(null);
         return null;
       }
       
       if (supabaseUser) {
-        // Try to get wallet info, but don't fail if it doesn't exist
         const { wallet_address, is_connected } = await fetchUserWallet(supabaseUser.id);
         
         const userData = {
@@ -135,10 +142,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         setUser(userData);
         return userData;
-      } else {
-        setUser(null);
-        return null;
       }
+      
+      setUser(null);
+      return null;
     } catch (err) {
       console.error('Error fetching user data:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -149,19 +156,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Initialize auth state
   useEffect(() => {
-    if (nextAuthStatus === 'loading') return;
-    fetchUserData();
+    const initializeAuth = async () => {
+      if (nextAuthStatus === 'loading') return;
+      
+      try {
+        await fetchUserData();
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+      }
+    };
+
+    initializeAuth();
   }, [nextAuthStatus, nextAuthSession]);
 
+  // Set up Supabase auth state listener
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
+      // Always check both auth systems when auth state changes
+      try {
         await fetchUserData();
-      } else {
-        if (nextAuthStatus !== 'authenticated') {
-          setUser(null);
-        }
+      } catch (error) {
+        console.error("Auth state change error:", error);
       }
     });
 
@@ -174,13 +191,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // First try Supabase login
+      const { data, error: supabaseError } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       });
 
-      if (error) throw error;
+      if (supabaseError) throw supabaseError;
 
+      // Then sync with NextAuth
       if (data.user) {
         const result = await signIn('credentials', {
           redirect: false,
@@ -264,8 +283,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // Log out from both systems
+      const { error: supabaseError } = await supabase.auth.signOut();
+      if (supabaseError) throw supabaseError;
       
       await signOut({ redirect: false });
       
@@ -281,7 +301,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshAuth = async () => {
-    await fetchUserData();
+    try {
+      // First refresh Supabase session
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      if (error) throw error;
+      
+      // Then refresh user data
+      await fetchUserData();
+    } catch (error) {
+      console.error("Failed to refresh auth:", error);
+      throw error;
+    }
   };
 
   const refreshUser = async () => {
@@ -294,14 +324,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      // Call the API route directly instead of using Supabase client-side
+      // Verify we have an active session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('No active session found');
+      }
+
       const response = await fetch("/api/connect-wallet", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
         },
         body: JSON.stringify({ walletAddress }),
-        credentials: 'include'
       });
       
       if (!response.ok) {
@@ -309,7 +345,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData?.message || `Failed to connect wallet (Status: ${response.status})`);
       }
       
-      // Update local state after successful API call
       await fetchUserData();
     } catch (err) {
       console.error('Wallet connection failed:', err);
@@ -336,7 +371,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      // Also update the user's record in the database
       const userUpdateResult = await supabase
         .from('users')
         .update({
