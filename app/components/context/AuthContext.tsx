@@ -52,35 +52,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         is_connected: false
       };
     }
-
+  
     try {
       const { data, error } = await supabase
         .from('user_wallets')
         .select('wallet_address, is_connected')
         .eq('user_id', userId)
         .maybeSingle();
-
+  
       if (error) {
-        console.error('Error fetching wallet data:', error);
+        // Instead of console.error, just log as info since this could be normal for new users
+        console.info('Info: No wallet data found or other non-critical issue:', error);
         return {
           wallet_address: null,
           is_connected: false
         };
       }
-
+  
       if (!data) {
+        // This is a normal state for users who haven't connected a wallet yet
         return {
           wallet_address: null,
           is_connected: false
         };
       }
-
+  
       return {
         wallet_address: data.wallet_address || null,
         is_connected: data.is_connected || false
       };
     } catch (error) {
-      console.error('Exception fetching wallet:', error);
+      // Only log a warning for unexpected errors
+      console.warn('Unexpected error fetching wallet:', error);
       return {
         wallet_address: null,
         is_connected: false
