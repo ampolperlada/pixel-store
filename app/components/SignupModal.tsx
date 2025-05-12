@@ -109,8 +109,7 @@ const handleConnectWallet = async () => {
       // Force permission request to show account selector
       try {
         await window.ethereum.request({
-          method: 'wallet_requestPermissions',
-          params: [{ eth_accounts: {} }]
+          method: 'wallet_requestPermissions'
         });
       } catch (permissionError) {
         console.log('Permission request rejected or failed, falling back to standard request');
