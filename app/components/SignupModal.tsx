@@ -107,11 +107,18 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
           method: 'eth_requestAccounts' 
         });
         
-        // Update wallet state with the first account
-        setWalletState({
-          address: accounts[0], // Now accounts is properly defined
-          status: 'connected'
-        });
+        if (accounts && accounts.length > 0) {
+          // Ensure the address is properly formatted (lowercase) and is a string
+          const formattedAddress = accounts[0].toLowerCase();
+          
+          // Update wallet state with the first account
+          setWalletState({
+            address: formattedAddress,
+            status: 'connected'
+          });
+        } else {
+          throw new Error('No accounts found');
+        }
       } else {
         throw new Error('Ethereum wallet not detected');
       }
