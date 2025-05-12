@@ -19,10 +19,11 @@ interface SignupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSwitchToLogin?: () => void; // Add this prop to handle switching to login
+  onSuccess?: (user: any) => void; // Add this prop to handle successful signup
 }
 
 
-const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLogin }) => {
+const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLogin, onSuccess }) => {
   const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
@@ -58,38 +59,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
     }
   };
 
-  const validateForm = (isGoogleSignup = false): boolean => {
-    const errors: Record<string, string> = {};
-  
-    // Only validate username and email for regular signup
-    if (!isGoogleSignup) {
-      if (!formData.username) errors.username = 'Username is required';
-      if (!formData.email) {
-        errors.email = 'Email is required';
-      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-        errors.email = 'Email is invalid';
-      }
-    }
-  
-    // Always validate password for regular signup
-    if (!isGoogleSignup && !formData.password) errors.password = 'Password is required';
-    if (!isGoogleSignup && formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
-  
-    // Always validate terms and conditions
-    if (!formData.agreeToTerms) {
-      errors.agreeToTerms = 'You must agree to the Terms and Conditions';
-    }
-  
-    // Only validate captcha for regular signup
-    if (!isGoogleSignup && !captchaToken) {
-      errors.captcha = 'Please complete the CAPTCHA';
-    }
-  
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+  // Removed duplicate validateForm function
 
   const handleModalContentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -100,48 +70,62 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
 // Import statements would be here...
 
 // Fixed handleConnectWallet function to force account selection
+// SignupModal.tsx
+// Import statements would be here...
+
+// Enhanced wallet connection with proper error handling
 const handleConnectWallet = async () => {
   try {
     setWalletState({ address: null, status: 'connecting' });
     
     // Check if Ethereum provider is available
-    if (window.ethereum) {
-      // Force permission request to show account selector
-      try {
-        await window.ethereum.request({
-          method: 'wallet_requestPermissions'
-        });
-      } catch (permissionError) {
-        console.log('Permission request rejected or failed, falling back to standard request');
-        // Continue even if this fails - it's just to try forcing the account selector
-      }
-      
-      // Request account access
-      const accounts = await window.ethereum.request({ 
-        method: 'eth_requestAccounts' 
-      });
-      
-      if (accounts && accounts.length > 0) {
-        // Ensure the address is properly formatted (lowercase) and is a string
-        const formattedAddress = accounts[0].toLowerCase();
-        
-        // Update wallet state with the first account
-        setWalletState({
-          address: formattedAddress,
-          status: 'connected'
-        });
-        
-        console.log('Wallet connected successfully:', formattedAddress);
-      } else {
-        throw new Error('No accounts found');
-      }
-    } else {
-      throw new Error('Ethereum wallet not detected');
+    if (!window.ethereum) {
+      throw new Error('Ethereum wallet not detected. Please install MetaMask.');
     }
+    
+    // Force account selection using permissions API
+    try {
+      await window.ethereum.request({
+        method: 'wallet_requestPermissions'
+      });
+    } catch (permissionError) {
+      console.log('Permission request rejected, attempting standard connection');
+      // Continue even if this fails - it's just to try forcing the account selector
+    }
+    
+    // Request account access
+    const accounts = await window.ethereum.request({ 
+      method: 'eth_requestAccounts' 
+    });
+    
+    if (!accounts || accounts.length === 0) {
+      throw new Error('No accounts found or user rejected the request');
+    }
+    
+    // Ensure the address is properly formatted (lowercase) and is a string
+    const formattedAddress = accounts[0].toLowerCase();
+    
+    // Validate the address format
+    if (!/^0x[a-f0-9]{40}$/i.test(formattedAddress)) {
+      throw new Error('Invalid wallet address format');
+    }
+    
+    // Update wallet state with the first account
+    setWalletState({
+      address: formattedAddress,
+      status: 'connected'
+    });
+    
+    console.log('Wallet connected successfully:', formattedAddress);
+    
+    return formattedAddress;
   } catch (error) {
-    // Improved error logging with specific error details
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Unknown wallet connection error';
+    
     console.error('Wallet connection failed:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: errorMessage,
       error
     });
     
@@ -152,97 +136,152 @@ const handleConnectWallet = async () => {
     
     setFormErrors({
       ...formErrors,
-      wallet: 'Wallet connection failed. Please try again or skip this step.'
+      wallet: `Wallet connection failed: ${errorMessage}`
     });
+    
+    throw error; // Re-throw to allow the calling function to handle it
   }
 };
 
-// Improved handleSubmit function with better error handling
+// Improved form validation with specific checks
+const validateForm = () => {
+  const errors: Record<string, string> = {};
+  
+  // Username validation
+  if (!formData.username?.trim()) {
+    errors.username = 'Username is required';
+  } else if (!/^[a-zA-Z0-9_]{3,30}$/.test(formData.username.trim())) {
+    errors.username = 'Username must be 3-30 characters (letters, numbers, underscores only)';
+  }
+  
+  // Email validation
+  if (!formData.email?.trim()) {
+    errors.email = 'Email is required';
+  } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    errors.email = 'Please enter a valid email address';
+  }
+  
+  // Password validation
+  if (!formData.password) {
+    errors.password = 'Password is required';
+  } else if (formData.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters';
+  }
+  
+  // Confirm password validation
+  if (formData.password !== formData.confirmPassword) {
+    errors.confirmPassword = 'Passwords do not match';
+  }
+  
+  // Terms agreement validation
+  if (!formData.agreeToTerms) {
+    errors.agreeToTerms = 'You must agree to the Terms and Conditions';
+  }
+  
+  // CAPTCHA validation
+  if (!captchaToken) {
+    errors.captcha = 'Please complete the CAPTCHA verification';
+  }
+  
+  setFormErrors(errors);
+  return Object.keys(errors).length === 0;
+};
+
+// Completely revamped handleSubmit with proper error handling
 const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
   event.preventDefault();
 
-  // Add validation debug
-  console.log('Form validation result:', validateForm()); 
+  // Clear previous errors
+  setFormErrors({});
+
+  // Validate form
   if (!validateForm()) {
-    console.log('Validation failed', formErrors);
+    console.log('Form validation failed:', formErrors);
     return;
   }
 
   setIsSubmitting(true);
 
   try {
-    // Better debugging for form data
-    console.log('Form data being submitted:', {
-      username: formData.username,
-      email: formData.email,
-      hasPassword: !!formData.password,
+    // Prepare user data
+    const userData = {
+      username: formData.username.trim(),
+      email: formData.email.trim(),
+      password: formData.password,
       wallet_address: walletState.address || null,
       agreedToTerms: formData.agreeToTerms,
-      hasCaptchaToken: !!captchaToken
-    });
-
-    const userData = {
-      username: formData.username, // Make sure this is defined in your form state
-      email: formData.email,
-      password: formData.password,
-      wallet_address: walletState.address || null, // Explicit null if empty
-      agreedToTerms: formData.agreeToTerms,
-      profile_image_url: undefined,
-      captchaToken: captchaToken || 'MOCK_TOKEN_FOR_DEBUG' // Temporary for testing
+      profile_image_url: undefined, // This would be handled separately if needed
+      captchaToken: captchaToken
     };
     
-    console.log('Submitting to /api/signup with wallet address:', userData.wallet_address);
+    console.log('Submitting user data:', {
+      ...userData,
+      password: '[REDACTED]',
+      captchaToken: '[REDACTED]'
+    });
 
-    // Check for missing required fields
-    const requiredFields: Array<keyof typeof userData> = ['username', 'email', 'password'];
-    const missingFields = requiredFields.filter(field => !userData[field]);
-    
-    if (missingFields.length > 0) {
-      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-    }
-
+    // Submit the form data
     const response = await fetch('/api/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData),
     });
     
-    // Log full response for debugging
-    console.log('API Response status:', response.status);
+    // Get response data
+    let result;
+    try {
+      result = await response.json();
+      console.log('API Response:', {
+        status: response.status,
+        ok: response.ok,
+        body: result
+      });
+    } catch (parseError) {
+      console.error('Error parsing response:', parseError);
+      throw new Error('Failed to parse server response');
+    }
     
-    const result = await response.json();
-    console.log('API Response body:', result);
-    
+    // Handle error responses
     if (!response.ok) {
-      throw new Error(result.message || result.error || `Signup failed with status ${response.status}`);
+      const errorMessage = result?.error || result?.message || `Signup failed with status ${response.status}`;
+      throw new Error(errorMessage);
     }
     
-    console.log('User signed up successfully', result);
+    // Handle success
+    console.log('User signed up successfully:', result);
+    
+    // If we're using a router, refresh the page
+    if (router) {
+      router.refresh();
+    }
+    
+    // Close the modal
     onClose();
-    router.refresh();
-  } catch (error) {
-    // Much better error logging that will work for any error type
-    console.error('Error during signup:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      name: error instanceof Error ? error.name : 'Not an Error object',
-      stack: error instanceof Error ? error.stack : 'No stack trace'
-    });
     
-    setFormErrors({ 
-      submit: error instanceof Error ? error.message : 'An error occurred. Please try again.' 
-    });
-    
-    // Display the error message on the UI
-    const errorElement = document.getElementById('signup-error-message');
-    if (errorElement) {
-      errorElement.textContent = error instanceof Error ? error.message : 'An error occurred. Please try again.';
+    // If onSuccess is provided as a prop, call it
+    if (typeof onSuccess === 'function') {
+      onSuccess(result.user);
     }
+  } catch (error) {
+    // Properly format and log the error
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    console.error('Error during signup:', {
+      message: errorMessage,
+      name: error instanceof Error ? error.name : 'Unknown',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Display the error to the user
+    setFormErrors({
+      ...formErrors,
+      submit: errorMessage
+    });
   } finally {
     setIsSubmitting(false);
   }
 };
 
-// Other functions remain unchanged
+// The rest of your component functions remain largely the same
 const handleGoogleSignup = async () => {
   try {
     if (!formData.agreeToTerms) {
@@ -273,6 +312,7 @@ const handleGoogleSignup = async () => {
     setFormErrors({ 
       submit: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
     });
+  } finally {
     setIsSubmitting(false);
   }
 };
@@ -285,6 +325,11 @@ const handleCaptchaChange = (token: string | null) => {
       delete newErrors.captcha;
       return newErrors;
     });
+  } else {
+    setFormErrors((prev) => ({
+      ...prev,
+      captcha: 'Please complete the CAPTCHA verification'
+    }));
   }
 };
 
@@ -304,14 +349,12 @@ const handleSwitchToLogin = () => {
   if (onSwitchToLogin) {
     onSwitchToLogin();
   } else {
-    // Optional: Add a fallback that doesn't use routes
     console.warn("No onSwitchToLogin callback provided");
   }
   
   // Close this modal
   onClose();
 };
-
   if (!isOpen) return null;
 
   return (
