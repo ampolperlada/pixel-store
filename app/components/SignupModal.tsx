@@ -96,178 +96,222 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
   };
   
 
-  const handleConnectWallet = async () => {
-    try {
-      setWalletState({ address: null, status: 'connecting' });
+ // Modify your handleConnectWallet function to force account selection
+// Import statements would be here...
+
+// Fixed handleConnectWallet function to force account selection
+const handleConnectWallet = async () => {
+  try {
+    setWalletState({ address: null, status: 'connecting' });
+    
+    // Check if Ethereum provider is available
+    if (window.ethereum) {
+      // Force permission request to show account selector
+      try {
+        await window.ethereum.request({
+          method: 'wallet_requestPermissions',
+          params: [{ eth_accounts: {} }]
+        });
+      } catch (permissionError) {
+        console.log('Permission request rejected or failed, falling back to standard request');
+        // Continue even if this fails - it's just to try forcing the account selector
+      }
       
-      // Check if Ethereum provider is available
-      if (window.ethereum) {
-        // Request account access
-        const accounts = await window.ethereum.request({ 
-          method: 'eth_requestAccounts' 
+      // Request account access
+      const accounts = await window.ethereum.request({ 
+        method: 'eth_requestAccounts' 
+      });
+      
+      if (accounts && accounts.length > 0) {
+        // Ensure the address is properly formatted (lowercase) and is a string
+        const formattedAddress = accounts[0].toLowerCase();
+        
+        // Update wallet state with the first account
+        setWalletState({
+          address: formattedAddress,
+          status: 'connected'
         });
         
-        if (accounts && accounts.length > 0) {
-          // Ensure the address is properly formatted (lowercase) and is a string
-          const formattedAddress = accounts[0].toLowerCase();
-          
-          // Update wallet state with the first account
-          setWalletState({
-            address: formattedAddress,
-            status: 'connected'
-          });
-        } else {
-          throw new Error('No accounts found');
-        }
+        console.log('Wallet connected successfully:', formattedAddress);
       } else {
-        throw new Error('Ethereum wallet not detected');
+        throw new Error('No accounts found');
       }
-    } catch (error) {
-      console.error('Wallet connection failed:', error);
-      setWalletState({
-        address: null,
-        status: 'error'
-      });
-      setFormErrors({
-        ...formErrors,
-        wallet: 'Wallet connection failed. Please try again or skip this step.'
-      });
+    } else {
+      throw new Error('Ethereum wallet not detected');
     }
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-  
-    // Add validation debug
-    console.log('Form validation result:', validateForm()); 
-    if (!validateForm()) {
-      console.log('Validation failed', formErrors);
-      return;
-    }
-  
-    setIsSubmitting(true);
-  
-    try {
-      const userData = {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        wallet_address: walletState.address || null, // Explicit null if empty
-        agreedToTerms: formData.agreeToTerms,
-        profile_image_url: undefined,
-        captchaToken: captchaToken || 'MOCK_TOKEN_FOR_DEBUG' // Temporary for testing
-      };
-      
-      console.log('Submitting:', userData); // Debug payload
-
-      const response = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      });
-      
-      const result = await response.json();
-      console.log('API Response:', result); // Debug response
-      
-      if (!response.ok) {
-        throw new Error(result.message || result.error || `Signup failed with status ${response.status}`);
-      }
-      
-      console.log('User signed up successfully', result);
-      onClose();
-      router.refresh();
-    } catch (error) {
-      console.error('Full error during signup:', {
-        error,
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      setFormErrors({ 
-        submit: error instanceof Error ? error.message : 'An error occurred. Please try again.' 
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  } catch (error) {
+    // Improved error logging with specific error details
+    console.error('Wallet connection failed:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      error
+    });
+    
+    setWalletState({
+      address: null,
+      status: 'error'
+    });
+    
+    setFormErrors({
+      ...formErrors,
+      wallet: 'Wallet connection failed. Please try again or skip this step.'
+    });
+  }
 };
 
-  // In your SignupModal component
-  const handleSignupSuccess = async () => {
-    // This should be passed from your auth context
-    // Replace with your actual user refresh logic or remove if unnecessary
-    console.warn('refreshUser function is not defined. Implement user refresh logic here if needed.');
-    onClose(); // Close the modal
-  };
+// Improved handleSubmit function with better error handling
+const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  event.preventDefault();
 
-  // In your SignupModal.tsx component
-  const handleGoogleSignup = async () => {
-    try {
-      if (!formData.agreeToTerms) {
-        setFormErrors({
-          agreeToTerms: 'You must agree to the Terms and Conditions'
-        });
-        return;
-      }
-      
-      setIsSubmitting(true);
-      
-      // Sign in with Google via NextAuth
-      const result = await signIn('google', { 
-        redirect: false,
-        callbackUrl: window.location.origin 
-      });
-      
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-      
-      // Close the modal if successful
-      if (!result?.error) {
-        onClose();
-      }
-    } catch (error) {
-      console.error('Error initiating Google signup:', error);
-      setFormErrors({ 
-        submit: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
-      });
-      setIsSubmitting(false);
-    }
-  };
+  // Add validation debug
+  console.log('Form validation result:', validateForm()); 
+  if (!validateForm()) {
+    console.log('Validation failed', formErrors);
+    return;
+  }
 
-  const handleCaptchaChange = (token: string | null) => {
-    setCaptchaToken(token);
-    if (token) {
-      setFormErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors.captcha;
-        return newErrors;
-      });
-    }
-  };
+  setIsSubmitting(true);
 
-  // Handle switching to login modal
-  const handleSwitchToLogin = () => {
-    // Reset form state before switching
-    setFormData({
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      agreeToTerms: false,
+  try {
+    // Better debugging for form data
+    console.log('Form data being submitted:', {
+      username: formData.username,
+      email: formData.email,
+      hasPassword: !!formData.password,
+      wallet_address: walletState.address || null,
+      agreedToTerms: formData.agreeToTerms,
+      hasCaptchaToken: !!captchaToken
     });
-    setFormErrors({});
-    setCaptchaToken(null);
+
+    const userData = {
+      username: formData.username, // Make sure this is defined in your form state
+      email: formData.email,
+      password: formData.password,
+      wallet_address: walletState.address || null, // Explicit null if empty
+      agreedToTerms: formData.agreeToTerms,
+      profile_image_url: undefined,
+      captchaToken: captchaToken || 'MOCK_TOKEN_FOR_DEBUG' // Temporary for testing
+    };
     
-    // If onSwitchToLogin is provided, call it
-    if (onSwitchToLogin) {
-      onSwitchToLogin();
-    } else {
-      // Optional: Add a fallback that doesn't use routes
-      console.warn("No onSwitchToLogin callback provided");
+    console.log('Submitting to /api/signup with wallet address:', userData.wallet_address);
+
+    // Check for missing required fields
+    const requiredFields: Array<keyof typeof userData> = ['username', 'email', 'password'];
+    const missingFields = requiredFields.filter(field => !userData[field]);
+    
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    }
+
+    const response = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+    });
+    
+    // Log full response for debugging
+    console.log('API Response status:', response.status);
+    
+    const result = await response.json();
+    console.log('API Response body:', result);
+    
+    if (!response.ok) {
+      throw new Error(result.message || result.error || `Signup failed with status ${response.status}`);
     }
     
-    // Close this modal
+    console.log('User signed up successfully', result);
     onClose();
-  };
+    router.refresh();
+  } catch (error) {
+    // Much better error logging that will work for any error type
+    console.error('Error during signup:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Not an Error object',
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
+    
+    setFormErrors({ 
+      submit: error instanceof Error ? error.message : 'An error occurred. Please try again.' 
+    });
+    
+    // Display the error message on the UI
+    const errorElement = document.getElementById('signup-error-message');
+    if (errorElement) {
+      errorElement.textContent = error instanceof Error ? error.message : 'An error occurred. Please try again.';
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+// Other functions remain unchanged
+const handleGoogleSignup = async () => {
+  try {
+    if (!formData.agreeToTerms) {
+      setFormErrors({
+        agreeToTerms: 'You must agree to the Terms and Conditions'
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    // Sign in with Google via NextAuth
+    const result = await signIn('google', { 
+      redirect: false,
+      callbackUrl: window.location.origin 
+    });
+    
+    if (result?.error) {
+      throw new Error(result.error);
+    }
+    
+    // Close the modal if successful
+    if (!result?.error) {
+      onClose();
+    }
+  } catch (error) {
+    console.error('Error initiating Google signup:', error);
+    setFormErrors({ 
+      submit: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
+    });
+    setIsSubmitting(false);
+  }
+};
+
+const handleCaptchaChange = (token: string | null) => {
+  setCaptchaToken(token);
+  if (token) {
+    setFormErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors.captcha;
+      return newErrors;
+    });
+  }
+};
+
+const handleSwitchToLogin = () => {
+  // Reset form state before switching
+  setFormData({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    agreeToTerms: false,
+  });
+  setFormErrors({});
+  setCaptchaToken(null);
+  
+  // If onSwitchToLogin is provided, call it
+  if (onSwitchToLogin) {
+    onSwitchToLogin();
+  } else {
+    // Optional: Add a fallback that doesn't use routes
+    console.warn("No onSwitchToLogin callback provided");
+  }
+  
+  // Close this modal
+  onClose();
+};
 
   if (!isOpen) return null;
 
