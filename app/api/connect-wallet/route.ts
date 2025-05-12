@@ -1,131 +1,159 @@
 // app/api/connect-wallet/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
 
-// Admin client for bypassing RLS if needed
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(req: NextRequest) {
   try {
-    // Get the request body
-    const body = await req.json();
-    const { walletAddress } = body;
+    // Verify authorization
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Missing or invalid token' },
+        { status: 401 }
+      );
+    }
+
+    // Get token
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Missing token' },
+        { status: 401 }
+      );
+    }
+
+    // Create Supabase client
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     
+    // Verify the session
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Authentication error:', authError);
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid session' },
+        { status: 401 }
+      );
+    }
+    
+    // Get the wallet address from the request body
+    const { walletAddress } = await req.json();
+    
+    // Validate wallet address
     if (!walletAddress || typeof walletAddress !== 'string') {
-      return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid wallet address' },
+        { status: 400 }
+      );
     }
     
-    // Clean the wallet address (lowercase and trim)
-    const cleanedWalletAddress = walletAddress.toLowerCase().trim();
-    
-    // Verify wallet address format (Ethereum addresses are 42 chars including '0x')
-    if (!/^0x[a-fA-F0-9]{40}$/.test(cleanedWalletAddress)) {
-      return NextResponse.json({ error: 'Invalid wallet address format' }, { status: 400 });
+    // Ensure wallet address format is valid (Ethereum address)
+    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return NextResponse.json(
+        { error: 'Invalid Ethereum wallet address format' },
+        { status: 400 }
+      );
     }
     
-    // Get the user ID from the session
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-    
-    const userId = session.user.id;
-    
-    // Check if wallet is already connected to another account
-    const { data: existingWallet, error: walletCheckError } = await supabase
-      .from('user_wallets')
-      .select('user_id')
-      .eq('wallet_address', cleanedWalletAddress)
-      .neq('user_id', userId)
-      .maybeSingle();
+    // Check if this wallet is already connected to another account
+    const { data: existingWallets, error: walletCheckError } = await supabase
+      .from('users')
+      .select('user_id, username')
+      .eq('wallet_address', walletAddress.toLowerCase())
+      .neq('user_id', user.id);
     
     if (walletCheckError) {
-      console.error('Error checking existing wallet:', walletCheckError);
-      return NextResponse.json({ error: 'Failed to verify wallet availability' }, { status: 500 });
+      console.error('Error checking wallet:', walletCheckError);
+      return NextResponse.json(
+        { error: 'Error checking wallet availability' },
+        { status: 500 }
+      );
     }
     
-    if (existingWallet) {
-      return NextResponse.json({ error: 'Wallet already connected to another account' }, { status: 409 });
+    if (existingWallets && existingWallets.length > 0) {
+      return NextResponse.json(
+        { 
+          error: 'This wallet is already connected to another account',
+          conflictingUser: existingWallets[0].username
+        },
+        { status: 409 }
+      );
     }
     
-    // First, check if this user already has a wallet entry
-    const { data: existingEntry, error: checkError } = await supabase
-      .from('user_wallets')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
+    // Update the user's wallet address
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('users')
+      .update({
+        wallet_address: walletAddress.toLowerCase(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id)
+      .select('*')
+      .single();
     
-    let result;
-    
-    if (checkError) {
-      console.error('Error checking existing wallet entry:', checkError);
-      // Continue with insert attempt
+    if (updateError) {
+      console.error('Error updating user wallet:', updateError);
+      return NextResponse.json(
+        { error: 'Failed to connect wallet to account' },
+        { status: 500 }
+      );
     }
     
-    if (!existingEntry) {
-      // Insert new wallet entry
-      result = await supabase
-        .from('user_wallets')
-        .insert({
-          user_id: userId,
-          wallet_address: cleanedWalletAddress,
-          is_connected: true
-        })
-        .select()
-        .single();
-    } else {
-      // Update existing wallet entry
-      result = await supabase
-        .from('user_wallets')
-        .update({
-          wallet_address: cleanedWalletAddress,
-          is_connected: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId)
-        .select()
-        .single();
-    }
-    
-    if (result.error) {
-      console.error('Error connecting wallet:', result.error);
-      return NextResponse.json({ error: 'Failed to connect wallet' }, { status: 500 });
-    }
-    
-    // Also update the users table if it has a wallet_address field
+    // Also handle the user_wallets table if it exists in your schema
     try {
-      const userUpdateResult = await supabase
-        .from('users')
-        .update({
-          wallet_address: cleanedWalletAddress,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId);
+      // First check if there's an existing wallet entry
+      const { data: existingUserWallet } = await supabase
+        .from('user_wallets')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('wallet_address', walletAddress.toLowerCase())
+        .maybeSingle();
       
-      if (userUpdateResult.error) {
-        // Just log this error but don't fail the request - users table updating is secondary
-        console.warn('Non-critical error updating users table:', userUpdateResult.error);
+      if (existingUserWallet) {
+        // Update existing wallet connection
+        await supabase
+          .from('user_wallets')
+          .update({
+            is_connected: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingUserWallet.id);
+      } else {
+        // Create new wallet connection
+        await supabase
+          .from('user_wallets')
+          .insert({
+            user_id: user.id,
+            wallet_address: walletAddress.toLowerCase(),
+            is_connected: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
       }
-    } catch (userUpdateError) {
-      console.warn('Failed to update users table:', userUpdateError);
-      // Continue without failing the request
+    } catch (walletTableError) {
+      // Don't fail the whole operation if this part has an issue
+      console.error('Error managing user_wallets table:', walletTableError);
     }
     
-    return NextResponse.json({ success: true, wallet: result.data }, { status: 200 });
+    // Return success response with user data
+    const { password_hash, ...safeUserData } = updatedUser;
+    
+    return NextResponse.json(
+      { 
+        message: 'Wallet connected successfully',
+        user: safeUserData
+      },
+      { status: 200 }
+    );
+    
   } catch (error) {
-    console.error('Connect wallet error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error connecting wallet:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
