@@ -1,154 +1,131 @@
 // app/api/connect-wallet/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../api/auth/[...nextauth]/route';
+import { authOptions } from '../auth/[...nextauth]/route';
+
+// Admin client for bypassing RLS if needed
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+);
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify Supabase session first
-    const { data: { session: supabaseSession }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !supabaseSession) {
-      console.log('No valid Supabase session found');
-      return NextResponse.json(
-        { success: false, message: 'Invalid session' },
-        { status: 401 }
-      );
-    }
-
-    // Then verify NextAuth session
-    const nextAuthSession = await getServerSession(authOptions);
-    console.log('Session received:', nextAuthSession ? 'valid' : 'invalid');
-
-    if (!nextAuthSession?.user?.id) {
-      console.log('No authenticated user found in session');
-      return NextResponse.json(
-        { success: false, message: 'User not authenticated' },
-        { status: 401 }
-      );
-    }
-
-    // Get the request payload
+    // Get the request body
     const body = await req.json();
     const { walletAddress } = body;
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { success: false, message: 'Wallet address is required' },
-        { status: 400 }
-      );
+    
+    if (!walletAddress || typeof walletAddress !== 'string') {
+      return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 });
     }
-
-    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid wallet address format' },
-        { status: 400 }
-      );
+    
+    // Clean the wallet address (lowercase and trim)
+    const cleanedWalletAddress = walletAddress.toLowerCase().trim();
+    
+    // Verify wallet address format (Ethereum addresses are 42 chars including '0x')
+    if (!/^0x[a-fA-F0-9]{40}$/.test(cleanedWalletAddress)) {
+      return NextResponse.json({ error: 'Invalid wallet address format' }, { status: 400 });
     }
-
-    const userId = nextAuthSession.user.id;
-
-    // Check if wallet is already connected to another user
-    const { data: existingUserWithWallet, error: walletCheckError } = await supabase
+    
+    // Get the user ID from the session
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    
+    const userId = session.user.id;
+    
+    // Check if wallet is already connected to another account
+    const { data: existingWallet, error: walletCheckError } = await supabase
       .from('user_wallets')
       .select('user_id')
-      .eq('wallet_address', walletAddress)
+      .eq('wallet_address', cleanedWalletAddress)
       .neq('user_id', userId)
       .maybeSingle();
-
-    if (walletCheckError) {
-      console.error('Error checking wallet availability:', walletCheckError);
-      return NextResponse.json(
-        { success: false, message: 'Database error while checking wallet availability' },
-        { status: 500 }
-      );
-    } 
     
-    if (existingUserWithWallet) {
-      return NextResponse.json(
-        { success: false, message: 'This wallet is already connected to another account' },
-        { status: 409 }
-      );
+    if (walletCheckError) {
+      console.error('Error checking existing wallet:', walletCheckError);
+      return NextResponse.json({ error: 'Failed to verify wallet availability' }, { status: 500 });
     }
-
-    // Check if user already has a wallet connection
-    const { data: existingWallet, error: fetchError } = await supabase
+    
+    if (existingWallet) {
+      return NextResponse.json({ error: 'Wallet already connected to another account' }, { status: 409 });
+    }
+    
+    // First, check if this user already has a wallet entry
+    const { data: existingEntry, error: checkError } = await supabase
       .from('user_wallets')
-      .select('*')
+      .select('id')
       .eq('user_id', userId)
       .maybeSingle();
-
-    if (fetchError) {
-      console.error('Error checking existing wallet:', fetchError);
-      return NextResponse.json(
-        { success: false, message: 'Database error while checking user wallet' },
-        { status: 500 }
-      );
-    }
-
+    
     let result;
-
-    if (existingWallet) {
-      result = await supabase
-        .from('user_wallets')
-        .update({
-          wallet_address: walletAddress,
-          is_connected: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId);
-    } else {
+    
+    if (checkError) {
+      console.error('Error checking existing wallet entry:', checkError);
+      // Continue with insert attempt
+    }
+    
+    if (!existingEntry) {
+      // Insert new wallet entry
       result = await supabase
         .from('user_wallets')
         .insert({
           user_id: userId,
-          wallet_address: walletAddress,
+          wallet_address: cleanedWalletAddress,
+          is_connected: true
+        })
+        .select()
+        .single();
+    } else {
+      // Update existing wallet entry
+      result = await supabase
+        .from('user_wallets')
+        .update({
+          wallet_address: cleanedWalletAddress,
           is_connected: true,
-          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        });
+        })
+        .eq('user_id', userId)
+        .select()
+        .single();
     }
-
+    
     if (result.error) {
       console.error('Error connecting wallet:', result.error);
-      return NextResponse.json(
-        { success: false, message: 'Failed to connect wallet', error: result.error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to connect wallet' }, { status: 500 });
     }
-
-    // Update user record if possible
-    const userUpdateResult = await supabase
-      .from('users')
-      .update({
-        wallet_address: walletAddress,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', userId);
-
-    if (userUpdateResult.error) {
-      console.error('Error updating user record:', userUpdateResult.error);
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Wallet connected successfully',
-      data: {
-        walletAddress: walletAddress,
-        isConnected: true,
-        userId: userId
+    
+    // Also update the users table if it has a wallet_address field
+    try {
+      const userUpdateResult = await supabase
+        .from('users')
+        .update({
+          wallet_address: cleanedWalletAddress,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+      
+      if (userUpdateResult.error) {
+        // Just log this error but don't fail the request - users table updating is secondary
+        console.warn('Non-critical error updating users table:', userUpdateResult.error);
       }
-    });
+    } catch (userUpdateError) {
+      console.warn('Failed to update users table:', userUpdateError);
+      // Continue without failing the request
+    }
+    
+    return NextResponse.json({ success: true, wallet: result.data }, { status: 200 });
   } catch (error) {
-    console.error('Wallet connection error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Internal server error',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    console.error('Connect wallet error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
