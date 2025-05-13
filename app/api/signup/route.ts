@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       username,
       email,
       password, 
-      wallet_address, // We'll handle this separately
+      wallet_address,
       agreedToTerms,
       profile_image_url,
       captchaToken,
@@ -233,6 +233,7 @@ export async function POST(req: NextRequest) {
       }
 
       // If wallet address is provided, add it to user_wallets table
+      let walletConnected = false;
       if (wallet_address && newUser.user_id) {
         const walletData = {
           user_id: newUser.user_id,
@@ -242,14 +243,19 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString()
         };
 
-        const { error: walletError } = await supabase
+        const { data: walletResult, error: walletError } = await supabase
           .from(WALLETS_TABLE)
-          .insert(walletData);
+          .insert(walletData)
+          .select('*')
+          .single();
 
         if (walletError) {
           console.error('Error adding wallet to user_wallets:', walletError);
           // Don't fail the entire signup just because wallet connection failed
           // We can notify the user they'll need to connect their wallet later
+        } else {
+          console.log('Wallet connected successfully:', walletResult);
+          walletConnected = true;
         }
       }
 
@@ -262,8 +268,10 @@ export async function POST(req: NextRequest) {
         { 
           message: 'Signup successful', 
           user: safeUserData,
-          walletConnected: wallet_address ? true : false,
-          isGoogleSignup
+          walletConnected,
+          isGoogleSignup,
+          // Include this flag so the client knows to sign in the user
+          autoSignIn: true
         }, 
         { status: 201 }
       );
