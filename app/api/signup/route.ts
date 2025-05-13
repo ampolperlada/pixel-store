@@ -1,11 +1,13 @@
 // app/api/signup/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
+import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY!
-const TABLE = 'users'
+const USERS_TABLE = 'users'
+const WALLETS_TABLE = 'user_wallets'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +16,7 @@ export async function POST(req: NextRequest) {
       username,
       email,
       password, 
-      wallet_address, // This is now properly handled
+      wallet_address, // We'll handle this separately
       agreedToTerms,
       profile_image_url,
       captchaToken,
@@ -103,10 +105,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Check for existing user (both username and email) - FIXED using proper query params
+    // Check for existing user (both username and email)
     try {
-      // FIX: Use proper query parameters instead of string concatenation
-      const checkUrl = new URL(`${SUPABASE_URL}/rest/v1/${TABLE}`);
+      // Use proper query parameters
+      const checkUrl = new URL(`${SUPABASE_URL}/rest/v1/${USERS_TABLE}`);
       checkUrl.searchParams.append('select', 'username,email');
       
       // Create proper OR condition using Supabase's filter format
@@ -181,6 +183,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Initialize Supabase client for transactions
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
     // Create the user
     try {
       // Validate wallet address format if provided
@@ -191,16 +196,17 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // IMPORTANT: Remove wallet_address from users table data
       const userData = {
         username: username.trim(),
         email,
         password_hash: hashedPassword,
-        wallet_address: wallet_address || null,
         agreed_to_terms: agreedToTerms,
         profile_image_url: profile_image_url || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         is_google_account: isGoogleSignup || false,
+        // wallet_address removed from here
       };
 
       console.log('Creating user with data:', {
@@ -208,43 +214,59 @@ export async function POST(req: NextRequest) {
         password_hash: '[REDACTED]'
       });
 
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Prefer': 'return=representation',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('Error creating user in Supabase:', errorText);
+      // Create user in the users table first
+      const { data: newUser, error: userError } = await supabase
+        .from(USERS_TABLE)
+        .insert(userData)
+        .select('*')
+        .single();
+      
+      if (userError) {
+        console.error('Error creating user in Supabase:', userError);
         return NextResponse.json(
           { 
             error: 'Failed to create user account', 
-            details: errorText 
+            details: userError.message 
           }, 
-          { status: res.status }
-        )
+          { status: 400 }
+        );
       }
 
-      const data = await res.json();
-      console.log('User created successfully:', data);
+      // If wallet address is provided, add it to user_wallets table
+      if (wallet_address && newUser.user_id) {
+        const walletData = {
+          user_id: newUser.user_id,
+          wallet_address: wallet_address.toLowerCase(),
+          is_connected: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        const { error: walletError } = await supabase
+          .from(WALLETS_TABLE)
+          .insert(walletData);
+
+        if (walletError) {
+          console.error('Error adding wallet to user_wallets:', walletError);
+          // Don't fail the entire signup just because wallet connection failed
+          // We can notify the user they'll need to connect their wallet later
+        }
+      }
+
+      console.log('User created successfully:', newUser);
 
       // Return user data without sensitive information
-      const { password_hash, ...safeUserData } = data[0];
+      const { password_hash, ...safeUserData } = newUser;
 
       return NextResponse.json(
         { 
           message: 'Signup successful', 
           user: safeUserData,
+          walletConnected: wallet_address ? true : false,
           isGoogleSignup
         }, 
         { status: 201 }
-      )
+      );
     } catch (error) {
       console.error('Error creating user:', error instanceof Error ? {
         message: error.message,
