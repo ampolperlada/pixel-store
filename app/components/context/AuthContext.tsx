@@ -1,4 +1,4 @@
-// app/components/context/AuthContext.tsx
+// app/components/context/AuthContext.tsx (Updated)
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { AuthSessionMissingError } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -19,12 +18,19 @@ interface User {
   is_wallet_connected: boolean;
 }
 
+interface RegisterCredentials {
+  email: string;
+  password: string;
+  username?: string;
+  walletAddress?: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
   login: (credentials: { email: string; password: string }) => Promise<void>;
-  register: (credentials: { email: string; password: string }) => Promise<{
+  register: (credentials: RegisterCredentials) => Promise<{
     user: User | null;
     session: Session | null;
   }>;
@@ -61,7 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
   
       if (error) {
-        // Instead of console.error, just log as info since this could be normal for new users
         console.info('Info: No wallet data found or other non-critical issue:', error);
         return {
           wallet_address: null,
@@ -70,7 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
   
       if (!data) {
-        // This is a normal state for users who haven't connected a wallet yet
         return {
           wallet_address: null,
           is_connected: false
@@ -82,7 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         is_connected: data.is_connected || false
       };
     } catch (error) {
-      // Only log a warning for unexpected errors
       console.warn('Unexpected error fetching wallet:', error);
       return {
         wallet_address: null,
@@ -227,17 +230,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (credentials: { email: string; password: string }) => {
+  const register = async (credentials: RegisterCredentials) => {
     setLoading(true);
     setError(null);
     try {
+      const username = credentials.username || credentials.email.split('@')[0];
+      
+      // Step 1: Register the user with Supabase
       const { data, error } = await supabase.auth.signUp({
         email: credentials.email,
         password: credentials.password,
         options: {
           data: {
-            name: credentials.email.split('@')[0],
-            username: credentials.email.split('@')[0],
+            name: username,
+            username: username,
           }
         }
       });
@@ -245,21 +251,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
+        // Step 2: Create the user profile
         const newUser: User = {
           id: data.user.id,
           email: data.user.email || '',
-          name: data.user.user_metadata?.name || '',
-          username: data.user.user_metadata?.username || '',
+          name: username,
+          username: username,
           wallet_address: null,
           is_wallet_connected: false
         };
         
+        // Step 3: If wallet address is provided, connect it
+        if (credentials.walletAddress) {
+          try {
+            // Create wallet entry
+            await supabase
+              .from('user_wallets')
+              .insert({
+                user_id: data.user.id,
+                wallet_address: credentials.walletAddress.toLowerCase(),
+                is_connected: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            
+            // Update user record
+            await supabase
+              .from('users')
+              .update({
+                wallet_address: credentials.walletAddress.toLowerCase(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', data.user.id);
+            
+            newUser.wallet_address = credentials.walletAddress.toLowerCase();
+            newUser.is_wallet_connected = true;
+          } catch (walletError) {
+            console.error('Error connecting wallet during registration:', walletError);
+            // Continue with registration even if wallet connection fails
+          }
+        }
+        
+        // Step 4: Sign in with NextAuth
         await signIn('credentials', {
           redirect: false,
           email: credentials.email,
           password: credentials.password,
         });
         
+        // Step 5: Update local state
         setUser(newUser);
         router.refresh();
         
