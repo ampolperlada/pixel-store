@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { signIn } from 'next-auth/react';
-import { useModal } from '../components/context/ModalContext';
-
+import { useRouter } from 'next/navigation';
+import GoogleReCAPTCHA from 'react-google-recaptcha';
 
 declare global {
   interface Window {
@@ -12,450 +12,392 @@ declare global {
     };
   }
 }
-import GoogleReCAPTCHA from 'react-google-recaptcha';
-import { useRouter } from 'next/navigation';
 
 interface SignupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSwitchToLogin?: () => void; // Add this prop to handle switching to login
-  onSuccess?: (user: any) => void; // Add this prop to handle successful signup
+  onSwitchToLogin?: () => void;
+  onSuccess?: (user: any) => void;
+  toast?: {
+    showToast: (message: string, type: string) => void;
+  };
 }
 
-
-const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLogin, onSuccess }) => {
+const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLogin, onSuccess, toast }) => {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '', 
-    confirmPassword: '',
-    agreeToTerms: false,
-  });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const captchaRef = useRef<GoogleReCAPTCHA>(null);
+  
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [isGoogleSignup, setIsGoogleSignup] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [walletState, setWalletState] = useState<{
-    address: string | null;
-    status: 'disconnected' | 'connecting' | 'connected' | 'error';
-  }>({
-    address: null,
-    status: 'disconnected'
-  });
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-
-    if (formErrors[name]) {
-      setFormErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  };
-
-  // Removed duplicate validateForm function
-
-  const handleModalContentClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
   
-
- // Modify your handleConnectWallet function to force account selection
-// Import statements would be here...
-
-// Fixed handleConnectWallet function to force account selection
-// SignupModal.tsx
-// Import statements would be here...
-
-// Enhanced wallet connection with proper error handling
-const handleConnectWallet = async () => {
-  try {
-    setWalletState({ address: null, status: 'connecting' });
-    
-    // Check if Ethereum provider is available
-    if (!window.ethereum) {
-      throw new Error('Ethereum wallet not detected. Please install MetaMask.');
-    }
-    
-    // First disconnect any existing connections to force account selection
-    try {
-      console.log('Requesting wallet accounts reset...');
-      await window.ethereum.request({
-        method: 'eth_requestAccounts',
-        // Removed invalid params property
-      });
-    } catch (resetError) {
-      console.log('Account reset request failed, continuing with connection');
-    }
-    
-    // Try to explicitly request permissions to select accounts
-    try {
-      console.log('Requesting wallet permissions...');
-      await window.ethereum.request({
-        method: 'wallet_requestPermissions',
-        // Removed invalid params property
-      }); 
-    } catch (permissionError) {
-      console.log('Permission request failed, falling back to standard connection');
-    }
-    
-    // Request account access using the standard method
-    console.log('Requesting accounts...');
-    const accounts = await window.ethereum.request({ 
-      method: 'eth_requestAccounts' 
-    });
-    
-    console.log('Accounts received:', accounts);
-    
-    if (!accounts || accounts.length === 0) {
-      throw new Error('No accounts found or user rejected the request');
-    }
-    
-    // Ensure the address is properly formatted (lowercase) and is a string
-    const formattedAddress = accounts[0].toLowerCase();
-    
-    // Validate the address format
-    if (!/^0x[a-f0-9]{40}$/i.test(formattedAddress)) {
-      throw new Error('Invalid wallet address format');
-    }
-    
-    // Update wallet state with the first account
-    setWalletState({
-      address: formattedAddress,
-      status: 'connected'
-    });
-    
-    console.log('Wallet connected successfully:', formattedAddress);
-    
-    return formattedAddress;
-  } catch (error) {
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : 'Unknown wallet connection error';
-    
-    console.error('Wallet connection failed:', {
-      message: errorMessage,
-      error
-    });
-    
-    setWalletState({
-      address: null,
-      status: 'error'
-    });
-    
-    setFormErrors({
-      ...formErrors,
-      wallet: `Wallet connection failed: ${errorMessage}`
-    });
-    
-    throw error; // Re-throw to allow the calling function to handle it
-  }
-};
-
-// Improved form validation with specific checks
-const validateForm = () => {
-  const errors: Record<string, string> = {};
-  
-  // Username validation
-  if (!formData.username?.trim()) {
-    errors.username = 'Username is required';
-  } else if (!/^[a-zA-Z0-9_]{3,30}$/.test(formData.username.trim())) {
-    errors.username = 'Username must be 3-30 characters (letters, numbers, underscores only)';
-  }
-  
-  // Email validation
-  if (!formData.email?.trim()) {
-    errors.email = 'Email is required';
-  } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-    errors.email = 'Please enter a valid email address';
-  }
-  
-  // Password validation
-  if (!formData.password) {
-    errors.password = 'Password is required';
-  } else if (formData.password.length < 8) {
-    errors.password = 'Password must be at least 8 characters';
-  }
-  
-  // Confirm password validation
-  if (formData.password !== formData.confirmPassword) {
-    errors.confirmPassword = 'Passwords do not match';
-  }
-  
-  // Terms agreement validation
-  if (!formData.agreeToTerms) {
-    errors.agreeToTerms = 'You must agree to the Terms and Conditions';
-  }
-  
-  // CAPTCHA validation
-  if (!captchaToken) {
-    errors.captcha = 'Please complete the CAPTCHA verification';
-  }
-  
-  setFormErrors(errors);
-  return Object.keys(errors).length === 0;
-};
-
-// Completely revamped handleSubmit with proper error handling
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (isSubmitting) return;
-
-  // Clear previous errors
-  setErrors({
+  const [errors, setErrors] = useState({
     username: '',
     email: '',
     password: '',
     confirm: '',
     terms: '',
-    general: ''
+    general: '',
+    wallet: ''
   });
+  
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletStatus, setWalletStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
 
-  // Client-side validation
-  let hasErrors = false;
-  const newErrors = { ...errors };
-
-  if (!username.trim()) {
-    newErrors.username = 'Username is required';
-    hasErrors = true;
-  } else if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
-    newErrors.username = 'Username must be 3-30 characters (letters, numbers, underscores)';
-    hasErrors = true;
-  }
-
-  if (!email.trim()) {
-    newErrors.email = 'Email is required';
-    hasErrors = true;
-  } else if (!/\S+@\S+\.\S+/.test(email)) {
-    newErrors.email = 'Please enter a valid email';
-    hasErrors = true;
-  }
-
-  if (!isGoogleSignup) {
-    if (!password) {
-      newErrors.password = 'Password is required';
-      hasErrors = true;
-    } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-      hasErrors = true;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    
+    // Clear error for this field
+    setErrors(prev => ({
+      ...prev,
+      [name]: ''
+    }));
+    
+    // Update the appropriate state
+    switch (name) {
+      case 'username':
+        setUsername(value);
+        break;
+      case 'email':
+        setEmail(value);
+        break;
+      case 'password':
+        setPassword(value);
+        break;
+      case 'confirmPassword':
+        setConfirmPassword(value);
+        break;
+      case 'agreeToTerms':
+        setAgreedToTerms(checked);
+        break;
     }
+  };
 
-    if (password !== confirmPassword) {
-      newErrors.confirm = 'Passwords do not match';
-      hasErrors = true;
-    }
-  }
-
-  if (!agreedToTerms) {
-    newErrors.terms = 'You must agree to the terms';
-    hasErrors = true;
-  }
-
-  if (hasErrors) {
-    setErrors(newErrors);
-    return;
-  }
-
-  // Captcha validation
-  if (!isGoogleSignup && !captchaToken) {
+  const handleConnectWallet = async () => {
     try {
-      const token = await captchaRef.current?.executeAsync();
-      setCaptchaToken(token || '');
-      if (!token) {
+      setWalletStatus('connecting');
+      setWalletAddress(null);
+      
+      // Check if Ethereum provider is available
+      if (!window.ethereum) {
+        throw new Error('Ethereum wallet not detected. Please install MetaMask.');
+      }
+      
+      // Request account access
+      console.log('Requesting wallet accounts...');
+      const accounts = await window.ethereum.request({ 
+        method: 'eth_requestAccounts' 
+      });
+      
+      console.log('Accounts received:', accounts);
+      
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts found or user rejected the request');
+      }
+      
+      // Ensure the address is properly formatted
+      const formattedAddress = accounts[0].toLowerCase();
+      
+      // Validate the address format
+      if (!/^0x[a-f0-9]{40}$/i.test(formattedAddress)) {
+        throw new Error('Invalid wallet address format');
+      }
+      
+      // Update wallet state
+      setWalletAddress(formattedAddress);
+      setWalletStatus('connected');
+      
+      console.log('Wallet connected successfully:', formattedAddress);
+      
+      return formattedAddress;
+    } catch (error) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Unknown wallet connection error';
+      
+      console.error('Wallet connection failed:', {
+        message: errorMessage,
+        error
+      });
+      
+      setWalletAddress(null);
+      setWalletStatus('error');
+      
+      setErrors(prev => ({
+        ...prev,
+        wallet: `Wallet connection failed: ${errorMessage}`
+      }));
+      
+      throw error;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    // Clear previous errors
+    setErrors({
+      username: '',
+      email: '',
+      password: '',
+      confirm: '',
+      terms: '',
+      general: '',
+      wallet: ''
+    });
+
+    // Client-side validation
+    let hasErrors = false;
+    const newErrors = { ...errors };
+
+    if (!username.trim()) {
+      newErrors.username = 'Username is required';
+      hasErrors = true;
+    } else if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+      newErrors.username = 'Username must be 3-30 characters (letters, numbers, underscores)';
+      hasErrors = true;
+    }
+
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+      hasErrors = true;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Please enter a valid email';
+      hasErrors = true;
+    }
+
+    if (!isGoogleSignup) {
+      if (!password) {
+        newErrors.password = 'Password is required';
+        hasErrors = true;
+      } else if (password.length < 8) {
+        newErrors.password = 'Password must be at least 8 characters';
+        hasErrors = true;
+      }
+
+      if (password !== confirmPassword) {
+        newErrors.confirm = 'Passwords do not match';
+        hasErrors = true;
+      }
+    }
+
+    if (!agreedToTerms) {
+      newErrors.terms = 'You must agree to the terms';
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // Captcha validation
+    if (!isGoogleSignup && !captchaToken) {
+      try {
+        const token = await captchaRef.current?.executeAsync();
+        setCaptchaToken(token || '');
+        if (!token) {
+          setErrors({ ...errors, general: 'CAPTCHA verification failed' });
+          return;
+        }
+      } catch (error) {
+        console.error('CAPTCHA error:', error);
         setErrors({ ...errors, general: 'CAPTCHA verification failed' });
         return;
       }
-    } catch (error) {
-      console.error('CAPTCHA error:', error);
-      setErrors({ ...errors, general: 'CAPTCHA verification failed' });
-      return;
-    }
-  }
-
-  // Proceed with form submission
-  setIsSubmitting(true);
-
-  try {
-    const response = await fetch('/api/signup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username,
-        email,
-        password,
-        wallet_address: walletAddress || null,
-        agreedToTerms,
-        profile_image_url: '',
-        captchaToken,
-        isGoogleSignup
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      setErrors({
-        ...errors,
-        general: data.error || 'Signup failed. Please try again.'
-      });
-      return;
     }
 
-    // Signup successful
-    toast?.showToast('Account created successfully!', 'success');
-    
-    // Store user data if needed
-    if (data.user) {
-      // You might want to store user data in context or state here
-      console.log('User created:', data.user);
-    }
+    // Proceed with form submission
+    setIsSubmitting(true);
 
-    // Important: Auto sign-in after signup
-    if (data.autoSignIn) {
-      try {
-        console.log('Attempting auto sign-in...');
-        
-        // Use next-auth signIn with credentials
-        const signInResult = await signIn('credentials', {
-          redirect: false,
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
           email,
           password,
-          callbackUrl: '/'
-        });
+          wallet_address: walletAddress || null,
+          agreedToTerms,
+          profile_image_url: '',
+          captchaToken,
+          isGoogleSignup
+        }),
+      });
 
-        if (signInResult?.error) {
-          console.error('Auto sign-in failed:', signInResult.error);
-          setErrors({
-            ...errors,
-            general: `Auto sign-in failed: ${signInResult.error}`
-          });
-          
-          // Don't close modal yet if auto-login failed
-          return;
-        }
-        
-        // Auto sign-in successful
-        console.log('Auto sign-in successful');
-        
-        // Handle wallet connections if needed
-        if (data.walletConnected) {
-          toast?.showToast('Wallet connected successfully!', 'success');
-        }
-        
-        // Close the modal and redirect if needed
-        onClose();
-        
-        // Update UI or redirect
-        if (signInResult?.url) {
-          window.location.href = signInResult.url;
-        } else {
-          // Force a refresh to update UI with logged-in state
-          window.location.reload();
-        }
-      } catch (signInError) {
-        console.error('Auto sign-in error:', signInError);
+      const data = await response.json();
+
+      if (!response.ok) {
         setErrors({
           ...errors,
-          general: 'Auto sign-in failed. Please try signing in manually.'
+          general: data.error || 'Signup failed. Please try again.'
         });
+        return;
       }
-    } else {
-      // Just close modal if no auto sign-in
-      onClose();
-    }
-  } catch (error) {
-    console.error('Signup error:', error);
-    setErrors({
-      ...errors,
-      general: 'An unexpected error occurred. Please try again.'
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
 
-// The rest of your component functions remain largely the same
-const handleGoogleSignup = async () => {
-  try {
-    if (!formData.agreeToTerms) {
-      setFormErrors({
-        agreeToTerms: 'You must agree to the Terms and Conditions'
+      // Signup successful
+      if (toast) {
+        toast.showToast('Account created successfully!', 'success');
+      }
+      
+      // Store user data if needed
+      if (data.user && onSuccess) {
+        onSuccess(data.user);
+      }
+
+      // Important: Auto sign-in after signup
+      if (!isGoogleSignup) {
+        try {
+          console.log('Attempting auto sign-in...');
+          
+          // Use next-auth signIn with credentials
+          const signInResult = await signIn('credentials', {
+            redirect: false,
+            email,
+            password,
+            callbackUrl: '/'
+          });
+
+          if (signInResult?.error) {
+            console.error('Auto sign-in failed:', signInResult.error);
+            setErrors({
+              ...errors,
+              general: `Auto sign-in failed: ${signInResult.error}`
+            });
+            
+            // Don't close modal yet if auto-login failed
+            return;
+          }
+          
+          // Auto sign-in successful
+          console.log('Auto sign-in successful');
+          
+          // Handle wallet connections if needed
+          if (walletAddress) {
+            if (toast) {
+              toast.showToast('Wallet connected successfully!', 'success');
+            }
+          }
+          
+          // Close the modal and redirect if needed
+          onClose();
+          
+          // Update UI or redirect
+          if (signInResult?.url) {
+            router.push(signInResult.url);
+          } else {
+            // Force a refresh to update UI with logged-in state
+            window.location.reload();
+          }
+        } catch (signInError) {
+          console.error('Auto sign-in error:', signInError);
+          setErrors({
+            ...errors,
+            general: 'Auto sign-in failed. Please try signing in manually.'
+          });
+        }
+      } else {
+        // Just close modal if Google sign-in (NextAuth handles the session)
+        onClose();
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      setErrors({
+        ...errors,
+        general: 'An unexpected error occurred. Please try again.'
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsSubmitting(true);
-    
-    // Sign in with Google via NextAuth
-    const result = await signIn('google', { 
-      redirect: false,
-      callbackUrl: window.location.origin 
-    });
-    
-    if (result?.error) {
-      throw new Error(result.error);
-    }
-    
-    // Close the modal if successful
-    if (!result?.error) {
-      onClose();
-    }
-  } catch (error) {
-    console.error('Error initiating Google signup:', error);
-    setFormErrors({ 
-      submit: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
-const handleCaptchaChange = (token: string | null) => {
-  setCaptchaToken(token);
-  if (token) {
-    setFormErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors.captcha;
-      return newErrors;
-    });
-  } else {
-    setFormErrors((prev) => ({
-      ...prev,
-      captcha: 'Please complete the CAPTCHA verification'
-    }));
-  }
-};
+  const handleGoogleSignup = async () => {
+    try {
+      if (!agreedToTerms) {
+        setErrors({
+          ...errors,
+          terms: 'You must agree to the Terms and Conditions'
+        });
+        return;
+      }
+      
+      setIsGoogleSignup(true);
+      setIsSubmitting(true);
+      
+      // Sign in with Google via NextAuth
+      const result = await signIn('google', { 
+        redirect: false,
+        callbackUrl: window.location.origin 
+      });
+      
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      
+      // Close the modal if successful
+      if (!result?.error) {
+        onClose();
+      }
+    } catch (error) {
+      console.error('Error initiating Google signup:', error);
+      setErrors({ 
+        ...errors,
+        general: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
+      });
+      setIsGoogleSignup(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-const handleSwitchToLogin = () => {
-  // Reset form state before switching
-  setFormData({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    agreeToTerms: false,
-  });
-  setFormErrors({});
-  setCaptchaToken(null);
-  
-  // If onSwitchToLogin is provided, call it
-  if (onSwitchToLogin) {
-    onSwitchToLogin();
-  } else {
-    console.warn("No onSwitchToLogin callback provided");
-  }
-  
-  // Close this modal
-  onClose();
-};
+  const handleCaptchaChange = (token: string | null) => {
+    setCaptchaToken(token);
+    if (!token) {
+      setErrors(prev => ({
+        ...prev,
+        general: 'Please complete the CAPTCHA verification'
+      }));
+    }
+  };
+
+  const handleSwitchToLogin = () => {
+    // Reset form state before switching
+    setUsername('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setAgreedToTerms(false);
+    setCaptchaToken(null);
+    setErrors({
+      username: '',
+      email: '',
+      password: '',
+      confirm: '',
+      terms: '',
+      general: '',
+      wallet: ''
+    });
+    
+    // If onSwitchToLogin is provided, call it
+    if (onSwitchToLogin) {
+      onSwitchToLogin();
+    } else {
+      console.warn("No onSwitchToLogin callback provided");
+    }
+    
+    // Close this modal
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -488,13 +430,13 @@ const handleSwitchToLogin = () => {
                 <input
                   type="text"
                   name="username"
-                  value={formData.username}
+                  value={username}
                   onChange={handleInputChange}
                   className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                   placeholder="Enter your username"
                 />
-                {formErrors.username && (
-                  <p className="text-red-400 text-xs mt-1">{formErrors.username}</p>
+                {errors.username && (
+                  <p className="text-red-400 text-xs mt-1">{errors.username}</p>
                 )}
               </div>
 
@@ -503,13 +445,13 @@ const handleSwitchToLogin = () => {
                 <input
                   type="email"
                   name="email"
-                  value={formData.email}
+                  value={email}
                   onChange={handleInputChange}
                   className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                   placeholder="your@email.com"
                 />
-                {formErrors.email && (
-                  <p className="text-red-400 text-xs mt-1">{formErrors.email}</p>
+                {errors.email && (
+                  <p className="text-red-400 text-xs mt-1">{errors.email}</p>
                 )}
               </div>
 
@@ -519,13 +461,13 @@ const handleSwitchToLogin = () => {
                   <input
                     type="password"
                     name="password"
-                    value={formData.password}
+                    value={password}
                     onChange={handleInputChange}
                     className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                     placeholder="••••••••"
                   />
-                  {formErrors.password && (
-                    <p className="text-red-400 text-xs mt-1">{formErrors.password}</p>
+                  {errors.password && (
+                    <p className="text-red-400 text-xs mt-1">{errors.password}</p>
                   )}
                 </div>
 
@@ -534,13 +476,13 @@ const handleSwitchToLogin = () => {
                   <input
                     type="password"
                     name="confirmPassword"
-                    value={formData.confirmPassword}
+                    value={confirmPassword}
                     onChange={handleInputChange}
                     className="w-full bg-gray-700/50 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                     placeholder="••••••••"
                   />
-                  {formErrors.confirmPassword && (
-                    <p className="text-red-400 text-xs mt-1">{formErrors.confirmPassword}</p>
+                  {errors.confirm && (
+                    <p className="text-red-400 text-xs mt-1">{errors.confirm}</p>
                   )}
                 </div>
               </div>
@@ -549,16 +491,16 @@ const handleSwitchToLogin = () => {
               <button
                 type="button"
                 onClick={handleConnectWallet}
-                disabled={walletState.status === 'connecting'}
+                disabled={walletStatus === 'connecting'}
                 className={`w-full py-3 rounded-lg font-medium transition-all border ${
-                  walletState.status === 'connected'
+                  walletStatus === 'connected'
                     ? 'bg-green-600/20 border-green-500 text-green-400'
-                    : walletState.status === 'connecting'
+                    : walletStatus === 'connecting'
                     ? 'bg-gray-600/50 border-gray-500 text-gray-400 cursor-not-allowed'
                     : 'bg-purple-600/20 hover:bg-purple-600/30 border-purple-500/50 hover:border-purple-500/70'
                 }`}
               >
-                {walletState.status === 'connecting' ? (
+                {walletStatus === 'connecting' ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -566,7 +508,7 @@ const handleSwitchToLogin = () => {
                     </svg>
                     Connecting...
                   </span>
-                ) : walletState.status === 'connected' ? (
+                ) : walletStatus === 'connected' ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
@@ -583,14 +525,14 @@ const handleSwitchToLogin = () => {
                 )}
               </button>
 
-              {walletState.status === 'connected' && (
+              {walletStatus === 'connected' && walletAddress && (
                 <p className="text-xs text-green-400">
-                  Wallet will be linked to your account: {walletState.address?.slice(0, 6)}...{walletState.address?.slice(-4)}
+                  Wallet will be linked to your account: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
                 </p>
               )}
 
-              {formErrors.wallet && (
-                <p className="text-red-400 text-xs mt-1">{formErrors.wallet}</p>
+              {errors.wallet && (
+                <p className="text-red-400 text-xs mt-1">{errors.wallet}</p>
               )}
 
               <div className="flex items-start">
@@ -598,7 +540,7 @@ const handleSwitchToLogin = () => {
                   <input
                     type="checkbox"
                     name="agreeToTerms"
-                    checked={formData.agreeToTerms}
+                    checked={agreedToTerms}
                     onChange={handleInputChange}
                     className="w-4 h-4 border border-gray-600 rounded bg-gray-700 focus:ring-2 focus:ring-cyan-500"
                   />
@@ -607,24 +549,21 @@ const handleSwitchToLogin = () => {
                   I agree to the <a href="#" className="text-cyan-400 hover:underline">Terms and Conditions</a>
                 </label>
               </div>
-              {formErrors.agreeToTerms && (
-                <p className="text-red-400 text-xs mt-1">{formErrors.agreeToTerms}</p>
+              {errors.terms && (
+                <p className="text-red-400 text-xs mt-1">{errors.terms}</p>
               )}
 
               <div className="flex justify-center mt-4">
                 <GoogleReCAPTCHA
+                  ref={captchaRef}
                   sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
                   onChange={handleCaptchaChange}
                   theme="dark"
                 />
               </div>
-              {formErrors.captcha && (
-                <p className="text-red-400 text-xs text-center mt-1">{formErrors.captcha}</p>
-              )}
-
-              {formErrors.submit && (
+              {errors.general && (
                 <p className="text-red-400 text-sm text-center mt-1 p-2 bg-red-900/20 border border-red-800/50 rounded">
-                  {formErrors.submit}
+                  {errors.general}
                 </p>
               )}
 
