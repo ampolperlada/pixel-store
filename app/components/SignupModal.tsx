@@ -88,7 +88,7 @@ const handleConnectWallet = async () => {
       console.log('Requesting wallet accounts reset...');
       await window.ethereum.request({
         method: 'eth_requestAccounts',
-        params: [{ eth_accounts: {} }]
+        // Removed invalid params property
       });
     } catch (resetError) {
       console.log('Account reset request failed, continuing with connection');
@@ -99,8 +99,8 @@ const handleConnectWallet = async () => {
       console.log('Requesting wallet permissions...');
       await window.ethereum.request({
         method: 'wallet_requestPermissions',
-        params: [{ eth_accounts: {} }]
-      });
+        // Removed invalid params property
+      }); 
     } catch (permissionError) {
       console.log('Permission request failed, falling back to standard connection');
     }
