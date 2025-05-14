@@ -203,116 +203,179 @@ const validateForm = () => {
 };
 
 // Completely revamped handleSubmit with proper error handling
-const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-  event.preventDefault();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (isSubmitting) return;
 
   // Clear previous errors
-  setFormErrors({});
+  setErrors({
+    username: '',
+    email: '',
+    password: '',
+    confirm: '',
+    terms: '',
+    general: ''
+  });
 
-  // Validate form
-  if (!validateForm()) {
-    console.log('Form validation failed:', formErrors);
+  // Client-side validation
+  let hasErrors = false;
+  const newErrors = { ...errors };
+
+  if (!username.trim()) {
+    newErrors.username = 'Username is required';
+    hasErrors = true;
+  } else if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+    newErrors.username = 'Username must be 3-30 characters (letters, numbers, underscores)';
+    hasErrors = true;
+  }
+
+  if (!email.trim()) {
+    newErrors.email = 'Email is required';
+    hasErrors = true;
+  } else if (!/\S+@\S+\.\S+/.test(email)) {
+    newErrors.email = 'Please enter a valid email';
+    hasErrors = true;
+  }
+
+  if (!isGoogleSignup) {
+    if (!password) {
+      newErrors.password = 'Password is required';
+      hasErrors = true;
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+      hasErrors = true;
+    }
+
+    if (password !== confirmPassword) {
+      newErrors.confirm = 'Passwords do not match';
+      hasErrors = true;
+    }
+  }
+
+  if (!agreedToTerms) {
+    newErrors.terms = 'You must agree to the terms';
+    hasErrors = true;
+  }
+
+  if (hasErrors) {
+    setErrors(newErrors);
     return;
   }
 
+  // Captcha validation
+  if (!isGoogleSignup && !captchaToken) {
+    try {
+      const token = await captchaRef.current?.executeAsync();
+      setCaptchaToken(token || '');
+      if (!token) {
+        setErrors({ ...errors, general: 'CAPTCHA verification failed' });
+        return;
+      }
+    } catch (error) {
+      console.error('CAPTCHA error:', error);
+      setErrors({ ...errors, general: 'CAPTCHA verification failed' });
+      return;
+    }
+  }
+
+  // Proceed with form submission
   setIsSubmitting(true);
 
   try {
-    // Prepare user data
-    const userData = {
-      username: formData.username.trim(),
-      email: formData.email.trim(),
-      password: formData.password,
-      wallet_address: walletState.address || null,
-      agreedToTerms: formData.agreeToTerms,
-      profile_image_url: undefined,
-      captchaToken: captchaToken
-    };
-    
-    console.log('Submitting user data:', {
-      ...userData,
-      password: '[REDACTED]',
-      captchaToken: '[REDACTED]'
-    });
-
-    // Submit the form data
     const response = await fetch('/api/signup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username,
+        email,
+        password,
+        wallet_address: walletAddress || null,
+        agreedToTerms,
+        profile_image_url: '',
+        captchaToken,
+        isGoogleSignup
+      }),
     });
-    
-    // Get response data
-    let result;
-    try {
-      result = await response.json();
-      console.log('API Response:', {
-        status: response.status,
-        ok: response.ok,
-        body: result
-      });
-    } catch (parseError) {
-      console.error('Error parsing response:', parseError);
-      throw new Error('Failed to parse server response');
-    }
-    
-    // Handle error responses
+
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorMessage = result?.error || result?.message || `Signup failed with status ${response.status}`;
-      throw new Error(errorMessage);
+      setErrors({
+        ...errors,
+        general: data.error || 'Signup failed. Please try again.'
+      });
+      return;
     }
+
+    // Signup successful
+    toast?.showToast('Account created successfully!', 'success');
     
-    // Handle success
-    console.log('User signed up successfully:', result);
-    
-    // Perform auto-login if indicated by the server response
-    if (result.autoSignIn) {
+    // Store user data if needed
+    if (data.user) {
+      // You might want to store user data in context or state here
+      console.log('User created:', data.user);
+    }
+
+    // Important: Auto sign-in after signup
+    if (data.autoSignIn) {
       try {
-        // Auto sign-in with the credentials
+        console.log('Attempting auto sign-in...');
+        
+        // Use next-auth signIn with credentials
         const signInResult = await signIn('credentials', {
           redirect: false,
-          email: userData.email,
-          password: userData.password,
-          callbackUrl: window.location.origin
+          email,
+          password,
+          callbackUrl: '/'
         });
-        
+
         if (signInResult?.error) {
           console.error('Auto sign-in failed:', signInResult.error);
-          // We'll still count signup as successful even if auto-login fails
-        } else {
-          console.log('Auto sign-in successful');
+          setErrors({
+            ...errors,
+            general: `Auto sign-in failed: ${signInResult.error}`
+          });
           
-          // Force a page refresh to update auth state completely
-          // This is the most reliable way to ensure all components update
-          setTimeout(() => {
-            window.location.href = window.location.origin; // Redirect to homepage
-          }, 800);
+          // Don't close modal yet if auto-login failed
+          return;
+        }
+        
+        // Auto sign-in successful
+        console.log('Auto sign-in successful');
+        
+        // Handle wallet connections if needed
+        if (data.walletConnected) {
+          toast?.showToast('Wallet connected successfully!', 'success');
+        }
+        
+        // Close the modal and redirect if needed
+        onClose();
+        
+        // Update UI or redirect
+        if (signInResult?.url) {
+          window.location.href = signInResult.url;
+        } else {
+          // Force a refresh to update UI with logged-in state
+          window.location.reload();
         }
       } catch (signInError) {
-        console.error('Error during auto sign-in:', signInError);
+        console.error('Auto sign-in error:', signInError);
+        setErrors({
+          ...errors,
+          general: 'Auto sign-in failed. Please try signing in manually.'
+        });
       }
-    }
-    
-    // Close the modal regardless
-    onClose();
-    
-    // If onSuccess is provided as a prop, call it
-    if (typeof onSuccess === 'function') {
-      onSuccess(result.user);
+    } else {
+      // Just close modal if no auto sign-in
+      onClose();
     }
   } catch (error) {
-    // Properly format and log the error
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    console.error('Error during signup:', {
-      message: errorMessage,
-      name: error instanceof Error ? error.name : 'Unknown',
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    
-    // Display the error to the user
-    setFormErrors({
-      ...formErrors,
-      submit: errorMessage
+    console.error('Signup error:', error);
+    setErrors({
+      ...errors,
+      general: 'An unexpected error occurred. Please try again.'
     });
   } finally {
     setIsSubmitting(false);
