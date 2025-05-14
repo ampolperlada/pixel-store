@@ -121,77 +121,89 @@ const StickyNavbar = () => {
   }, []);
   
   const handleConnectWallet = async () => {
-    if (walletConnecting) {
-      console.log('Already processing wallet connection. Please wait.');
+  if (walletConnecting) {
+    console.log('Already processing wallet connection. Please wait.');
+    return;
+  }
+  
+  setWalletConnecting(true);
+  
+  try {
+    if (!user) {
+      showToast('You must be logged in to connect a wallet', 'warning');
+      setIsLoginOpen(true);
       return;
     }
     
-    setWalletConnecting(true);
-    
-    try {
-      if (!user) {
-        showToast('You must be logged in to connect a wallet', 'warning');
-        setIsLoginOpen(true);
-        return;
-      }
-      
-      if (!window.ethereum) {
-        showToast('MetaMask or compatible wallet not detected. Please install MetaMask first.', 'error');
-        return;
-      }
-      
-      let accounts;
-      try {
-        const accountsPromise = window.ethereum.request({ method: "eth_requestAccounts" });
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Connection request timed out')), 15000)
-        );
-        accounts = await Promise.race([accountsPromise, timeoutPromise]);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('User rejected') || errorMessage.includes('user rejected')) {
-          showToast('You rejected the connection request', 'info');
-        } else {
-          showToast('Failed to connect to wallet: ' + errorMessage, 'error');
-        }
-        return;
-      }
-      
-      if (!accounts || accounts.length === 0) {
-        showToast('No wallet accounts found or authorized.', 'error');
-        return;
-      }
-      
-      const response = await fetch("/api/connect-wallet", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.user?.id || ""}` 
-        },
-        body: JSON.stringify({ walletAddress: accounts[0] }),
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        const errorMsg = errorData?.message || `Failed to save wallet address (Status: ${response.status})`;
-        showToast(errorMsg, 'error');
-        return;
-      }
-      
-      if (refreshUser) await refreshUser();
-      await refreshSession();
-      
-      showToast('Wallet connected successfully!', 'success');
-      setTimeout(() => window.location.reload(), 1000);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error connecting wallet';
-      console.error('Wallet connection error:', error);
-      showToast(`Wallet connection failed: ${errorMessage}`, 'error');
-    } finally {
-      setWalletConnecting(false);
+    if (!window.ethereum) {
+      showToast('MetaMask or compatible wallet not detected. Please install MetaMask first.', 'error');
+      return;
     }
-  };
+    
+    let accounts;
+    try {
+      // Force account selection using permissions API
+      try {
+        await window.ethereum.request({
+          method: 'eth_requestAccounts'
+        });
+      } catch (permError) {
+        console.log('Permission request failed, continuing with standard flow');
+      }
+      
+      const accountsPromise = window.ethereum.request({ method: "eth_requestAccounts" });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection request timed out')), 15000)
+      );
+      accounts = await Promise.race([accountsPromise, timeoutPromise]);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('User rejected') || errorMessage.includes('user rejected')) {
+        showToast('You rejected the connection request', 'info');
+      } else {
+        showToast('Failed to connect to wallet: ' + errorMessage, 'error');
+      }
+      return;
+    }
+    
+    if (!accounts || accounts.length === 0) {
+      showToast('No wallet accounts found or authorized.', 'error');
+      return;
+    }
+    
+    const response = await fetch("/api/connect-wallet", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session?.user?.id || ""}` 
+      },
+      body: JSON.stringify({ walletAddress: accounts[0].toLowerCase() }),
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const errorMsg = errorData?.message || `Failed to save wallet address (Status: ${response.status})`;
+      showToast(errorMsg, 'error');
+      return;
+    }
+    
+    // Ensure we refresh everything properly
+    if (refreshUser) await refreshUser();
+    await refreshSession();
+    
+    showToast('Wallet connected successfully!', 'success');
+    
+    // Force a page refresh to ensure all components update correctly
+    setTimeout(() => window.location.reload(), 1000);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error connecting wallet';
+    console.error('Wallet connection error:', error);
+    showToast(`Wallet connection failed: ${errorMessage}`, 'error');
+  } finally {
+    setWalletConnecting(false);
+  }
+};
 
   if (!hasMounted) return null;
 

@@ -83,20 +83,35 @@ const handleConnectWallet = async () => {
       throw new Error('Ethereum wallet not detected. Please install MetaMask.');
     }
     
-    // Force account selection using permissions API
+    // First disconnect any existing connections to force account selection
     try {
+      console.log('Requesting wallet accounts reset...');
       await window.ethereum.request({
-        method: 'wallet_requestPermissions'
+        method: 'eth_requestAccounts',
+        params: [{ eth_accounts: {} }]
       });
-    } catch (permissionError) {
-      console.log('Permission request rejected, attempting standard connection');
-      // Continue even if this fails - it's just to try forcing the account selector
+    } catch (resetError) {
+      console.log('Account reset request failed, continuing with connection');
     }
     
-    // Request account access
+    // Try to explicitly request permissions to select accounts
+    try {
+      console.log('Requesting wallet permissions...');
+      await window.ethereum.request({
+        method: 'wallet_requestPermissions',
+        params: [{ eth_accounts: {} }]
+      });
+    } catch (permissionError) {
+      console.log('Permission request failed, falling back to standard connection');
+    }
+    
+    // Request account access using the standard method
+    console.log('Requesting accounts...');
     const accounts = await window.ethereum.request({ 
       method: 'eth_requestAccounts' 
     });
+    
+    console.log('Accounts received:', accounts);
     
     if (!accounts || accounts.length === 0) {
       throw new Error('No accounts found or user rejected the request');
@@ -210,7 +225,7 @@ const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
       password: formData.password,
       wallet_address: walletState.address || null,
       agreedToTerms: formData.agreeToTerms,
-      profile_image_url: undefined, // This would be handled separately if needed
+      profile_image_url: undefined,
       captchaToken: captchaToken
     };
     
@@ -250,12 +265,35 @@ const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     // Handle success
     console.log('User signed up successfully:', result);
     
-    // If we're using a router, refresh the page
-    if (router) {
-      router.refresh();
+    // Perform auto-login if indicated by the server response
+    if (result.autoSignIn) {
+      try {
+        // Auto sign-in with the credentials
+        const signInResult = await signIn('credentials', {
+          redirect: false,
+          email: userData.email,
+          password: userData.password,
+          callbackUrl: window.location.origin
+        });
+        
+        if (signInResult?.error) {
+          console.error('Auto sign-in failed:', signInResult.error);
+          // We'll still count signup as successful even if auto-login fails
+        } else {
+          console.log('Auto sign-in successful');
+          
+          // Force a page refresh to update auth state completely
+          // This is the most reliable way to ensure all components update
+          setTimeout(() => {
+            window.location.href = window.location.origin; // Redirect to homepage
+          }, 800);
+        }
+      } catch (signInError) {
+        console.error('Error during auto sign-in:', signInError);
+      }
     }
     
-    // Close the modal
+    // Close the modal regardless
     onClose();
     
     // If onSuccess is provided as a prop, call it

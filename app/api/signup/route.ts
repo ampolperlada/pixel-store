@@ -187,94 +187,113 @@ export async function POST(req: NextRequest) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // Create the user
-    try {
-      // Validate wallet address format if provided
-      if (wallet_address && !/^0x[a-fA-F0-9]{40}$/.test(wallet_address)) {
-        return NextResponse.json(
-          { error: 'Invalid wallet address format' }, 
-          { status: 400 }
-        );
-      }
+   try {
+  // Validate wallet address format if provided
+  if (wallet_address && !/^0x[a-fA-F0-9]{40}$/.test(wallet_address)) {
+    return NextResponse.json(
+      { error: 'Invalid wallet address format' }, 
+      { status: 400 }
+    );
+  }
 
-      // IMPORTANT: Remove wallet_address from users table data
-      const userData = {
-        username: username.trim(),
-        email,
-        password_hash: hashedPassword,
-        agreed_to_terms: agreedToTerms,
-        profile_image_url: profile_image_url || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_google_account: isGoogleSignup || false,
-        // wallet_address removed from here
-      };
+  // IMPORTANT: Remove wallet_address from users table data
+  const userData = {
+    username: username.trim(),
+    email,
+    password_hash: hashedPassword,
+    agreed_to_terms: agreedToTerms,
+    profile_image_url: profile_image_url || null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    is_google_account: isGoogleSignup || false,
+    // wallet_address removed from here
+  };
 
-      console.log('Creating user with data:', {
-        ...userData,
-        password_hash: '[REDACTED]'
-      });
+  console.log('Creating user with data:', {
+    ...userData,
+    password_hash: '[REDACTED]'
+  });
 
-      // Create user in the users table first
-      const { data: newUser, error: userError } = await supabase
-        .from(USERS_TABLE)
-        .insert(userData)
-        .select('*')
-        .single();
+  // Create user in the users table first
+  const { data: newUser, error: userError } = await supabase
+    .from(USERS_TABLE)
+    .insert(userData)
+    .select('*')
+    .single();
+  
+  if (userError) {
+    console.error('Error creating user in Supabase:', userError);
+    return NextResponse.json(
+      { 
+        error: 'Failed to create user account', 
+        details: userError.message 
+      }, 
+      { status: 400 }
+    );
+  }
+
+  // If wallet address is provided, add it to user_wallets table
+  let walletConnected = false;
+  if (wallet_address && newUser.user_id) {
+    const walletData = {
+      user_id: newUser.user_id,
+      wallet_address: wallet_address.toLowerCase(),
+      is_connected: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    console.log('Attempting to connect wallet with data:', {
+      ...walletData,
+      wallet_address: wallet_address.toLowerCase() // Log the exact wallet address being inserted
+    });
+
+    const { data: walletResult, error: walletError } = await supabase
+      .from(WALLETS_TABLE)
+      .insert(walletData)
+      .select('*')
+      .single();
+
+    if (walletError) {
+      console.error('Error adding wallet to user_wallets:', walletError);
+      // Don't fail the entire signup just because wallet connection failed
+      // We can notify the user they'll need to connect their wallet later
+    } else {
+      console.log('Wallet connected successfully:', walletResult);
+      walletConnected = true;
       
-      if (userError) {
-        console.error('Error creating user in Supabase:', userError);
-        return NextResponse.json(
-          { 
-            error: 'Failed to create user account', 
-            details: userError.message 
-          }, 
-          { status: 400 }
-        );
+      // IMPORTANT: Update the user record to reference this wallet
+      const { error: updateError } = await supabase
+        .from(USERS_TABLE)
+        .update({ wallet_address: wallet_address.toLowerCase() })
+        .eq('user_id', newUser.user_id);
+        
+      if (updateError) {
+        console.error('Error updating user with wallet address:', updateError);
       }
+    }
+  }
 
-      // If wallet address is provided, add it to user_wallets table
-      let walletConnected = false;
-      if (wallet_address && newUser.user_id) {
-        const walletData = {
-          user_id: newUser.user_id,
-          wallet_address: wallet_address.toLowerCase(),
-          is_connected: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
+  console.log('User created successfully:', newUser);
 
-        const { data: walletResult, error: walletError } = await supabase
-          .from(WALLETS_TABLE)
-          .insert(walletData)
-          .select('*')
-          .single();
+  // Return user data without sensitive information
+  const { password_hash, ...safeUserData } = newUser;
 
-        if (walletError) {
-          console.error('Error adding wallet to user_wallets:', walletError);
-          // Don't fail the entire signup just because wallet connection failed
-          // We can notify the user they'll need to connect their wallet later
-        } else {
-          console.log('Wallet connected successfully:', walletResult);
-          walletConnected = true;
-        }
-      }
+  return NextResponse.json(
+    { 
+      message: 'Signup successful', 
+      user: {
+        ...safeUserData,
+        wallet_address: wallet_address?.toLowerCase() || null // Include wallet_address in response
+      },
+      walletConnected,
+      isGoogleSignup,
+      // Include this flag so the client knows to sign in the user
+      autoSignIn: true
+    }, 
+    { status: 201 }
+  );
 
-      console.log('User created successfully:', newUser);
-
-      // Return user data without sensitive information
-      const { password_hash, ...safeUserData } = newUser;
-
-      return NextResponse.json(
-        { 
-          message: 'Signup successful', 
-          user: safeUserData,
-          walletConnected,
-          isGoogleSignup,
-          // Include this flag so the client knows to sign in the user
-          autoSignIn: true
-        }, 
-        { status: 201 }
-      );
     } catch (error) {
       console.error('Error creating user:', error instanceof Error ? {
         message: error.message,
