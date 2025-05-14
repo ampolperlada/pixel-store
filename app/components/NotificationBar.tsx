@@ -141,7 +141,7 @@ const StickyNavbar = () => {
     }
     
     // First check if MetaMask is locked
-    let accounts = [];
+    let accounts: string[] = [];
     try {
       // Get current accounts without requesting new permissions
       accounts = await window.ethereum.request({ 
