@@ -122,7 +122,7 @@ const StickyNavbar = () => {
   
   const handleConnectWallet = async () => {
   if (walletConnecting) {
-    console.log('Already processing wallet connection. Please wait.');
+    showToast('Already processing wallet connection. Please wait.', 'warning');
     return;
   }
   
@@ -140,29 +140,39 @@ const StickyNavbar = () => {
       return;
     }
     
-    let accounts;
+    // First check if MetaMask is locked
+    let accounts = [];
     try {
-      // Force account selection using permissions API
-      try {
-        await window.ethereum.request({
-          method: 'eth_requestAccounts'
-        });
-      } catch (permError) {
-        console.log('Permission request failed, continuing with standard flow');
-      }
+      // Get current accounts without requesting new permissions
+      accounts = await window.ethereum.request({ 
+        method: "eth_accounts" 
+      });
       
-      const accountsPromise = window.ethereum.request({ method: "eth_requestAccounts" });
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection request timed out')), 15000)
-      );
-      accounts = await Promise.race([accountsPromise, timeoutPromise]);
+      // If no accounts, then we need to request access
+      if (!accounts || accounts.length === 0) {
+        try {
+          showToast('Please select an account in your wallet', 'info');
+          
+          // Request access to accounts
+          accounts = await window.ethereum.request({ 
+            method: "eth_requestAccounts" 
+          });
+        } catch (requestError) {
+          if ((requestError as { code?: number }).code === 4001) { // User rejected request
+            showToast('You rejected the connection request', 'info');
+          } else {
+            if (requestError instanceof Error) {
+              showToast(`Wallet error: ${requestError.message}`, 'error');
+            } else {
+              showToast('Wallet error: Unknown error', 'error');
+            }
+          }
+          return;
+        }
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('User rejected') || errorMessage.includes('user rejected')) {
-        showToast('You rejected the connection request', 'info');
-      } else {
-        showToast('Failed to connect to wallet: ' + errorMessage, 'error');
-      }
+      showToast(`Failed to connect to wallet: ${errorMessage}`, 'error');
       return;
     }
     
@@ -171,20 +181,44 @@ const StickyNavbar = () => {
       return;
     }
     
+    // If multiple accounts, let user choose one
+    let selectedAccount = accounts[0];
+    if (accounts.length > 1) {
+      // Simple account selection UI (you could replace this with a modal)
+      const accountIndex = window.prompt(
+        `Select an account number (1-${accounts.length}):\n\n${
+          accounts.map((acc, i) => `${i+1}: ${acc}`).join('\n')
+        }`
+      );
+      
+      if (!accountIndex || isNaN(Number(accountIndex)) || Number(accountIndex) < 1 || Number(accountIndex) > accounts.length) {
+        showToast('Invalid account selection', 'error');
+        return;
+      }
+      
+      selectedAccount = accounts[Number(accountIndex) - 1];
+    }
+    
+    // User selected a wallet, now save it to database
     const response = await fetch("/api/connect-wallet", {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
         "Authorization": `Bearer ${session?.user?.id || ""}` 
       },
-      body: JSON.stringify({ walletAddress: accounts[0].toLowerCase() }),
+      body: JSON.stringify({ walletAddress: selectedAccount.toLowerCase() }),
       credentials: 'include'
     });
     
+    const responseData = await response.json();
+    
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-      const errorMsg = errorData?.message || `Failed to save wallet address (Status: ${response.status})`;
-      showToast(errorMsg, 'error');
+      // Handle specific errors from the API
+      if (response.status === 409) {
+        showToast(`This wallet is already connected to user: ${responseData.conflictingUser}`, 'error');
+      } else {
+        showToast(responseData.error || `Failed to save wallet address (Status: ${response.status})`, 'error');
+      }
       return;
     }
     
@@ -194,8 +228,15 @@ const StickyNavbar = () => {
     
     showToast('Wallet connected successfully!', 'success');
     
-    // Force a page refresh to ensure all components update correctly
-    setTimeout(() => window.location.reload(), 1000);
+    // Update UI without forcing page refresh
+    setTimeout(() => {
+      if (responseData.user) {
+        // Update local user state if available
+        // This is better than forcing a page reload
+      } else {
+        window.location.reload();
+      }
+    }, 1000);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error connecting wallet';
     console.error('Wallet connection error:', error);
