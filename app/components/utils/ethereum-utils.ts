@@ -18,7 +18,7 @@ export async function requestAccountsWithPrompt(): Promise<string[]> {
       await window.ethereum.request({
         method: 'wallet_requestPermissions',
         params: [{ eth_accounts: {} }]
-      });
+      } as any);
     } catch (permissionError) {
       console.warn('Failed to request permissions, will continue with normal account request:', permissionError);
     }
@@ -30,7 +30,7 @@ export async function requestAccountsWithPrompt(): Promise<string[]> {
     
     return accounts || [];
   } catch (error) {
-    if (error.code === 4001) {
+    if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 4001) {
       // User rejected the request
       throw new Error('User rejected the connection request');
     }

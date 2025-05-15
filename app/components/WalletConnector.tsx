@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // Import the utility functions you provided
-import { requestAccountsWithPrompt, isWalletAlreadyConnected } from '../utils/ethereum-utils';
+import { requestAccountsWithPrompt, isWalletAlreadyConnected } from '../components/utils/ethereum-utils';
 
 interface WalletConnectorProps {
   onError?: (error: Error) => void;
