@@ -313,7 +313,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
       console.error('Signup error:', error);
       setErrors({
         ...errors,
-        general: 'An unexpected error occurred. Please try again.'
+        general: 'An unexpected error has occurred. Please try again.'
       });
     } finally {
       setIsSubmitting(false);
