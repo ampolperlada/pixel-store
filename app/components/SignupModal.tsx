@@ -167,7 +167,10 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
         isConnected: false,
         address: null,
         error: error instanceof Error ? error.message : 'Connection failed',
-        conflictingUser: error?.cause?.conflictingUser || null,
+        conflictingUser:
+          error instanceof Error && typeof (error as any).cause === 'object'
+            ? (error as any).cause?.conflictingUser || null
+            : null,
         isMetaMaskInstalled: walletState.isMetaMaskInstalled
       });
       
@@ -315,7 +318,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${signInResult?.token || ''}`,
+                // If you need an Authorization header, obtain a token after sign-in
               },
               body: JSON.stringify({
                 walletAddress: walletState.address
