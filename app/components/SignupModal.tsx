@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import GoogleReCAPTCHA from 'react-google-recaptcha';
@@ -23,10 +23,17 @@ interface SignupModalProps {
   };
 }
 
+// Helper function to format Ethereum addresses
+const formatEthereumAddress = (address: string): string => {
+  if (!address || address.length < 10) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+
 const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLogin, onSuccess, toast }) => {
   const router = useRouter();
   const captchaRef = useRef<GoogleReCAPTCHA>(null);
   
+  // Form state
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +43,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Error state
   const [errors, setErrors] = useState({
     username: '',
     email: '',
@@ -46,8 +54,23 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
     wallet: ''
   });
   
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [walletStatus, setWalletStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+  // Enhanced wallet connection state
+  const [walletState, setWalletState] = useState({
+    isConnecting: false,
+    isConnected: false,
+    address: null as string | null,
+    error: null as string | null,
+    conflictingUser: null as string | null,
+    isMetaMaskInstalled: false
+  });
+
+  // Check for MetaMask on component mount
+  useEffect(() => {
+    setWalletState(prev => ({
+      ...prev,
+      isMetaMaskInstalled: typeof window.ethereum !== 'undefined'
+    }));
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -80,23 +103,26 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
 
   const handleConnectWallet = async () => {
     try {
-      setWalletStatus('connecting');
-      setWalletAddress(null);
+      setWalletState({
+        isConnecting: true,
+        isConnected: false,
+        address: null,
+        error: null,
+        conflictingUser: null,
+        isMetaMaskInstalled: walletState.isMetaMaskInstalled
+      });
       
       // Check if Ethereum provider is available
       if (!window.ethereum) {
-        throw new Error('Ethereum wallet not detected. Please install MetaMask.');
+        throw new Error('MetaMask not detected. Please install the extension.');
       }
       
       // Request account access
-      console.log('Requesting wallet accounts...');
       const accounts = await window.ethereum.request({ 
         method: 'eth_requestAccounts' 
       });
       
-      console.log('Accounts received:', accounts);
-      
-      if (!accounts || accounts.length === 0) {
+      if (!accounts?.[0]) {
         throw new Error('No accounts found or user rejected the request');
       }
       
@@ -108,33 +134,60 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
         throw new Error('Invalid wallet address format');
       }
       
-      // Update wallet state
-      setWalletAddress(formattedAddress);
-      setWalletStatus('connected');
-      
-      console.log('Wallet connected successfully:', formattedAddress);
-      
-      return formattedAddress;
-    } catch (error) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'Unknown wallet connection error';
-      
-      console.error('Wallet connection failed:', {
-        message: errorMessage,
-        error
+      // Check if wallet is already connected to another account
+      const res = await fetch('/api/check-wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: formattedAddress })
       });
       
-      setWalletAddress(null);
-      setWalletStatus('error');
+      if (!res.ok) {
+        const data = await res.json();
+        if (res.status === 409) {
+          throw new Error(data.error || 'Wallet already connected', {
+            cause: { conflictingUser: data.conflictingUser }
+          });
+        }
+        throw new Error(data.error || 'Wallet check failed');
+      }
+
+      // Update wallet state
+      setWalletState({
+        isConnecting: false,
+        isConnected: true,
+        address: formattedAddress,
+        error: null,
+        conflictingUser: null,
+        isMetaMaskInstalled: true
+      });
+
+    } catch (error) {
+      setWalletState({
+        isConnecting: false,
+        isConnected: false,
+        address: null,
+        error: error instanceof Error ? error.message : 'Connection failed',
+        conflictingUser: error?.cause?.conflictingUser || null,
+        isMetaMaskInstalled: walletState.isMetaMaskInstalled
+      });
       
+      // Also set the error in the form errors
       setErrors(prev => ({
         ...prev,
-        wallet: `Wallet connection failed: ${errorMessage}`
+        wallet: error instanceof Error ? error.message : 'Wallet connection failed'
       }));
-      
-      throw error;
     }
+  };
+
+  const disconnectWallet = () => {
+    setWalletState({
+      isConnecting: false,
+      isConnected: false,
+      address: null,
+      error: null,
+      conflictingUser: null,
+      isMetaMaskInstalled: walletState.isMetaMaskInstalled
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -217,7 +270,8 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/signup', {
+      // 1. First create the user account
+      const signupResponse = await fetch('/api/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -226,7 +280,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
           username,
           email,
           password,
-          wallet_address: walletAddress || null,
+          wallet_address: walletState.address || null,
           agreedToTerms,
           profile_image_url: '',
           captchaToken,
@@ -234,86 +288,68 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
         }),
       });
 
-      const data = await response.json();
+      const signupData = await signupResponse.json();
 
-      if (!response.ok) {
-        setErrors({
-          ...errors,
-          general: data.error || 'Signup failed. Please try again.'
-        });
-        return;
+      if (!signupResponse.ok) {
+        throw new Error(signupData.error || 'Signup failed. Please try again.');
       }
 
-      // Signup successful
-      if (toast) {
-        toast.showToast('Account created successfully!', 'success');
-      }
-      
-      // Store user data if needed
-      if (data.user && onSuccess) {
-        onSuccess(data.user);
-      }
-
-      // Important: Auto sign-in after signup
+      // 2. Attempt auto sign-in for email/password signup
       if (!isGoogleSignup) {
-        try {
-          console.log('Attempting auto sign-in...');
-          
-          // Use next-auth signIn with credentials
-          const signInResult = await signIn('credentials', {
-            redirect: false,
-            email,
-            password,
-            callbackUrl: '/'
-          });
+        console.log('Attempting auto sign-in...');
+        const signInResult = await signIn('credentials', {
+          redirect: false,
+          email,
+          password,
+          callbackUrl: '/dashboard'
+        });
 
-          if (signInResult?.error) {
-            console.error('Auto sign-in failed:', signInResult.error);
-            setErrors({
-              ...errors,
-              general: `Auto sign-in failed: ${signInResult.error}`
-            });
-            
-            // Don't close modal yet if auto-login failed
-            return;
-          }
-          
-          // Auto sign-in successful
-          console.log('Auto sign-in successful');
-          
-          // Handle wallet connections if needed
-          if (walletAddress) {
-            if (toast) {
-              toast.showToast('Wallet connected successfully!', 'success');
-            }
-          }
-          
-          // Close the modal and redirect if needed
-          onClose();
-          
-          // Update UI or redirect
-          if (signInResult?.url) {
-            router.push(signInResult.url);
-          } else {
-            // Force a refresh to update UI with logged-in state
-            window.location.reload();
-          }
-        } catch (signInError) {
-          console.error('Auto sign-in error:', signInError);
-          setErrors({
-            ...errors,
-            general: 'Auto sign-in failed. Please try signing in manually.'
-          });
+        if (signInResult?.error) {
+          throw new Error(`Auto sign-in failed: ${signInResult.error}`);
         }
+
+        // 3. If wallet was connected, link it to the account
+        if (walletState.address) {
+          try {
+            const walletResponse = await fetch('/api/connect-wallet', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${signInResult?.token || ''}`,
+              },
+              body: JSON.stringify({
+                walletAddress: walletState.address
+              }),
+            });
+
+            if (!walletResponse.ok) {
+              console.warn('Wallet connection failed (non-critical)');
+            }
+          } catch (walletError) {
+            console.warn('Wallet connection error:', walletError);
+          }
+        }
+
+        // Success handling
+        if (toast) {
+          toast.showToast('Account created successfully!', 'success');
+          if (walletState.address) {
+            toast.showToast('Wallet connected successfully!', 'success');
+          }
+        }
+
+        // Close modal and redirect
+        onClose();
+        router.push(signInResult?.url || '/dashboard');
       } else {
-        // Just close modal if Google sign-in (NextAuth handles the session)
+        // For Google signup, just close the modal
         onClose();
       }
     } catch (error) {
       console.error('Signup error:', error);
       setErrors({
         ...errors,
-        general: 'An unexpected error has occurred. Please try again.'
+        general: error instanceof Error ? error.message : 'An unexpected error occurred'
       });
     } finally {
       setIsSubmitting(false);
@@ -385,6 +421,16 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
       terms: '',
       general: '',
       wallet: ''
+    });
+    
+    // Reset wallet state
+    setWalletState({
+      isConnecting: false,
+      isConnected: false,
+      address: null,
+      error: null,
+      conflictingUser: null,
+      isMetaMaskInstalled: walletState.isMetaMaskInstalled
     });
     
     // If onSwitchToLogin is provided, call it
@@ -487,53 +533,116 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
                 </div>
               </div>
 
-              {/* Wallet Connection Button */}
-              <button
-                type="button"
-                onClick={handleConnectWallet}
-                disabled={walletStatus === 'connecting'}
-                className={`w-full py-3 rounded-lg font-medium transition-all border ${
-                  walletStatus === 'connected'
-                    ? 'bg-green-600/20 border-green-500 text-green-400'
-                    : walletStatus === 'connecting'
-                    ? 'bg-gray-600/50 border-gray-500 text-gray-400 cursor-not-allowed'
-                    : 'bg-purple-600/20 hover:bg-purple-600/30 border-purple-500/50 hover:border-purple-500/70'
-                }`}
-              >
-                {walletStatus === 'connecting' ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Connecting...
-                  </span>
-                ) : walletStatus === 'connected' ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Wallet Connected
-                  </span>
+              {/* Enhanced Wallet Connection Section */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Wallet Connection (Optional)
+                </label>
+                
+                {walletState.isConnected ? (
+                  <div className="p-4 bg-green-900/20 text-green-400 rounded-lg border border-green-800/50">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      <span>Wallet Connected</span>
+                    </div>
+                    <p className="text-sm mt-1">
+                      Wallet will be linked to your account: 
+                      <span className="font-mono text-sm block mt-1">
+                        {formatEthereumAddress(walletState.address || '')}
+                      </span>
+                    </p>
+                    <div className="flex mt-2 space-x-2">
+                      <button
+                        type="button"
+                        className="px-3 py-1 text-sm bg-green-900/30 hover:bg-green-800/50 rounded"
+                        onClick={handleConnectWallet}
+                      >
+                        Change Wallet
+                      </button>
+                      <button
+                        type="button"
+                        className="px-3 py-1 text-sm bg-red-900/30 hover:bg-red-800/50 text-red-400 rounded"
+                        onClick={disconnectWallet}
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  </div>
+                ) : walletState.error ? (
+                  <div className="p-4 bg-red-900/20 text-red-400 rounded-lg border border-red-800/50 mb-4">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                      </svg>
+                      <span>Connection Error</span>
+                    </div>
+                    <p className="text-sm mt-1">{walletState.error}</p>
+                    {walletState.conflictingUser && (
+                      <p className="text-sm mt-1">
+                        This wallet is already linked to user: <strong>{walletState.conflictingUser}</strong>
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      className="mt-2 px-3 py-1 text-sm bg-red-900/30 hover:bg-red-800/50 rounded"
+                      onClick={handleConnectWallet}
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : !walletState.isMetaMaskInstalled ? (
+                  <div className="p-4 bg-yellow-900/20 text-yellow-400 rounded-lg border border-yellow-800/50 mb-4">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                      </svg>
+                      <span>MetaMask Not Detected</span>
+                    </div>
+                    <p className="text-sm mt-1">
+                      To connect a wallet, please install the MetaMask browser extension.
+                    </p>
+                    <a
+                      href="https://metamask.io/download/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 px-3 py-1 text-sm bg-yellow-900/30 hover:bg-yellow-800/50 rounded inline-block"
+                    >
+                      Download MetaMask
+                    </a>
+                  </div>
                 ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    Connect Wallet (Optional)
-                  </span>
+                  <div>
+                    <p className="text-sm mb-2 text-gray-400">
+                      Connect your wallet to access advanced features (optional)
+                    </p>
+                    <button
+                      type="button"
+                      className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded flex items-center justify-center"
+                      onClick={handleConnectWallet}
+                      disabled={walletState.isConnecting}
+                    >
+                      {walletState.isConnecting ? (
+                        <>
+                          <svg className="w-5 h-5 mr-2 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                          </svg>
+                          Connect Wallet
+                        </>
+                      )}
+                    </button>
+                  </div>
                 )}
-              </button>
-
-              {walletStatus === 'connected' && walletAddress && (
-                <p className="text-xs text-green-400">
-                  Wallet will be linked to your account: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                </p>
-              )}
-
-              {errors.wallet && (
-                <p className="text-red-400 text-xs mt-1">{errors.wallet}</p>
-              )}
+              </div>
 
               <div className="flex items-start">
                 <div className="flex items-center h-5">
