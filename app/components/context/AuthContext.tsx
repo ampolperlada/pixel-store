@@ -1,4 +1,4 @@
-// app/components/context/AuthContext.tsx (Updated)
+// app/components/context/AuthContext.tsx
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -16,6 +16,12 @@ interface User {
   profile_image_url?: string;
   wallet_address: string | null;
   is_wallet_connected: boolean;
+  role?: string;
+}
+
+interface LoginCredentials {
+  email: string;
+  password: string;
 }
 
 interface RegisterCredentials {
@@ -23,13 +29,18 @@ interface RegisterCredentials {
   password: string;
   username?: string;
   walletAddress?: string | null;
+  agreedToTerms?: boolean;
+  captchaToken?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  login: (credentials: { email: string; password: string }) => Promise<void>;
+  isAuthenticated: boolean;
+  
+  // Auth functions
+  login: (credentials: LoginCredentials) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<{
     user: User | null;
     session: Session | null;
@@ -37,6 +48,11 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   refreshUser: () => Promise<User | null>;
+  
+  // Profile management
+  updateUserProfile: (data: Partial<User>) => Promise<void>;
+  
+  // Wallet functions
   connectWallet: (walletAddress: string) => Promise<void>;
   disconnectWallet: () => Promise<void>;
 }
@@ -58,14 +74,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         is_connected: false
       };
     }
-  
+
     try {
       const { data, error } = await supabase
         .from('user_wallets')
         .select('wallet_address, is_connected')
         .eq('user_id', userId)
         .maybeSingle();
-  
+
       if (error) {
         console.info('Info: No wallet data found or other non-critical issue:', error);
         return {
@@ -73,14 +89,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           is_connected: false
         };
       }
-  
+
       if (!data) {
         return {
           wallet_address: null,
           is_connected: false
         };
       }
-  
+
       return {
         wallet_address: data.wallet_address || null,
         is_connected: data.is_connected || false
@@ -97,13 +113,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // First try with NextAuth session
       if (nextAuthStatus === 'authenticated' && nextAuthSession?.user) {
         const { wallet_address, is_connected } = await fetchUserWallet(nextAuthSession.user.id);
         
-        setUser({
+        const userData = {
           id: nextAuthSession.user.id,
           email: nextAuthSession.user.email || '',
           name: nextAuthSession.user.name || '',
@@ -111,9 +127,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar: nextAuthSession.user.image || '',
           profile_image_url: nextAuthSession.user.image || '',
           wallet_address,
-          is_wallet_connected: is_connected
-        });
-        return user;
+          is_wallet_connected: is_connected,
+          role: nextAuthSession.user.role || 'user'
+        };
+        
+        setUser(userData);
+        return userData;
       }
 
       // Fallback to Supabase session
@@ -143,7 +162,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar: supabaseUser.user_metadata?.avatar_url || '',
           profile_image_url: supabaseUser.user_metadata?.avatar_url || '',
           wallet_address,
-          is_wallet_connected: is_connected
+          is_wallet_connected: is_connected,
+          role: supabaseUser.user_metadata?.role || 'user'
         };
         
         setUser(userData);
@@ -166,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       if (nextAuthStatus === 'loading') return;
-      
+
       try {
         await fetchUserData();
       } catch (error) {
@@ -193,7 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = async (credentials: { email: string; password: string }) => {
+  const login = async (credentials: LoginCredentials) => {
     setLoading(true);
     setError(null);
     try {
@@ -235,7 +255,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const username = credentials.username || credentials.email.split('@')[0];
-      
+
+      // Validation for additional fields if needed
+      if (credentials.agreedToTerms === false) {
+        throw new Error('You must agree to the terms and conditions');
+      }
+
+      if (!credentials.captchaToken && process.env.NODE_ENV === 'production') {
+        throw new Error('CAPTCHA verification required');
+      }
+
       // Step 1: Register the user with Supabase
       const { data, error } = await supabase.auth.signUp({
         email: credentials.email,
@@ -329,7 +358,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Log out from both systems
       const { error: supabaseError } = await supabase.auth.signOut();
       if (supabaseError) throw supabaseError;
-      
+
       await signOut({ redirect: false });
       
       setUser(null);
@@ -348,7 +377,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // First refresh Supabase session
       const { data: { session }, error } = await supabase.auth.refreshSession();
       if (error) throw error;
-      
+
       // Then refresh user data
       await fetchUserData();
     } catch (error) {
@@ -361,9 +390,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return fetchUserData();
   };
 
-  const connectWallet = async (walletAddress: string) => {
+  const updateUserProfile = async (data: Partial<User>) => {
     if (!user) throw new Error('User not authenticated');
     
+    setLoading(true);
+    setError(null);
+    try {
+      // Verify we have an active session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('No active session found');
+      }
+
+      const response = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData?.message || `Failed to update profile (Status: ${response.status})`);
+      }
+      
+      await fetchUserData();
+    } catch (err) {
+      console.error('Profile update failed:', err);
+      setError(err instanceof Error ? err.message : 'Profile update failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const connectWallet = async (walletAddress: string) => {
+    if (!user) throw new Error('User not authenticated');
+
     setLoading(true);
     setError(null);
     try {
@@ -400,7 +466,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const disconnectWallet = async () => {
     if (!user) throw new Error('User not authenticated');
-    
+
     setLoading(true);
     setError(null);
     try {
@@ -437,16 +503,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        loading, 
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
         error,
-        login, 
-        register, 
-        logout, 
+        isAuthenticated: !!user,
+        login,
+        register,
+        logout,
         refreshAuth,
         refreshUser,
+        updateUserProfile,
         connectWallet,
         disconnectWallet
       }}
