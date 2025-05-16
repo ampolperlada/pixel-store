@@ -1,79 +1,70 @@
-// utils/ethereum-utils.ts
+import { useEffect } from 'react';
 
-/** 
- * Forces MetaMask to show account selection dialog by clearing previous permissions
- * This helps prevent auto-connecting with previously used accounts
- * 
- * @returns Promise<string[]> Array of selected account addresses 
+/**
+ * Utility functions for Ethereum wallet interactions
  */
-export async function requestAccountsWithPrompt(): Promise<string[]> {
-  if (!window.ethereum) {
-    throw new Error('MetaMask is not installed');
+
+/**
+ * Checks if a wallet address is valid
+ * @param address Ethereum wallet address to validate
+ * @returns boolean indicating if the address is valid
+ */
+export const isValidEthereumAddress = (address: string): boolean => {
+  // Basic validation - should be 42 chars long and start with 0x
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+};
+
+/**
+ * Formats an Ethereum address for display (shortens it)
+ * @param address Full Ethereum address
+ * @returns Shortened address with ellipsis in the middle
+ */
+export const formatEthereumAddress = (address: string): string => {
+  if (!address) return '';
+  if (!isValidEthereumAddress(address)) return address;
+  
+  return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+};
+
+/**
+ * Hook to detect MetaMask or other Ethereum providers
+ * @returns Boolean indicating if MetaMask is installed
+ */
+export const useEthereumDetection = (): boolean => {
+  let isEthereumAvailable = false;
+  
+  if (typeof window !== 'undefined') {
+    isEthereumAvailable = window.ethereum !== undefined;
   }
   
-  try {
-    // First try to reset permissions to force the selection dialog
-    try {
-      // This will clear cached permissions so the user sees the account selection dialog
-      await window.ethereum.request({
-        method: 'wallet_requestPermissions',
-        params: [{ eth_accounts: {} }]
-      } as any);
-    } catch (permissionError) {
-      console.warn('Failed to request permissions, will continue with normal account request:', permissionError);
-    }
-    
-    // Now request accounts, which should show the selection dialog
-    const accounts = await window.ethereum.request({
-      method: 'eth_requestAccounts'
-    });
-    
-    return accounts || [];
-  } catch (error) {
-    if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 4001) {
-      // User rejected the request
-      throw new Error('User rejected the connection request');
-    }
-    throw error;
-  }
-}
+  return isEthereumAvailable;
+};
 
-/** 
- * Checks if a wallet address is already connected to a user account
+/**
+ * Function to check if a wallet address is already registered
+ * This would typically make an API call to your backend
  * 
  * @param address Ethereum wallet address to check
- * @returns Promise<boolean> True if wallet is already used, false otherwise
+ * @returns Promise resolving to validation result
  */
-export async function isWalletAlreadyConnected(address: string): Promise<boolean> {
+export const checkWalletAvailability = async (address: string): Promise<{
+  available: boolean;
+  existingUser?: string;
+}> => {
   try {
-    if (!address) return false;
+    // Mock API call - replace with actual API call to your backend
+    // const response = await fetch(`/api/wallet/check?address=${address}`);
+    // const data = await response.json();
     
-    // Normalize the address for comparison
-    const normalizedAddress = address.toLowerCase();
+    // Placeholder response
+    const mockResult = {
+      available: true,
+      existingUser: undefined
+    };
     
-    // Make API call to your backend to check if wallet is already connected
-    const response = await fetch('/api/check-wallet', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ walletAddress: normalizedAddress })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      // If error status is 409, that means the wallet is already in use
-      if (response.status === 409) {
-        return true;
-      }
-      throw new Error(errorData?.message || 'Error checking wallet status');
-    }
-    
-    const data = await response.json();
-    return !!data.isConnected;
+    return mockResult;
   } catch (error) {
-    console.error('Error checking wallet connection status:', error);
-    // Return false by default - let the actual connection attempt handle errors
-    return false;
+    console.error('Error checking wallet availability:', error);
+    throw new Error('Failed to check wallet availability');
   }
-}
+};
