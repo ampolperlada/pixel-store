@@ -24,11 +24,7 @@ declare global {
     removeListener: (event: string, callback: (...args: any[]) => void) => void;
   }
   interface Window {
-    ethereum?: {
-      request: (args: { method: string }) => Promise<any>;
-      isMetaMask?: boolean;
-      // Add any other properties you need here
-    } & Ethereum;
+    ethereum?: Ethereum;
   }
 }
 
