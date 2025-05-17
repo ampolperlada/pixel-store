@@ -5,11 +5,17 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import GoogleReCAPTCHA from 'react-google-recaptcha';
 
+// Updated and consolidated ethereum type definition
 declare global {
+  interface Ethereum {
+    isMetaMask?: boolean;
+    request: (request: { method: string; params?: any[] }) => Promise<any>;
+    on?: (event: string, callback: (...args: any[]) => void) => void;
+    removeListener?: (event: string, callback: (...args: any[]) => void) => void;
+  }
+  
   interface Window {
-    ethereum?: {
-      request: (args: { method: string }) => Promise<any>;
-    };
+    ethereum?: Ethereum;
   }
 }
 
@@ -68,7 +74,9 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
   useEffect(() => {
     setWalletState(prev => ({
       ...prev,
-      isMetaMaskInstalled: typeof window.ethereum !== 'undefined'
+      isMetaMaskInstalled: typeof window !== 'undefined' && 
+        typeof window.ethereum !== 'undefined' && 
+        !!window.ethereum.isMetaMask
     }));
   }, []);
 
@@ -711,24 +719,54 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.255H17.92C17.665 15.63 16.89 16.795 15.725 17.575V20.115H19.28C21.36 18.14 22.56 15.42 22.56 12.25Z" fill="#4285F4"/>
-                  <path d="M12 23C14.97 23 17.46 21.99 19.28 20.115L15.725 17.575C14.745 18.235 13.48 18.625 12 18.625C9.135 18.625 6.71 16.69 5.845 14.09H2.17V16.66C3.98 20.21 7.7 23 12 23Z" fill="#34A853"/>
-                  <path d="M5.845 14.09C5.625 13.43 5.5 12.725 5.5 12C5.5 11.275 5.625 10.57 5.845 9.91V7.34H2.17C1.4 8.735 1 10.32 1 12C1 13.68 1.4 15.265 2.17 16.66L5.845 14.09Z" fill="#FBBC05"/>
-                  <path d="M12 5.375C13.615 5.375 15.065 5.93 16.205 7.02L19.36 3.865C17.455 2.09 14.965 1 12 1C7.7 1 3.98 3.79 2.17 7.34L5.845 9.91C6.71 7.31 9.135 5.375 12 5.375Z" fill="#EA4335"/>
+ <path d="M12 23C14.97 23 17.46 21.99 19.28 20.115L15.725 17.575C14.745 18.235 13.48 18.625 12 18.625C9.135 18.625 6.71 16.69 5.845 14.09H2.17V16.695C3.98 20.375 7.7 23 12 23Z" fill="#34A853"/>
+                  <path d="M5.845 14.09C5.625 13.43 5.505 12.725 5.505 12C5.505 11.275 5.625 10.57 5.845 9.91V7.305H2.17C1.4 8.76 0.975 10.35 0.975 12C0.975 13.65 1.4 15.24 2.17 16.695L5.845 14.09Z" fill="#FBBC05"/>
+                  <path d="M12 5.375C13.615 5.375 15.065 5.93 16.205 7.02L19.36 3.865C17.455 2.09 14.965 1 12 1C7.7 1 3.98 3.625 2.17 7.305L5.845 9.91C6.71 7.31 9.135 5.375 12 5.375Z" fill="#EA4335"/>
                 </svg>
                 Continue with Google
               </button>
 
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-500">
-                  Already have an account?{' '}
-                  <button 
-                    type="button"
-                    onClick={handleSwitchToLogin} 
-                    className="text-cyan-400 hover:underline hover:text-cyan-300 transition-colors font-medium"
-                  >
-                    Sign in
-                  </button>
-                </p>
+              <div className="text-center my-4">
+                <p className="text-sm text-gray-400">Already have an account?</p>
+              </div>
+
+              <button
+                onClick={handleSwitchToLogin}
+                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-3 rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-indigo-500/20"
+              >
+                Sign In Instead
+              </button>
+
+              <div className="border-t border-gray-700/50 mt-6 pt-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-white mb-4">Why Create an Account?</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start">
+                      <svg className="w-5 h-5 mr-2 text-cyan-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <p className="text-sm text-gray-300">Access exclusive content and features</p>
+                    </div>
+                    <div className="flex items-start">
+                      <svg className="w-5 h-5 mr-2 text-cyan-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <p className="text-sm text-gray-300">Participate in community discussions</p>
+                    </div>
+                    <div className="flex items-start">
+                      <svg className="w-5 h-5 mr-2 text-cyan-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <p className="text-sm text-gray-300">Connect your wallet for blockchain features</p>
+                    </div>
+                    <div className="flex items-start">
+                      <svg className="w-5 h-5 mr-2 text-cyan-400 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <p className="text-sm text-gray-300">Track your progress and achievements</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

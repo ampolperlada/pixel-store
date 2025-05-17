@@ -17,13 +17,18 @@ interface WalletConnectorHook {
 }
 
 declare global {
+  interface Ethereum {
+    isMetaMask?: boolean;
+    request: (request: { method: string; params?: any[] }) => Promise<any>;
+    on: (event: string, callback: (...args: any[]) => void) => void;
+    removeListener: (event: string, callback: (...args: any[]) => void) => void;
+  }
   interface Window {
     ethereum?: {
+      request: (args: { method: string }) => Promise<any>;
       isMetaMask?: boolean;
-      request: (request: { method: string; params?: any[] }) => Promise<any>;
-      on: (event: string, callback: (...args: any[]) => void) => void;
-      removeListener: (event: string, callback: (...args: any[]) => void) => void;
-    };
+      // Add any other properties you need here
+    } & Ethereum;
   }
 }
 
@@ -65,13 +70,13 @@ const WalletConnector = ({ onSuccess, onError }: WalletConnectorProps): WalletCo
   useEffect(() => {
     const { ethereum } = window;
     
-    if (ethereum) {
+    if (ethereum && typeof (ethereum as any).on === 'function') {
       // Add event listener for account changes
-      ethereum.on('accountsChanged', handleAccountsChanged);
+      (ethereum as any).on('accountsChanged', handleAccountsChanged);
       
       // Clean up when component unmounts
       return () => {
-        ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        (ethereum as any).removeListener('accountsChanged', handleAccountsChanged);
       };
     }
   }, [handleAccountsChanged]);
