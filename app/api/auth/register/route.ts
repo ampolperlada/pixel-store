@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     const hashedPassword = await hashPassword(password);
     
     // Create the user in a transaction to ensure wallet is linked properly
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx: typeof prisma) => {
       // Create the user
       const newUser = await tx.user.create({
         data: {
