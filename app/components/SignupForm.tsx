@@ -1,4 +1,3 @@
-// Updated SignupForm.tsx to work with your WalletConnector
 import { useState, useEffect } from 'react';
 import { useAuth } from '../components/context/AuthContext';
 import WalletConnector from './WalletConnector';
@@ -17,8 +16,9 @@ const SignupForm = ({ onSuccess, onError }: SignupFormProps) => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
+  const [showAccountSelector, setShowAccountSelector] = useState(false);
   
-  // Use your WalletConnector hook
+  // Use your enhanced WalletConnector hook
   const { 
     handleConnect, 
     isConnecting, 
@@ -27,19 +27,25 @@ const SignupForm = ({ onSuccess, onError }: SignupFormProps) => {
     walletAddress,
     disconnectWallet,
     isMetaMaskInstalled,
-    conflictingUser
+    conflictingUser,
+    availableAccounts,
+    selectAccount
   } = WalletConnector({
     onError: (err) => onError(err.message),
     onSuccess: (address) => {
       console.log(`Wallet successfully connected: ${address}`);
+      setShowAccountSelector(false);
     }
   });
 
-  // Ensure no wallet is auto-connected on component mount
+  // Show account selector modal when multiple accounts are available
   useEffect(() => {
-    // Your WalletConnector's useEffect should already handle this
-    console.log('SignupForm mounted - ensuring no auto-connected wallets');
-  }, []);
+    if (availableAccounts.length > 1) {
+      setShowAccountSelector(true);
+    } else {
+      setShowAccountSelector(false);
+    }
+  }, [availableAccounts]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,195 +102,238 @@ const SignupForm = ({ onSuccess, onError }: SignupFormProps) => {
     }
   };
 
+  // Format wallet address for display
+  const formatAddress = (address: string) => {
+    if (!address) return '';
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Username input */}
-      <div className="mb-4">
-        <label htmlFor="username" className="block text-sm font-medium mb-1">Username</label>
-        <input
-          id="username"
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Enter your username"
-          className="w-full p-2 border rounded"
-          required
-        />
-      </div>
-      
-      {/* Email input */}
-      <div className="mb-4">
-        <label htmlFor="email" className="block text-sm font-medium mb-1">Email</label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="your@email.com"
-          className="w-full p-2 border rounded"
-          required
-        />
-      </div>
-      
-      {/* Password input */}
-      <div className="mb-4">
-        <label htmlFor="password" className="block text-sm font-medium mb-1">Password</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          className="w-full p-2 border rounded"
-          required
-        />
-      </div>
-      
-      {/* Confirm Password input */}
-      <div className="mb-4">
-        <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">Confirm Password</label>
-        <input
-          id="confirmPassword"
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          placeholder="••••••••"
-          className="w-full p-2 border rounded"
-          required
-        />
-      </div>
-      
-      {/* Wallet Connection section */}
-      <div className="mb-4">
-        <label className="block mb-2 font-medium">Wallet Connection (Optional)</label>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Username input */}
+        <div className="mb-4">
+          <label htmlFor="username" className="block text-sm font-medium mb-1">Username</label>
+          <input
+            id="username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your username"
+            className="w-full p-2 border rounded"
+            required
+          />
+        </div>
         
-        {isWalletConnected ? (
-          <div className="p-4 bg-green-50 text-green-700 rounded">
-            <div className="flex items-center">
-              <CheckIcon className="w-5 h-5 mr-2" />
-              <span>Wallet Connected</span>
+        {/* Email input */}
+        <div className="mb-4">
+          <label htmlFor="email" className="block text-sm font-medium mb-1">Email</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            className="w-full p-2 border rounded"
+            required
+          />
+        </div>
+        
+        {/* Password input */}
+        <div className="mb-4">
+          <label htmlFor="password" className="block text-sm font-medium mb-1">Password</label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            className="w-full p-2 border rounded"
+            required
+          />
+        </div>
+        
+        {/* Confirm Password input */}
+        <div className="mb-4">
+          <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">Confirm Password</label>
+          <input
+            id="confirmPassword"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="••••••••"
+            className="w-full p-2 border rounded"
+            required
+          />
+        </div>
+        
+        {/* Wallet Connection section */}
+        <div className="mb-4">
+          <label className="block mb-2 font-medium">Wallet Connection (Optional)</label>
+          
+          {isWalletConnected ? (
+            <div className="p-4 bg-green-50 text-green-700 rounded">
+              <div className="flex items-center">
+                <CheckIcon className="w-5 h-5 mr-2" />
+                <span>Wallet Connected</span>
+              </div>
+              <p className="text-sm mt-1">
+                Wallet will be linked to your account: 
+                <span className="font-mono text-sm block mt-1 truncate">{walletAddress}</span>
+              </p>
+              <div className="flex mt-2 space-x-2">
+                <button
+                  type="button"
+                  className="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 rounded"
+                  onClick={() => handleConnect()}
+                >
+                  Change Wallet
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded"
+                  onClick={() => disconnectWallet()}
+                >
+                  Disconnect
+                </button>
+              </div>
             </div>
-            <p className="text-sm mt-1">
-              Wallet will be linked to your account: 
-              <span className="font-mono text-sm block mt-1 truncate">{walletAddress}</span>
-            </p>
-            <div className="flex mt-2 space-x-2">
+          ) : connectionError ? (
+            <div className="p-4 bg-red-50 text-red-700 rounded mb-4">
+              <div className="flex items-center">
+                <ExclamationIcon className="w-5 h-5 mr-2" />
+                <span>Connection Error</span>
+              </div>
+              <p className="text-sm mt-1">{connectionError}</p>
+              {conflictingUser && (
+                <p className="text-sm mt-1">
+                  This wallet is already linked to user: <strong>{conflictingUser}</strong>
+                </p>
+              )}
               <button
                 type="button"
-                className="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 rounded"
+                className="mt-2 px-3 py-1 text-sm bg-red-100 hover:bg-red-200 rounded"
                 onClick={() => handleConnect()}
               >
-                Change Wallet
+                Try Again
               </button>
+            </div>
+          ) : !isMetaMaskInstalled ? (
+            <div className="p-4 bg-yellow-50 text-yellow-700 rounded mb-4">
+              <div className="flex items-center">
+                <ExclamationIcon className="w-5 h-5 mr-2" />
+                <span>MetaMask Not Detected</span>
+              </div>
+              <p className="text-sm mt-1">
+                To connect a wallet, please install the MetaMask browser extension.
+              </p>
+              <a
+                href="https://metamask.io/download/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 px-3 py-1 text-sm bg-yellow-100 hover:bg-yellow-200 rounded inline-block"
+              >
+                Download MetaMask
+              </a>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm mb-2 text-gray-600">
+                Connect your wallet to access advanced features (optional)
+              </p>
               <button
                 type="button"
-                className="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded"
-                onClick={() => disconnectWallet()}
+                className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded flex items-center justify-center"
+                onClick={() => handleConnect()}
+                disabled={isConnecting}
               >
-                Disconnect
+                {isConnecting ? (
+                  <>
+                    <SpinnerIcon className="w-5 h-5 mr-2 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <WalletIcon className="w-5 h-5 mr-2" />
+                    Connect Wallet
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* Terms and Conditions */}
+        <div className="mb-4">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mr-2"
+            />
+            <span>I agree to the <a href="/terms" className="text-blue-500">Terms and Conditions</a></span>
+          </label>
+        </div>
+        
+        {/* reCAPTCHA component would go here */}
+        <div className="mb-4">
+          {/* Placeholder for CAPTCHA component */}
+          <p className="text-sm text-gray-500">CAPTCHA verification component here</p>
+        </div>
+        
+        {/* Submit button */}
+        <button
+          type="submit"
+          className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <SpinnerIcon className="w-5 h-5 mr-2 animate-spin" />
+              Creating Account...
+            </>
+          ) : (
+            'Create Account'
+          )}
+        </button>
+      </form>
+
+      {/* Account Selection Modal */}
+      {showAccountSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4">Select a Wallet</h3>
+            <p className="mb-4 text-gray-600 dark:text-gray-400">
+              Choose which wallet you want to connect:
+            </p>
+            <div className="max-h-60 overflow-y-auto">
+              {availableAccounts.map((account) => (
+                <button
+                  key={account}
+                  onClick={() => selectAccount(account)}
+                  className="w-full mb-2 p-3 text-left border rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                >
+                  <WalletIcon className="w-5 h-5 mr-3 text-emerald-500" />
+                  <span className="font-mono">{formatAddress(account)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowAccountSelector(false); 
+                  disconnectWallet();
+                }}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                Cancel
               </button>
             </div>
           </div>
-        ) : connectionError ? (
-          <div className="p-4 bg-red-50 text-red-700 rounded mb-4">
-            <div className="flex items-center">
-              <ExclamationIcon className="w-5 h-5 mr-2" />
-              <span>Connection Error</span>
-            </div>
-            <p className="text-sm mt-1">{connectionError}</p>
-            {conflictingUser && (
-              <p className="text-sm mt-1">
-                This wallet is already linked to user: <strong>{conflictingUser}</strong>
-              </p>
-            )}
-            <button
-              type="button"
-              className="mt-2 px-3 py-1 text-sm bg-red-100 hover:bg-red-200 rounded"
-              onClick={() => handleConnect()}
-            >
-              Try Again
-            </button>
-          </div>
-        ) : !isMetaMaskInstalled ? (
-          <div className="p-4 bg-yellow-50 text-yellow-700 rounded mb-4">
-            <div className="flex items-center">
-              <ExclamationIcon className="w-5 h-5 mr-2" />
-              <span>MetaMask Not Detected</span>
-            </div>
-            <p className="text-sm mt-1">
-              To connect a wallet, please install the MetaMask browser extension.
-            </p>
-            <a
-              href="https://metamask.io/download/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 px-3 py-1 text-sm bg-yellow-100 hover:bg-yellow-200 rounded inline-block"
-            >
-              Download MetaMask
-            </a>
-          </div>
-        ) : (
-          <div>
-            <p className="text-sm mb-2 text-gray-600">
-              Connect your wallet to access advanced features (optional)
-            </p>
-            <button
-              type="button"
-              className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded flex items-center justify-center"
-              onClick={() => handleConnect()}
-              disabled={isConnecting}
-            >
-              {isConnecting ? (
-                <>
-                  <SpinnerIcon className="w-5 h-5 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <WalletIcon className="w-5 h-5 mr-2" />
-                  Connect Wallet
-                </>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
-      
-      {/* Terms and Conditions */}
-      <div className="mb-4">
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            checked={agreedToTerms}
-            onChange={(e) => setAgreedToTerms(e.target.checked)}
-            className="mr-2"
-          />
-          <span>I agree to the <a href="/terms" className="text-blue-500">Terms and Conditions</a></span>
-        </label>
-      </div>
-      
-      {/* reCAPTCHA component would go here */}
-      <div className="mb-4">
-        {/* Placeholder for CAPTCHA component */}
-        <p className="text-sm text-gray-500">CAPTCHA verification component here</p>
-      </div>
-      
-      {/* Submit button */}
-      <button
-        type="submit"
-        className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? (
-          <>
-            <SpinnerIcon className="w-5 h-5 mr-2 animate-spin" />
-            Creating Account...
-          </>
-        ) : (
-          'Create Account'
-        )}
-      </button>
-    </form>
+        </div>
+      )}
+    </>
   );
 };
 
