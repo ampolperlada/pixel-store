@@ -1,31 +1,36 @@
-// Updated auth/register.ts API route handler
+// Fixed auth/register.ts API route handler
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import prisma from '../../lib/prisma';
-import { hashPassword } from '../../utils/auth-utils';
-import { isValidEthereumAddress } from '../../utils/ethereum-utils';
+import prisma from '../../../lib/prisma'; // Adjust the import path as necessary
+import { hashPassword } from '../../../components/utils/auth-utils'; // Adjust the import path as necessary
 
-// Define registration schema with Zod for validation
+// Simple ethereum address validation function
+const isValidEthereumAddress = (address: string): boolean => {
+  return /^0x[a-fA-F0-9]{40}$/i.test(address);
+};
+
+// Define the registration schema with proper types
 const registrationSchema = z.object({
-  username: z.string().min(3).max(20),
+  username: z.string().min(3).max(30),
   email: z.string().email(),
   password: z.string().min(8),
+  wallet_address: z.string().nullable().optional(),
   agreedToTerms: z.boolean().refine(val => val === true, {
     message: "You must agree to the terms and conditions"
   }),
-  captchaToken: z.string().min(1, "CAPTCHA verification is required"),
-  walletAddress: z.string().optional().nullable().refine(
-    val => val === null || val === undefined || val === '' || isValidEthereumAddress(val), {
-      message: "Invalid wallet address format"
-    }
-  )
+  captchaToken: z.string().nullable().optional(),
+  profile_image_url: z.string().optional(),
+  isGoogleSignup: z.boolean().optional()
 });
+
+// Type for the request body
+type RegistrationRequest = z.infer<typeof registrationSchema>;
 
 export async function POST(request: Request) {
   try {
     // Parse request body
-    const body = await request.json();
+    const body = await request.json() as RegistrationRequest;
     
     // Validate request data
     const validationResult = registrationSchema.safeParse(body);
@@ -37,15 +42,24 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     
-    const { username, email, password, walletAddress, captchaToken } = validationResult.data;
+    const { 
+      username, 
+      email, 
+      password, 
+      wallet_address: walletAddress, 
+      captchaToken,
+      isGoogleSignup 
+    } = validationResult.data;
     
-    // Verify CAPTCHA token
-    // This is where you'd verify the captchaToken with Google reCAPTCHA
-    // For example:
-    // const captchaValid = await verifyCaptcha(captchaToken);
-    // if (!captchaValid) {
-    //   return NextResponse.json({ error: 'CAPTCHA verification failed' }, { status: 400 });
-    // }
+    // Verify CAPTCHA token if not Google signup
+    if (!isGoogleSignup && captchaToken) {
+      // This is where you'd verify the captchaToken with Google reCAPTCHA
+      // For example:
+      // const captchaValid = await verifyCaptcha(captchaToken);
+      // if (!captchaValid) {
+      //   return NextResponse.json({ error: 'CAPTCHA verification failed' }, { status: 400 });
+      // }
+    }
     
     // Check if username is already taken
     const existingUsername = await prisma.user.findUnique({
@@ -65,8 +79,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email is already registered' }, { status: 409 });
     }
     
-    // If wallet address is provided, check if it's already linked to another account
-    if (walletAddress) {
+    // If wallet address is provided and valid, check if it's already linked to another account
+    if (walletAddress && isValidEthereumAddress(walletAddress)) {
       const existingWallet = await prisma.wallet.findUnique({
         where: { address: walletAddress },
         include: { user: true }
@@ -78,6 +92,8 @@ export async function POST(request: Request) {
           conflictingUser: existingWallet.user.username
         }, { status: 409 });
       }
+    } else if (walletAddress && !isValidEthereumAddress(walletAddress)) {
+      return NextResponse.json({ error: 'Invalid wallet address format' }, { status: 400 });
     }
     
     // Hash the password
@@ -98,7 +114,7 @@ export async function POST(request: Request) {
       });
       
       // If wallet address is provided, link it to the user
-      if (walletAddress) {
+      if (walletAddress && isValidEthereumAddress(walletAddress)) {
         await tx.wallet.create({
           data: {
             address: walletAddress,
