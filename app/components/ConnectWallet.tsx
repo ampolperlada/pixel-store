@@ -1,6 +1,6 @@
 // components/ConnectWallet.tsx
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../components/context/AuthContext'; // Adjust the import path as necessary
 
 interface WalletAccount {
   id: string;
@@ -47,10 +47,13 @@ export default function ConnectWallet({ onSuccess, onError }: ConnectWalletProps
           // Try to get balance (optional)
           let balance = "0";
           try {
-            const balanceHex = await window.ethereum.request({
-              method: 'eth_getBalance',
-              params: [address, 'latest'],
-            });
+            let balanceHex = "0x0";
+            if (window.ethereum) {
+              balanceHex = await window.ethereum.request({
+                method: 'eth_getBalance',
+                params: [address, 'latest'],
+              });
+            }
             balance = parseInt(balanceHex, 16) / 1e18 + " ETH"; // Convert from wei to ETH
           } catch (e) {
             console.warn("Could not fetch balance for", address);
