@@ -206,6 +206,30 @@ const PixelMarketplace: React.FC = () => {
   const [itemFilter, setItemFilter] = useState<string>('all');
   const [rarityFilter, setRarityFilter] = useState<string>('all');
   const [selectedItem, setSelectedItem] = useState<PremadeItem | null>(null);
+
+  // State for template browser panel
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  // Example templates for the browser panel
+  const templates = [
+    { id: 1, name: 'Pixel Cat', category: 'characters', preview: '🐱' },
+    { id: 2, name: 'Pixel Tree', category: 'nature', preview: '🌳' },
+    { id: 3, name: 'Pixel Sword', category: 'objects', preview: '🗡️' },
+    { id: 4, name: 'Pixel Sun', category: 'nature', preview: '🌞' },
+    { id: 5, name: 'Pixel Ghost', category: 'characters', preview: '👻' },
+    { id: 6, name: 'Pixel Cube', category: 'abstract', preview: '🟪' },
+  ];
+
+  const filteredTemplates = templates.filter(template =>
+    (selectedCategory === 'all' || template.category === selectedCategory) &&
+    template.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Dummy loadTemplate function
+  const loadTemplate = (template: { id: number; name: string; category: string; preview: string }) => {
+    alert(`Template "${template.name}" loaded!`);
+  };
   
   const filteredItems = premadeItems
     .filter(item => itemFilter === 'all' || item.category === itemFilter)
@@ -831,6 +855,20 @@ const PixelMarketplace: React.FC = () => {
     setFrames(newFrames);
     setActiveFrameId(newFrameId);
     addToHistory(newFrames);
+  };
+
+  // Rename layer
+  const updateLayerName = (layerId: number, newName: string) => {
+    const layerIndex = layers.findIndex(l => l.id === layerId);
+    if (layerIndex < 0) return;
+    
+    const newLayers = [...layers];
+    newLayers[layerIndex] = {
+      ...newLayers[layerIndex],
+      name: newName
+    };
+    
+    setLayers(newLayers);
   };
 
   // Update frame name
@@ -1945,4 +1983,4 @@ const PixelMarketplace: React.FC = () => {
   );
 };
 
-export default PixelArtCreator;
+export default CreatePage;
