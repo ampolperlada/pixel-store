@@ -850,3 +850,4 @@ const PixelMarketplace: React.FC = () => {
     setHistoryIndex(newHistory.length - 1);
   }
 
+      }
