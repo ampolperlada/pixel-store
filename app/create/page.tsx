@@ -303,26 +303,7 @@ const PixelMarketplace: React.FC = () => {
   };
 
   // Add current frames state to history
-  const addToHistory = (newFrames: Frame[]) => {
-    if (historyIndex >= 0 && JSON.stringify(newFrames) === JSON.stringify(history[historyIndex])) {
-      return;
-    }
-    
-    const newHistory = history.slice(0, historyIndex + 1);
-    
-    // Create deep copy of frames to prevent shared references
-    const framesCopy = JSON.parse(JSON.stringify(newFrames));
-    
-    newHistory.push(framesCopy);
-    
-    // If history exceeds max length, trim it
-    if (newHistory.length > historyMaxLength) {
-      newHistory.shift();
-    }
-    
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  };
+  // (removed duplicate definition)
 
   // Get pixels for the current frame and all visible layers
   const getCurrentPixels = () => {
