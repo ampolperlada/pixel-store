@@ -1533,11 +1533,10 @@ const PixelMarketplace: React.FC = () => {
                     className={`flex-1 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                       activePanel === tab.id
                         ? 'bg-blue-500 text-white'
-                        : 'text-gray-600 dark:text-gray-400 hover:  
-                        bg-gray-100 dark:hover:bg-gray-700'
-}`}
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
                   >
-                    <span className="mr-1">{tab.icon}</span>
+                  <span className="mr-1">{tab.icon}</span>
                     {tab.label}
                   </button>
                 ))}
