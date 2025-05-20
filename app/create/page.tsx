@@ -149,6 +149,8 @@ const PixelForgeCreator = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    if (!canvas) return;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
@@ -294,12 +296,7 @@ const PixelForgeCreator = () => {
     y: number;
   }
 
-  interface PixelPositionEvent extends MouseEvent {
-    clientX: number;
-    clientY: number;
-  }
-
-  const getPixelPosition = (e: PixelPositionEvent): PixelPosition => {
+  const getPixelPosition = (e: React.MouseEvent<HTMLCanvasElement>): PixelPosition => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
@@ -444,19 +441,27 @@ const PixelForgeCreator = () => {
     setHistoryStep(newHistory.length - 1);
   };
 
-  const undo = () => {
-    if (historyStep > 0) {
-      setHistoryStep(historyStep - 1);
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      img.onload = () => {
-        ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
-        ctx.drawImage(img, 0, 0);
-      };
-      img.src = history[historyStep - 1];
-    }
-  };
+ const undo = () => {
+  if (historyStep > 0) {
+    setHistoryStep(historyStep - 1);
+    const canvas = canvasRef.current;
+    
+    // Add null check for canvas
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Add null check for ctx
+    if (!ctx) return;
+    
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
+      ctx.drawImage(img, 0, 0);
+    };
+    img.src = history[historyStep - 1];
+  }
+};
 
   const redo = () => {
     if (historyStep < history.length - 1) {
