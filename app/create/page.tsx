@@ -22,7 +22,7 @@ const PixelForgeCreator = () => {
     { id: 5, name: 'Hair/Hat', visible: true, locked: false, opacity: 100 }
   ]);
   const [activeLayer, setActiveLayer] = useState(2);
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState<string[]>([]);
   const [historyStep, setHistoryStep] = useState(-1);
   const [showTutorial, setShowTutorial] = useState(false);
   const [currentTutorialStep, setCurrentTutorialStep] = useState(0);
@@ -38,7 +38,7 @@ const PixelForgeCreator = () => {
   const [currentFrame, setCurrentFrame] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [mintPreview, setMintPreview] = useState(false);
-  const [rarityLevel, setRarityLevel] = useState('common'); // 'common', 'rare', 'legendary'
+  const [rarityLevel, setRarityLevel] = useState<'common' | 'rare' | 'legendary'>('common'); // 'common', 'rare', 'legendary'
 
   // NFT Character Sections with exact measurements
   const characterSections = [
@@ -209,7 +209,7 @@ const PixelForgeCreator = () => {
     ctx.restore();
   };
 
-  const drawProfessionalGrid = (ctx) => {
+  const drawProfessionalGrid = (ctx: CanvasRenderingContext2D) => {
     ctx.save();
     ctx.strokeStyle = '#333333';
     ctx.lineWidth = 0.5;
@@ -251,31 +251,55 @@ const PixelForgeCreator = () => {
     ctx.restore();
   };
 
-  const drawSectionHighlights = (ctx) => {
-    const activeAreaSection = characterSections.find(s => s.id === activeSection);
+  interface CharacterSection {
+    id: string;
+    name: string;
+    icon: string;
+    area: { x: number; y: number; width: number; height: number };
+    color: string;
+  }
+
+  interface DrawSectionHighlightsContext extends CanvasRenderingContext2D {}
+
+  const drawSectionHighlights = (
+    ctx: DrawSectionHighlightsContext
+  ): void => {
+    const activeAreaSection: CharacterSection | undefined = characterSections.find(
+      (s: CharacterSection) => s.id === activeSection
+    );
     if (!activeAreaSection) return;
-    
+
     ctx.save();
     ctx.strokeStyle = activeAreaSection.color;
     ctx.lineWidth = 3;
     ctx.setLineDash([]);
     ctx.globalAlpha = 0.8;
-    
+
     const { x, y, width, height } = activeAreaSection.area;
     ctx.strokeRect(x, y, width, height);
-    
+
     // Add corner indicators
     const cornerSize = 8;
     ctx.fillStyle = activeAreaSection.color;
-    ctx.fillRect(x - cornerSize/2, y - cornerSize/2, cornerSize, cornerSize);
-    ctx.fillRect(x + width - cornerSize/2, y - cornerSize/2, cornerSize, cornerSize);
-    ctx.fillRect(x - cornerSize/2, y + height - cornerSize/2, cornerSize, cornerSize);
-    ctx.fillRect(x + width - cornerSize/2, y + height - cornerSize/2, cornerSize, cornerSize);
-    
+    ctx.fillRect(x - cornerSize / 2, y - cornerSize / 2, cornerSize, cornerSize);
+    ctx.fillRect(x + width - cornerSize / 2, y - cornerSize / 2, cornerSize, cornerSize);
+    ctx.fillRect(x - cornerSize / 2, y + height - cornerSize / 2, cornerSize, cornerSize);
+    ctx.fillRect(x + width - cornerSize / 2, y + height - cornerSize / 2, cornerSize, cornerSize);
+
     ctx.restore();
   };
 
-  const getPixelPosition = (e) => {
+  interface PixelPosition {
+    x: number;
+    y: number;
+  }
+
+  interface PixelPositionEvent extends MouseEvent {
+    clientX: number;
+    clientY: number;
+  }
+
+  const getPixelPosition = (e: PixelPositionEvent): PixelPosition => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
@@ -288,7 +312,19 @@ const PixelForgeCreator = () => {
     return { x, y };
   };
 
-  const drawPixel = (x, y, color, tool = selectedTool) => {
+  interface DrawPixelOptions {
+    x: number;
+    y: number;
+    color: string;
+    tool?: string;
+  }
+
+  const drawPixel = (
+    x: number,
+    y: number,
+    color: string,
+    tool: string = selectedTool
+  ): void => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!ctx) return;
@@ -400,6 +436,7 @@ const PixelForgeCreator = () => {
 
   const saveToHistory = () => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const imageData = canvas.toDataURL();
     const newHistory = history.slice(0, historyStep + 1);
     newHistory.push(imageData);
