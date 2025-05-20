@@ -367,7 +367,9 @@ const PixelForgeCreator = () => {
     
     if (selectedTool === 'eyedropper') {
       const canvas = canvasRef.current;
+      if (!canvas) return;
       const ctx = canvas.getContext('2d');
+      if (!ctx) return;
       const imageData = ctx.getImageData(x * pixelSize + pixelSize/2, y * pixelSize + pixelSize/2, 1, 1);
       const data = imageData.data;
       if (data[3] > 0) {
@@ -381,7 +383,12 @@ const PixelForgeCreator = () => {
     saveToHistory();
   };
 
-  const handleMouseMove = (e) => {
+  interface MouseEventWithClient extends React.MouseEvent<HTMLCanvasElement> {
+    clientX: number;
+    clientY: number;
+  }
+
+  const handleMouseMove = (e: MouseEventWithClient) => {
     if (!isDrawing) return;
     const { x, y } = getPixelPosition(e);
     drawPixel(x, y, currentColor);
