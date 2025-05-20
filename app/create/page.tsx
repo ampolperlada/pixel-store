@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Download, Upload, Undo, Redo, Grid, Palette, Brush, Eye, Save, Folder, Settings, Play, Square, User, UserCheck, Layers, HelpCircle, BookOpen, Zap, Target, Ruler, Lock, Unlock, RotateCcw, Copy, Trash2, Move, ZoomIn, ZoomOut, Lightbulb, Star, X, Monitor, FilePlus, Edit3, AlertTriangle, Copy as CopyIcon, RefreshCw } from 'lucide-react';
 
 const PixelForgeCreator = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [canvasSize] = useState({ width: 512, height: 512 });
   const [pixelSize, setPixelSize] = useState(8);
   const [currentColor, setCurrentColor] = useState('#000000');
@@ -150,6 +150,7 @@ const PixelForgeCreator = () => {
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     
     // Clear canvas with transparent background for NFT
     ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
@@ -169,7 +170,9 @@ const PixelForgeCreator = () => {
     }
   }, [canvasSize, pixelSize, showGrid, showGuides, activeSection]);
 
-  const drawNFTGuidelines = (ctx) => {
+  interface NFTGuidelinesContext extends CanvasRenderingContext2D {}
+
+  const drawNFTGuidelines = (ctx: NFTGuidelinesContext): void => {
     ctx.save();
     
     // Main character boundary (480x480 with 32px margins)
@@ -274,6 +277,7 @@ const PixelForgeCreator = () => {
 
   const getPixelPosition = (e) => {
     const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
@@ -286,7 +290,8 @@ const PixelForgeCreator = () => {
 
   const drawPixel = (x, y, color, tool = selectedTool) => {
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
     
     const pixelX = x * pixelSize;
     const pixelY = y * pixelSize;
@@ -356,7 +361,7 @@ const PixelForgeCreator = () => {
     }
   };
 
-  const handleMouseDown = (e) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
     const { x, y } = getPixelPosition(e);
     
