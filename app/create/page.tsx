@@ -1,1986 +1,1294 @@
-"use client";
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useState, useRef, useEffect } from 'react';
-import LoginModal from "../components/LoginModal";
-import SignupModal from "../components/SignupModal";
+import React, { useState, useRef, useEffect } from 'react';
+import { Download, Upload, Undo, Redo, Grid, Palette, Brush, Eye, Save, Folder, Settings, Play, Square, User, UserCheck, Layers, HelpCircle, BookOpen, Zap, Target, Ruler, Lock, Unlock, RotateCcw, Copy, Trash2, Move, ZoomIn, ZoomOut, Lightbulb, Star, X, Monitor, FilePlus, Edit3, AlertTriangle, Copy as CopyIcon, RefreshCw } from 'lucide-react';
 
-// Types for our pixel art creator
-interface Pixel {
-  x: number;
-  y: number;
-  color: string;
-  layerId: number;
-}
-
-interface Layer {
-  id: number;
-  name: string;
-  visible: boolean;
-  locked: boolean;
-  opacity: number;
-}
-
-interface Frame {
-  id: number;
-  name: string;
-  pixels: Pixel[];
-  duration: number; // in milliseconds
-}
-
-interface PremadeItem {
-  id: number;
-  name: string;
-  thumbnail: string;
-  category: string;
-  rarity: string;
-  color: string;
-}
-
-// For custom brushes
-type BrushPattern = boolean[][];
-
-const INITIAL_CANVAS_SIZE = '32x32';
-const MAX_LAYERS = 5;
-const MAX_FRAMES = 8;
-const DEFAULT_BRUSH_SIZE = 1;
-
-const CreatePage = () => {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showSignupModal, setShowSignupModal] = useState(false);
-  const [triggerReason] = useState('create pixel art');
-
-  // Redirect to login if unauthenticated
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      setShowLoginModal(true);
-    }
-  }, [status]);
-
-  // Close modals if authenticated
-  useEffect(() => {
-    if (status === 'authenticated') {
-      setShowLoginModal(false);
-      setShowSignupModal(false);
-    }
-  }, [status]);
-
-  const handleCloseLoginModal = () => {
-    setShowLoginModal(false);
-    router.push('/'); // Redirect to home when closing login modal
-  };
-
-  const handleSwitchToSignup = () => {
-    setShowLoginModal(false);
-    setShowSignupModal(true);
-  };
-
-  const handleCloseSignupModal = () => {
-    setShowSignupModal(false);
-  };
-
-  // If not authenticated, show loading state or nothing (modals will handle the auth flow)
-  if (status !== 'authenticated') {
-    return (
-      <>
-        {showLoginModal && (
-          <LoginModal
-            isOpen={showLoginModal}
-            onClose={handleCloseLoginModal}
-            triggerReason={triggerReason}
-            onSwitchToSignup={handleSwitchToSignup}
-          />
-        )}
-        {showSignupModal && (
-          <SignupModal
-            isOpen={showSignupModal}
-            onClose={handleCloseSignupModal}
-          />
-        )}
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500 mx-auto"></div>
-            <p className="mt-4 text-lg">Checking authentication...</p>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // If authenticated, render the PixelMarketplace component
-  return <PixelMarketplace />;
-};
-
-// Enhanced PixelMarketplace component
-const PixelMarketplace: React.FC = () => {
-  // Drawing tools
-  const [currentTool, setCurrentTool] = useState<string>('pencil');
-  const [currentColor, setCurrentColor] = useState<string>('#000000');
-  const [brushSize, setBrushSize] = useState<number>(DEFAULT_BRUSH_SIZE);
-  const [customBrush, setCustomBrush] = useState<BrushPattern | null>(null);
-  const [symmetryMode, setSymmetryMode] = useState<string>('none'); // 'none', 'horizontal', 'vertical', 'both'
-  
-  // Canvas settings
-  const [canvasSize, setCanvasSize] = useState<string>(INITIAL_CANVAS_SIZE);
-  const [showGrid, setShowGrid] = useState<boolean>(true);
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
-  
-  // Layers
-  const [layers, setLayers] = useState<Layer[]>([
-    { id: 0, name: 'Background', visible: true, locked: false, opacity: 1 }
+const PixelForgeCreator = () => {
+  const canvasRef = useRef(null);
+  const [canvasSize] = useState({ width: 512, height: 512 });
+  const [pixelSize, setPixelSize] = useState(8);
+  const [currentColor, setCurrentColor] = useState('#000000');
+  const [selectedTool, setSelectedTool] = useState('pencil');
+  const [brushSize, setBrushSize] = useState(1);
+  const [showGrid, setShowGrid] = useState(true);
+  const [showGuides, setShowGuides] = useState(true);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [zoom, setZoom] = useState(100);
+  const [activeSection, setActiveSection] = useState('head');
+  const [characterGender, setCharacterGender] = useState('male');
+  const [layers, setLayers] = useState([
+    { id: 1, name: 'Background', visible: true, locked: false, opacity: 100 },
+    { id: 2, name: 'Body Base', visible: true, locked: false, opacity: 100 },
+    { id: 3, name: 'Clothing', visible: true, locked: false, opacity: 100 },
+    { id: 4, name: 'Accessories', visible: true, locked: false, opacity: 100 },
+    { id: 5, name: 'Hair/Hat', visible: true, locked: false, opacity: 100 }
   ]);
-  const [activeLayerId, setActiveLayerId] = useState<number>(0);
-  
-  // Frames for animation
-  const [frames, setFrames] = useState<Frame[]>([
-    { id: 0, name: 'Frame 1', pixels: [], duration: 200 }
-  ]);
-  const [activeFrameId, setActiveFrameId] = useState<number>(0);
-  const [isAnimating, setIsAnimating] = useState<boolean>(false);
-  const [animationPreviewFps, setAnimationPreviewFps] = useState<number>(12);
-  
-  // History for undo/redo
-  const [history, setHistory] = useState<Frame[][]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
-  const [historyMaxLength] = useState<number>(30);
-  
-  // UI state
-  const [isDrawing, setIsDrawing] = useState<boolean>(false);
-  const [hoveredPixel, setHoveredPixel] = useState<{ x: number; y: number } | null>(null);
-  const [darkMode, setDarkMode] = useState<boolean>(true);
-  const [activePanel, setActivePanel] = useState<string>('draw');
-  const [mintPreviewVisible, setMintPreviewVisible] = useState<boolean>(false);
-  const [panelCollapsed, setPanelCollapsed] = useState<Record<string, boolean>>({
-    tools: false,
-    layers: false,
-    colors: false,
-    animation: false,
-    history: false
-  });
-  
-  // DOM references
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const animationTimerRef = useRef<number | null>(null);
-  const animationFrameIndexRef = useRef<number>(0);
-  
-  // Color palettes with unique keys
-  const [colorPalettes] = useState<{ [key: string]: string[] }>({
-    basic: [
-      '#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF',
-      '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080',
-    ],
-    pastel: [
-      '#FFD1DC', '#FFABAB', '#FFC3A0', '#FF677D', '#D4A5A5',
-      '#F0E68C', '#77DD77', '#AEC6CF', '#B39EB5', '#FDFD96',
-    ],
-    vibrant: [
-      '#FF5722', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5',
-      '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50',
-    ],
-    retro: [
-      '#8F974A', '#4D533C', '#1F1F1F', '#52646E', '#041C31',
-      '#C6CAC9', '#898D96', '#33312F', '#BEB5A4', '#5A5A5A',
-    ],
-  });
-  const [currentPalette, setCurrentPalette] = useState<string>('basic');
-  const [recentColors, setRecentColors] = useState<string[]>([]);
-  
-  // Pre-made pixel items for the browser - with enhanced categories and rarities
-  const premadeItems: PremadeItem[] = [
-    { id: 1, name: 'Epic Sword', thumbnail: '/sword.png', category: 'weapon', rarity: 'rare', color: '#FF5722' },
-    { id: 2, name: 'Crystal Shield', thumbnail: '/shield.png', category: 'weapon', rarity: 'epic', color: '#2196F3' },
-    { id: 3, name: 'Gold Coin', thumbnail: '/coin.png', category: 'item', rarity: 'common', color: '#FFC107' },
-    { id: 4, name: 'Health Potion', thumbnail: '/potion.png', category: 'item', rarity: 'uncommon', color: '#E91E63' },
-    { id: 5, name: 'Fireball Spell', thumbnail: '/fireball.png', category: 'spell', rarity: 'rare', color: '#FF9800' },
-    { id: 6, name: 'Elven Bow', thumbnail: '/bow.png', category: 'weapon', rarity: 'uncommon', color: '#8BC34A' },
-    { id: 7, name: 'Dwarven Axe', thumbnail: '/axe.png', category: 'weapon', rarity: 'rare', color: '#795548' },
-    { id: 8, name: 'Wizard Staff', thumbnail: '/staff.png', category: 'weapon', rarity: 'epic', color: '#9C27B0' },
-    { id: 9, name: 'Treasure Chest', thumbnail: '/chest.png', category: 'item', rarity: 'uncommon', color: '#FFEB3B' },
-    { id: 10, name: 'Diamond Gem', thumbnail: '/gem.png', category: 'item', rarity: 'legendary', color: '#00BCD4' },
-    { id: 11, name: 'Pixel Warrior', thumbnail: '/warrior.png', category: 'character', rarity: 'epic', color: '#607D8B' },
-    { id: 12, name: 'Pixel Mage', thumbnail: '/mage.png', category: 'character', rarity: 'epic', color: '#9C27B0' },
-  ];
-  
-  const [itemFilter, setItemFilter] = useState<string>('all');
-  const [rarityFilter, setRarityFilter] = useState<string>('all');
-  const [selectedItem, setSelectedItem] = useState<PremadeItem | null>(null);
+  const [activeLayer, setActiveLayer] = useState(2);
+  const [history, setHistory] = useState([]);
+  const [historyStep, setHistoryStep] = useState(-1);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [currentTutorialStep, setCurrentTutorialStep] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [savedProjects, setSavedProjects] = useState([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [symmetryEnabled, setSymmetryEnabled] = useState(false);
+  const [symmetryAxis, setSymmetryAxis] = useState('vertical'); // 'vertical', 'horizontal', 'both'
+  const [showUIPanel, setShowUIPanel] = useState('tools'); // 'tools', 'layers', 'animation'
+  const [showAnimationTimeline, setShowAnimationTimeline] = useState(false);
+  const [frames, setFrames] = useState([{ id: 1, name: 'Frame 1', duration: 100 }]);
+  const [currentFrame, setCurrentFrame] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [mintPreview, setMintPreview] = useState(false);
+  const [rarityLevel, setRarityLevel] = useState('common'); // 'common', 'rare', 'legendary'
 
-  // State for template browser panel
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-
-  // Example templates for the browser panel
-  const templates = [
-    { id: 1, name: 'Pixel Cat', category: 'characters', preview: '🐱' },
-    { id: 2, name: 'Pixel Tree', category: 'nature', preview: '🌳' },
-    { id: 3, name: 'Pixel Sword', category: 'objects', preview: '🗡️' },
-    { id: 4, name: 'Pixel Sun', category: 'nature', preview: '🌞' },
-    { id: 5, name: 'Pixel Ghost', category: 'characters', preview: '👻' },
-    { id: 6, name: 'Pixel Cube', category: 'abstract', preview: '🟪' },
+  // NFT Character Sections with exact measurements
+  const characterSections = [
+    { id: 'head', name: 'Head', icon: '👤', area: { x: 176, y: 32, width: 160, height: 160 }, color: '#FF6B6B' },
+    { id: 'hair', name: 'Hair', icon: '🦱', area: { x: 160, y: 32, width: 192, height: 96 }, color: '#4ECDC4' },
+    { id: 'eyes', name: 'Eyes', icon: '👁️', area: { x: 192, y: 80, width: 128, height: 32 }, color: '#45B7D1' },
+    { id: 'mouth', name: 'Mouth', icon: '👄', area: { x: 208, y: 128, width: 96, height: 32 }, color: '#FFA07A' },
+    { id: 'torso', name: 'Torso', icon: '👕', area: { x: 176, y: 192, width: 160, height: 128 }, color: '#98D8C8' },
+    { id: 'arms', name: 'Arms', icon: '💪', area: { x: 96, y: 192, width: 320, height: 128 }, color: '#F7DC6F' },
+    { id: 'hands', name: 'Hands', icon: '✋', area: { x: 96, y: 288, width: 320, height: 48 }, color: '#BB8FCE' },
+    { id: 'legs', name: 'Legs', icon: '🦵', area: { x: 176, y: 320, width: 160, height: 128 }, color: '#85C1E9' },
+    { id: 'feet', name: 'Feet', icon: '👟', area: { x: 160, y: 448, width: 192, height: 32 }, color: '#F8C471' },
+    { id: 'accessories', name: 'Accessories', icon: '⚔️', area: { x: 32, y: 192, width: 448, height: 256 }, color: '#D7BDE2' },
+    { id: 'hat', name: 'Hat/Helmet', icon: '🎩', area: { x: 144, y: 16, width: 224, height: 96 }, color: '#AED6F1' }
   ];
 
-  const filteredTemplates = templates.filter(template =>
-    (selectedCategory === 'all' || template.category === selectedCategory) &&
-    template.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Enhanced brush sizes
+  const brushSizes = [
+    { id: 1, size: 1, label: '1px' },
+    { id: 2, size: 2, label: '2px' },
+    { id: 3, size: 4, label: '4px' },
+  ];
 
-  // Dummy loadTemplate function
-  const loadTemplate = (template: { id: number; name: string; category: string; preview: string }) => {
-    alert(`Template "${template.name}" loaded!`);
-  };
-  
-  const filteredItems = premadeItems
-    .filter(item => itemFilter === 'all' || item.category === itemFilter)
-    .filter(item => rarityFilter === 'all' || item.rarity === rarityFilter);
+  // Advanced professional tools
+  const advancedTools = [
+    { id: 'pencil', name: 'Pencil', icon: '✏️', hotkey: 'P', description: 'Draw pixel by pixel' },
+    { id: 'brush', name: 'Brush', icon: '🖌️', hotkey: 'B', description: 'Paint with various sizes' },
+    { id: 'eraser', name: 'Eraser', icon: '🧹', hotkey: 'E', description: 'Erase pixels' },
+    { id: 'fill', name: 'Bucket Fill', icon: '🪣', hotkey: 'F', description: 'Fill an area with color' },
+    { id: 'eyedropper', name: 'Color Picker', icon: '💧', hotkey: 'I', description: 'Pick a color from canvas' },
+    { id: 'line', name: 'Line Tool', icon: '📏', hotkey: 'L', description: 'Draw straight lines' },
+    { id: 'rectangle', name: 'Rectangle', icon: '⬜', hotkey: 'R', description: 'Draw rectangles' },
+    { id: 'circle', name: 'Circle', icon: '⭕', hotkey: 'C', description: 'Draw circles' },
+    { id: 'select', name: 'Selection', icon: '⭐', hotkey: 'S', description: 'Select and move parts' },
+    { id: 'move', name: 'Move', icon: '🔄', hotkey: 'M', description: 'Move selection or layer' }
+  ];
 
-  // Add current frames state to history
-  const addToHistory = (newFrames: Frame[]) => {
-    // If the new state is the same as the current, do not add
-    if (
-      historyIndex >= 0 &&
-      JSON.stringify(newFrames) === JSON.stringify(history[historyIndex])
-    ) {
-      return;
+  // Professional color palettes
+  const professionalPalettes = {
+    skin: {
+      name: 'Skin Tones',
+      colors: ['#FDBCB4', '#F1C27D', '#E0AC69', '#C68642', '#8D5524', '#654321', '#4A4A4A', '#2D2D2D']
+    },
+    hair: {
+      name: 'Hair Colors',
+      colors: ['#000000', '#4A3C28', '#8B4513', '#DAA520', '#FF8C00', '#DC143C', '#4B0082', '#87CEEB']
+    },
+    clothing: {
+      name: 'Clothing',
+      colors: ['#FF0000', '#0000FF', '#008000', '#FFFF00', '#800080', '#FFA500', '#FF69B4', '#00CED1']
+    },
+    metal: {
+      name: 'Metals/Armor',
+      colors: ['#C0C0C0', '#FFD700', '#CD7F32', '#708090', '#2F4F4F', '#000000', '#800000', '#4B0082']
+    },
+    nature: {
+      name: 'Nature/Magic',
+      colors: ['#228B22', '#32CD32', '#00FF7F', '#00FA9A', '#20B2AA', '#008B8B', '#8A2BE2', '#FF1493']
     }
-
-    // Copy history up to the current index
-    const newHistory = history.slice(0, historyIndex + 1);
-
-    // Deep copy to avoid reference issues
-    const framesCopy = JSON.parse(JSON.stringify(newFrames));
-    newHistory.push(framesCopy);
-
-    // Trim history if it exceeds max length
-    if (newHistory.length > historyMaxLength) {
-      newHistory.shift();
-    }
-
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
   };
 
-  // Initialize canvas when component mounts or canvas size changes
+  // Tutorial steps
+  const tutorialSteps = [
+    {
+      title: "Welcome to Pixel Forge Creator",
+      content: "This professional pixel art tool is designed specifically for creating consistent NFT characters. Let's start with the basics!",
+      highlight: "canvas"
+    },
+    {
+      title: "Character Sections",
+      content: "Your canvas is divided into precise sections for different body parts. Click on any section to focus your edits.",
+      highlight: "sections"
+    },
+    {
+      title: "Tools & Brushes",
+      content: "Use advanced tools like brush, line, and shape tools. Each tool has keyboard shortcuts for faster workflow.",
+      highlight: "tools"
+    },
+    {
+      title: "Professional Layers",
+      content: "Work with multiple layers to organize your artwork. Lock layers to prevent accidental edits.",
+      highlight: "layers"
+    },
+    {
+      title: "NFT Standards",
+      content: "Your art follows strict NFT standards: 512×512px canvas with 32px margins for perfect consistency.",
+      highlight: "standards"
+    }
+  ];
+
+  // Character Templates
+  const characterTemplates = {
+    male: [
+      { name: 'Warrior', preview: '/api/placeholder/64/64', data: null },
+      { name: 'Wizard', preview: '/api/placeholder/64/64', data: null },
+      { name: 'Rogue', preview: '/api/placeholder/64/64', data: null },
+      { name: 'Paladin', preview: '/api/placeholder/64/64', data: null }
+    ],
+    female: [
+      { name: 'Archer', preview: '/api/placeholder/64/64', data: null },
+      { name: 'Mage', preview: '/api/placeholder/64/64', data: null },
+      { name: 'Assassin', preview: '/api/placeholder/64/64', data: null },
+      { name: 'Healer', preview: '/api/placeholder/64/64', data: null }
+    ]
+  };
+
   useEffect(() => {
-    // Reset pixels, frames, and layers
-    const newLayers = [
-      { id: 0, name: 'Background', visible: true, locked: false, opacity: 1 }
-    ];
-    
-    const newFrames = [
-      { id: 0, name: 'Frame 1', pixels: [], duration: 200 }
-    ];
-    
-    setLayers(newLayers);
-    setActiveLayerId(0);
-    
-    setFrames(newFrames);
-    setActiveFrameId(0);
-    
-    // Reset history
-    setHistory([]);
-    setHistoryIndex(-1);
-    
-    // Add first history entry
-    addToHistory(newFrames);
-  }, [canvasSize]);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-  // Setup animation preview
-  useEffect(() => {
-    if (isAnimating && frames.length > 1) {
-      animationFrameIndexRef.current = 0;
-      const timer = window.setInterval(() => {
-        animationFrameIndexRef.current = (animationFrameIndexRef.current + 1) % frames.length;
-        // Force a re-render
-        setActiveFrameId(animationFrameIndexRef.current);
-      }, 1000 / animationPreviewFps);
-      
-      animationTimerRef.current = timer;
-    } else {
-      if (animationTimerRef.current) {
-        window.clearInterval(animationTimerRef.current);
-        animationTimerRef.current = null;
-      }
-    }
-    
-    return () => {
-      if (animationTimerRef.current) {
-        window.clearInterval(animationTimerRef.current);
-        animationTimerRef.current = null;
-      }
-    };
-  }, [isAnimating, frames, animationPreviewFps]);
-
-  // Get pixels for the current frame and all visible layers
-  const getCurrentPixels = () => {
-    const activeFrame = frames.find(f => f.id === activeFrameId);
-    if (!activeFrame) return [];
-    
-    return activeFrame.pixels.filter(p => {
-      const layer = layers.find(l => l.id === p.layerId);
-      return layer?.visible;
-    });
-  };
-
-  // Get the size of each pixel based on canvas size
-  const getPixelSize = (): number => {
-    const pixelCount = parseInt(canvasSize.split('x')[0]);
-    return (600 / pixelCount) * zoomLevel;
-  };
-
-  // Get the actual dimensions of the canvas in pixels
-  const getCanvasDimensions = () => {
-    const pixelCount = parseInt(canvasSize.split('x')[0]);
-    const pixelSize = getPixelSize();
-    return {
-      width: pixelCount * pixelSize,
-      height: pixelCount * pixelSize
-    };
-  };
-
-  // Convert mouse position to canvas coordinates (pixel indices)
-  const getCanvasCoordinates = (clientX: number, clientY: number) => {
-    if (!canvasRef.current) return { x: -1, y: -1 };
-    
-    const rect = canvasRef.current.getBoundingClientRect();
-    const pixelSize = getPixelSize();
-    const pixelCount = parseInt(canvasSize.split('x')[0]);
-    
-    const x = Math.floor((clientX - rect.left) / pixelSize);
-    const y = Math.floor((clientY - rect.top) / pixelSize);
-    
-    if (x >= 0 && x < pixelCount && y >= 0 && y < pixelCount) {
-      return { x, y };
-    }
-    
-    return { x: -1, y: -1 };
-  };
-
-  // Apply a drawing operation to the canvas
-  const applyDrawing = (clientX: number, clientY: number) => {
-    if (!canvasRef.current) return;
-    
-    const { x, y } = getCanvasCoordinates(clientX, clientY);
-    if (x < 0 || y < 0) return;
-    
-    const pixelCount = parseInt(canvasSize.split('x')[0]);
-    
-    // Find the active layer
-    const activeLayer = layers.find(l => l.id === activeLayerId);
-    if (!activeLayer || activeLayer.locked) return;
-    
-    // Get the active frame
-    const frameIndex = frames.findIndex(f => f.id === activeFrameId);
-    if (frameIndex < 0) return;
-    
-    // Make a copy of the frames
-    const newFrames = [...frames];
-    
-    // Applying drawing based on the current tool
-    if (currentTool === 'pencil') {
-      // For brush size > 1, draw multiple pixels
-      const pixelsToUpdate = [];
-      
-      // Calculate brush pixels
-      const startX = x - Math.floor(brushSize / 2);
-      const startY = y - Math.floor(brushSize / 2);
-      
-      for (let dx = 0; dx < brushSize; dx++) {
-        for (let dy = 0; dy < brushSize; dy++) {
-          const newX = startX + dx;
-          const newY = startY + dy;
-          
-          // Skip if out of bounds
-          if (newX < 0 || newX >= pixelCount || newY < 0 || newY >= pixelCount) continue;
-          
-          // Add pixel to update list
-          pixelsToUpdate.push({ x: newX, y: newY });
-          
-          // Apply symmetry if enabled
-          if (symmetryMode === 'horizontal' || symmetryMode === 'both') {
-            const symmetricX = pixelCount - 1 - newX;
-            pixelsToUpdate.push({ x: symmetricX, y: newY });
-          }
-          
-          if (symmetryMode === 'vertical' || symmetryMode === 'both') {
-            const symmetricY = pixelCount - 1 - newY;
-            pixelsToUpdate.push({ x: newX, y: symmetricY });
-          }
-          
-          if (symmetryMode === 'both') {
-            const symmetricX = pixelCount - 1 - newX;
-            const symmetricY = pixelCount - 1 - newY;
-            pixelsToUpdate.push({ x: symmetricX, y: symmetricY });
-          }
-        }
-      }
-      
-      // Apply all pixel updates
-      for (const pixel of pixelsToUpdate) {
-        const pixelIndex = newFrames[frameIndex].pixels.findIndex(
-          p => p.x === pixel.x && p.y === pixel.y && p.layerId === activeLayerId
-        );
-        
-        if (pixelIndex >= 0) {
-          // Update existing pixel
-          newFrames[frameIndex].pixels[pixelIndex].color = currentColor;
-        } else {
-          // Add new pixel
-          newFrames[frameIndex].pixels.push({
-            x: pixel.x,
-            y: pixel.y,
-            color: currentColor,
-            layerId: activeLayerId
-          });
-        }
-      }
-    } 
-    else if (currentTool === 'eraser') {
-      // Similar to pencil but removes pixels
-      interface PixelToErase {
-        x: number;
-        y: number;
-      }
-      const pixelsToErase: PixelToErase[] = [];
-      
-      const startX = x - Math.floor(brushSize / 2);
-      const startY = y - Math.floor(brushSize / 2);
-      
-      for (let dx = 0; dx < brushSize; dx++) {
-        for (let dy = 0; dy < brushSize; dy++) {
-          const newX = startX + dx;
-          const newY = startY + dy;
-          
-          if (newX < 0 || newX >= pixelCount || newY < 0 || newY >= pixelCount) continue;
-          
-          pixelsToErase.push({ x: newX, y: newY });
-          
-          if (symmetryMode === 'horizontal' || symmetryMode === 'both') {
-            const symmetricX = pixelCount - 1 - newX;
-            pixelsToErase.push({ x: symmetricX, y: newY });
-          }
-          
-          if (symmetryMode === 'vertical' || symmetryMode === 'both') {
-            const symmetricY = pixelCount - 1 - newY;
-            pixelsToErase.push({ x: newX, y: symmetricY });
-          }
-          
-          if (symmetryMode === 'both') {
-            const symmetricX = pixelCount - 1 - newX;
-            const symmetricY = pixelCount - 1 - newY;
-            pixelsToErase.push({ x: symmetricX, y: symmetricY });
-          }
-        }
-      }
-      
-      // Filter out pixels that need to be erased
-      newFrames[frameIndex].pixels = newFrames[frameIndex].pixels.filter(
-        p => !pixelsToErase.some(pe => pe.x === p.x && pe.y === p.y && p.layerId === activeLayerId)
-      );
-    }
-    else if (currentTool === 'eyedropper') {
-      // Find the pixel at this position in any visible layer (top to bottom)
-      const visibleLayers = layers.filter(l => l.visible).reverse();
-      
-      for (const layer of visibleLayers) {
-        const pixel = newFrames[frameIndex].pixels.find(
-          p => p.x === x && p.y === y && p.layerId === layer.id
-        );
-        
-        if (pixel) {
-          setCurrentColor(pixel.color);
-          
-          // Add to recent colors if not already there
-          if (!recentColors.includes(pixel.color)) {
-            const newRecentColors = [pixel.color, ...recentColors.slice(0, 9)];
-            setRecentColors(newRecentColors);
-          }
-          
-          break;
-        }
-      }
-    }
-    else if (currentTool === 'fill') {
-      // Find the target color to replace
-      const targetPixel = newFrames[frameIndex].pixels.find(
-        p => p.x === x && p.y === y && p.layerId === activeLayerId
-      );
-      
-      const targetColor = targetPixel?.color || null;
-      
-      if (targetColor !== currentColor) {
-        // Perform flood fill
-        floodFill(newFrames[frameIndex].pixels, x, y, targetColor, currentColor, pixelCount, activeLayerId);
-      }
-    }
-    
-    // Update the state with the new frames
-    setFrames(newFrames);
-    
-    // Store a snapshot in history if this is a new action (not continuous drawing)
-    if (!isDrawing) {
-      addToHistory(newFrames);
-    }
-  };
-
-  // Handle mouse down event
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    setIsDrawing(true);
-    applyDrawing(e.clientX, e.clientY);
-  };
-
-  // Handle mouse move event
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!canvasRef.current) return;
-    
-    const { x, y } = getCanvasCoordinates(e.clientX, e.clientY);
-    
-    if (x >= 0 && y >= 0) {
-      setHoveredPixel({ x, y });
-      
-      if (isDrawing) {
-        applyDrawing(e.clientX, e.clientY);
-      }
-    } else {
-      setHoveredPixel(null);
-    }
-  };
-
-  // Handle mouse up event
-  const handleMouseUp = () => {
-    if (isDrawing) {
-      setIsDrawing(false);
-      // Add to history if not already done
-      addToHistory(frames);
-    }
-  };
-
-  // Flood fill algorithm
-  const floodFill = (
-    pixelsArray: Pixel[], 
-    x: number, 
-    y: number, 
-    targetColor: string | null, 
-    replacementColor: string, 
-    pixelCount: number,
-    layerId: number
-  ) => {
-    const stack = [{x, y}];
-    const visited = new Set<string>();
-    
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (!current) continue;
-      const cx = current.x;
-      const cy = current.y;
-      const key = `${cx},${cy}`;
-      
-      if (
-        cx < 0 || cx >= pixelCount || 
-        cy < 0 || cy >= pixelCount || 
-        visited.has(key)
-      ) {
-        continue;
-      }
-      
-      visited.add(key);
-      
-      // Find the pixel at this position
-      const pixelIndex = pixelsArray.findIndex(
-        p => p.x === cx && p.y === cy && p.layerId === layerId
-      );
-      
-      const currentColor = pixelIndex >= 0 ? pixelsArray[pixelIndex].color : null;
-      
-      if (currentColor === replacementColor) continue;
-      if (targetColor !== null && currentColor !== targetColor) continue;
-      
-      if (pixelIndex >= 0) {
-        // Update existing pixel
-        pixelsArray[pixelIndex].color = replacementColor;
-      } else {
-        // Add new pixel
-        pixelsArray.push({
-          x: cx,
-          y: cy,
-          color: replacementColor,
-          layerId: layerId
-        });
-      }
-      
-      // Expand in 4 directions
-      stack.push({x: cx + 1, y: cy});
-      stack.push({x: cx - 1, y: cy});
-      stack.push({x: cx, y: cy + 1});
-      stack.push({x: cx, y: cy - 1});
-    }
-  };
-
-  // Handle undo
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setFrames(JSON.parse(JSON.stringify(history[newIndex])));
-    }
-  };
-
-  // Handle redo
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setFrames(JSON.parse(JSON.stringify(history[newIndex])));
-    }
-  };
-
-  // Clear canvas
-  const clearCanvas = () => {
-    if (window.confirm("Are you sure you want to clear the canvas?")) {
-      const newFrames = frames.map(frame => ({
-        ...frame,
-        pixels: frame.pixels.filter(pixel => pixel.layerId !== activeLayerId)
-      }));
-      
-      setFrames(newFrames);
-      addToHistory(newFrames);
-    }
-  };
-
-  // Add a new layer
-  const addLayer = () => {
-    if (layers.length >= MAX_LAYERS) {
-      alert(`Maximum of ${MAX_LAYERS} layers reached`);
-      return;
-    }
-    
-    const newLayerId = Math.max(...layers.map(l => l.id), 0) + 1;
-    const newLayer = {
-      id: newLayerId,
-      name: `Layer ${newLayerId + 1}`,
-      visible: true,
-      locked: false,
-      opacity: 1
-    };
-    
-    setLayers([...layers, newLayer]);
-    setActiveLayerId(newLayerId);
-  };
-
-  // Delete a layer
-  const deleteLayer = (layerId: number) => {
-    if (layers.length <= 1) {
-      alert("Cannot delete the last layer");
-      return;
-    }
-    
-    if (window.confirm("Are you sure you want to delete this layer? This action cannot be undone.")) {
-      // Remove the layer
-      const newLayers = layers.filter(l => l.id !== layerId);
-      setLayers(newLayers);
-      
-      // Set active layer to the first one if the active layer was deleted
-      if (activeLayerId === layerId) {
-        setActiveLayerId(newLayers[0].id);
-      }
-      
-      // Remove all pixels from this layer in all frames
-      const newFrames = frames.map(frame => ({
-        ...frame,
-        pixels: frame.pixels.filter(p => p.layerId !== layerId)
-      }));
-      
-      setFrames(newFrames);
-      addToHistory(newFrames);
-    }
-  };
-
-  // Toggle layer visibility
-  const toggleLayerVisibility = (layerId: number) => {
-    const layerIndex = layers.findIndex(l => l.id === layerId);
-    if (layerIndex < 0) return;
-    
-    const newLayers = [...layers];
-    newLayers[layerIndex] = {
-      ...newLayers[layerIndex],
-      visible: !newLayers[layerIndex].visible
-    };
-    
-    setLayers(newLayers);
-  };
-
-  // Toggle layer lock
-  const toggleLayerLock = (layerId: number) => {
-    const layerIndex = layers.findIndex(l => l.id === layerId);
-    if (layerIndex < 0) return;
-    
-    const newLayers = [...layers];
-    newLayers[layerIndex] = {
-      ...newLayers[layerIndex],
-      locked: !newLayers[layerIndex].locked
-    };
-    
-    setLayers(newLayers);
-  };
-
-  // Update layer opacity
-  const updateLayerOpacity = (layerId: number, opacity: number) => {
-    const layerIndex = layers.findIndex(l => l.id === layerId);
-    if (layerIndex < 0) return;
-    
-    const newLayers = [...layers];
-    newLayers[layerIndex] = {
-      ...newLayers[layerIndex],
-      opacity: opacity
-    };
-    
-    setLayers(newLayers);
-  };
-
-  // Move layer up or down
-  const moveLayer = (layerId: number, direction: 'up' | 'down') => {
-    const layerIndex = layers.findIndex(l => l.id === layerId);
-    if (layerIndex < 0) return;
-    
-    if (direction === 'up' && layerIndex > 0) {
-      const newLayers = [...layers];
-      [newLayers[layerIndex], newLayers[layerIndex - 1]] = 
-        [newLayers[layerIndex - 1], newLayers[layerIndex]];
-      setLayers(newLayers);
-    } else if (direction === 'down' && layerIndex < layers.length - 1) {
-      const newLayers = [...layers];
-      [newLayers[layerIndex], newLayers[layerIndex + 1]] = 
-        [newLayers[layerIndex + 1], newLayers[layerIndex]];
-      setLayers(newLayers);
-    }
-  };
-
-  // Rename layer
-  const renameLayer = (layerId: number, newName: string) => {
-    const layerIndex = layers.findIndex(l => l.id === layerId);
-    if (layerIndex < 0) return;
-    
-    const newLayers = [...layers];
-    newLayers[layerIndex] = {
-      ...newLayers[layerIndex],
-      name: newName
-    };
-    
-    setLayers(newLayers);
-  };
-
-  // Add new frame
-  const addFrame = () => {
-    if (frames.length >= MAX_FRAMES) {
-      alert(`Maximum of ${MAX_FRAMES} frames reached`);
-      return;
-    }
-
-    const newFrameId = Math.max(...frames.map(f => f.id), 0) + 1;
-
-    // Create new frame based on currently active frame
-    const activeFrame = frames.find(f => f.id === activeFrameId);
-
-    // Option to duplicate current frame pixels or start fresh
-// Option to duplicate current frame pixels or start fresh
-    let newFramePixels: Pixel[] = [];
-    
-    // Ask user if they want to duplicate the current frame
-    const shouldDuplicate = window.confirm("Do you want to duplicate the current frame? Click OK to duplicate, Cancel to start with empty frame.");
-    
-    if (shouldDuplicate && activeFrame) {
-      newFramePixels = [...activeFrame.pixels];
-    }
-    
-    const newFrame: Frame = {
-      id: newFrameId,
-      name: `Frame ${newFrameId + 1}`,
-      pixels: newFramePixels,
-      duration: 200
-    };
-    
-    setFrames([...frames, newFrame]);
-    setActiveFrameId(newFrameId);
-    addToHistory([...frames, newFrame]);
-  };
-
-  // Delete frame
-  const deleteFrame = (frameId: number) => {
-    if (frames.length <= 1) {
-      alert("Cannot delete the last frame");
-      return;
-    }
-    
-    if (window.confirm("Are you sure you want to delete this frame?")) {
-      const newFrames = frames.filter(f => f.id !== frameId);
-      setFrames(newFrames);
-      
-      // Set active frame to the first one if the active frame was deleted
-      if (activeFrameId === frameId) {
-        setActiveFrameId(newFrames[0].id);
-      }
-      
-      addToHistory(newFrames);
-    }
-  };
-
-  // Duplicate frame
-  const duplicateFrame = (frameId: number) => {
-    if (frames.length >= MAX_FRAMES) {
-      alert(`Maximum of ${MAX_FRAMES} frames reached`);
-      return;
-    }
-    
-    const frameIndex = frames.findIndex(f => f.id === frameId);
-    if (frameIndex < 0) return;
-    
-    const newFrameId = Math.max(...frames.map(f => f.id), 0) + 1;
-    const sourceFrame = frames[frameIndex];
-    
-    const newFrame: Frame = {
-      id: newFrameId,
-      name: `${sourceFrame.name} Copy`,
-      pixels: [...sourceFrame.pixels],
-      duration: sourceFrame.duration
-    };
-    
-    // Insert after the source frame
-    const newFrames = [
-      ...frames.slice(0, frameIndex + 1),
-      newFrame,
-      ...frames.slice(frameIndex + 1)
-    ];
-    
-    setFrames(newFrames);
-    setActiveFrameId(newFrameId);
-    addToHistory(newFrames);
-  };
-
-  // Rename layer
-  const updateLayerName = (layerId: number, newName: string) => {
-    const layerIndex = layers.findIndex(l => l.id === layerId);
-    if (layerIndex < 0) return;
-    
-    const newLayers = [...layers];
-    newLayers[layerIndex] = {
-      ...newLayers[layerIndex],
-      name: newName
-    };
-    
-    setLayers(newLayers);
-  };
-
-  // Update frame name
-  const updateFrameName = (frameId: number, newName: string) => {
-    const frameIndex = frames.findIndex(f => f.id === frameId);
-    if (frameIndex < 0) return;
-    
-    const newFrames = [...frames];
-    newFrames[frameIndex] = {
-      ...newFrames[frameIndex],
-      name: newName
-    };
-    
-    setFrames(newFrames);
-  };
-
-  // Update frame duration
-  const updateFrameDuration = (frameId: number, duration: number) => {
-    const frameIndex = frames.findIndex(f => f.id === frameId);
-    if (frameIndex < 0) return;
-    
-    const newFrames = [...frames];
-    newFrames[frameIndex] = {
-      ...newFrames[frameIndex],
-      duration: Math.max(50, Math.min(2000, duration)) // Clamp between 50ms and 2s
-    };
-    
-    setFrames(newFrames);
-    addToHistory(newFrames);
-  };
-
-  // Export functions
-  const exportAsPNG = () => {
-    const canvas = document.createElement('canvas');
-    const pixelCount = parseInt(canvasSize.split('x')[0]);
-    const exportSize = 512; // Fixed export size
-    const pixelSize = exportSize / pixelCount;
-    
-    canvas.width = exportSize;
-    canvas.height = exportSize;
-    
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
     
-    // Clear canvas with transparent background
-    ctx.clearRect(0, 0, exportSize, exportSize);
+    // Clear canvas with transparent background for NFT
+    ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
     
-    // Get current pixels
-    const currentPixels = getCurrentPixels();
+    // Draw NFT guidelines
+    if (showGuides) {
+      drawNFTGuidelines(ctx);
+    }
     
-    // Draw pixels
-    currentPixels.forEach(pixel => {
-      const layer = layers.find(l => l.id === pixel.layerId);
-      if (layer) {
-        ctx.globalAlpha = layer.opacity;
-        ctx.fillStyle = pixel.color;
-        ctx.fillRect(
-          pixel.x * pixelSize,
-          pixel.y * pixelSize,
-          pixelSize,
-          pixelSize
-        );
+    if (showGrid) {
+      drawProfessionalGrid(ctx);
+    }
+
+    // Draw section highlights
+    if (showGuides) {
+      drawSectionHighlights(ctx);
+    }
+  }, [canvasSize, pixelSize, showGrid, showGuides, activeSection]);
+
+  const drawNFTGuidelines = (ctx) => {
+    ctx.save();
+    
+    // Main character boundary (480x480 with 32px margins)
+    ctx.strokeStyle = '#00FF41';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(32, 32, 448, 448);
+    
+    // Center guidelines
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(256, 32);
+    ctx.lineTo(256, 480);
+    ctx.moveTo(32, 256);
+    ctx.lineTo(480, 256);
+    ctx.stroke();
+    
+    // Character proportion guidelines
+    ctx.strokeStyle = '#FF6B6B';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    
+    // Head area
+    ctx.strokeRect(176, 32, 160, 160);
+    
+    // Body area
+    ctx.strokeRect(176, 192, 160, 160);
+    
+    // Legs area
+    ctx.strokeRect(176, 352, 160, 128);
+    
+    ctx.restore();
+  };
+
+  const drawProfessionalGrid = (ctx) => {
+    ctx.save();
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 0.5;
+    ctx.globalAlpha = 0.3;
+    
+    // Major grid lines (every 32 pixels)
+    for (let x = 0; x <= canvasSize.width; x += 32) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvasSize.height);
+      ctx.stroke();
+    }
+    
+    for (let y = 0; y <= canvasSize.height; y += 32) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvasSize.width, y);
+      ctx.stroke();
+    }
+    
+    // Minor grid lines
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 0.25;
+    
+    for (let x = 0; x <= canvasSize.width; x += pixelSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvasSize.height);
+      ctx.stroke();
+    }
+    
+    for (let y = 0; y <= canvasSize.height; y += pixelSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvasSize.width, y);
+      ctx.stroke();
+    }
+    
+    ctx.restore();
+  };
+
+  const drawSectionHighlights = (ctx) => {
+    const activeAreaSection = characterSections.find(s => s.id === activeSection);
+    if (!activeAreaSection) return;
+    
+    ctx.save();
+    ctx.strokeStyle = activeAreaSection.color;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.8;
+    
+    const { x, y, width, height } = activeAreaSection.area;
+    ctx.strokeRect(x, y, width, height);
+    
+    // Add corner indicators
+    const cornerSize = 8;
+    ctx.fillStyle = activeAreaSection.color;
+    ctx.fillRect(x - cornerSize/2, y - cornerSize/2, cornerSize, cornerSize);
+    ctx.fillRect(x + width - cornerSize/2, y - cornerSize/2, cornerSize, cornerSize);
+    ctx.fillRect(x - cornerSize/2, y + height - cornerSize/2, cornerSize, cornerSize);
+    ctx.fillRect(x + width - cornerSize/2, y + height - cornerSize/2, cornerSize, cornerSize);
+    
+    ctx.restore();
+  };
+
+  const getPixelPosition = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const x = Math.floor(((e.clientX - rect.left) * scaleX) / pixelSize);
+    const y = Math.floor(((e.clientY - rect.top) * scaleY) / pixelSize);
+    
+    return { x, y };
+  };
+
+  const drawPixel = (x, y, color, tool = selectedTool) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    const pixelX = x * pixelSize;
+    const pixelY = y * pixelSize;
+    
+    if (tool === 'eraser') {
+      ctx.clearRect(pixelX, pixelY, pixelSize * brushSize, pixelSize * brushSize);
+    } else if (tool === 'brush') {
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.8;
+      ctx.fillRect(pixelX, pixelY, pixelSize * brushSize, pixelSize * brushSize);
+      ctx.globalAlpha = 1.0;
+    } else {
+      ctx.fillStyle = color;
+      ctx.fillRect(pixelX, pixelY, pixelSize, pixelSize);
+    }
+    
+    // Handle symmetry if enabled
+    if (symmetryEnabled) {
+      const centerX = Math.floor(canvasSize.width / pixelSize / 2);
+      const centerY = Math.floor(canvasSize.height / pixelSize / 2);
+      
+      if (symmetryAxis === 'vertical' || symmetryAxis === 'both') {
+        const mirrorX = 2 * centerX - x;
+        if (tool === 'eraser') {
+          ctx.clearRect(mirrorX * pixelSize, pixelY, pixelSize * brushSize, pixelSize * brushSize);
+        } else if (tool === 'brush') {
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.8;
+          ctx.fillRect(mirrorX * pixelSize, pixelY, pixelSize * brushSize, pixelSize * brushSize);
+          ctx.globalAlpha = 1.0;
+        } else {
+          ctx.fillStyle = color;
+          ctx.fillRect(mirrorX * pixelSize, pixelY, pixelSize, pixelSize);
+        }
       }
-    });
+      
+      if (symmetryAxis === 'horizontal' || symmetryAxis === 'both') {
+        const mirrorY = 2 * centerY - y;
+        if (tool === 'eraser') {
+          ctx.clearRect(pixelX, mirrorY * pixelSize, pixelSize * brushSize, pixelSize * brushSize);
+        } else if (tool === 'brush') {
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.8;
+          ctx.fillRect(pixelX, mirrorY * pixelSize, pixelSize * brushSize, pixelSize * brushSize);
+          ctx.globalAlpha = 1.0;
+        } else {
+          ctx.fillStyle = color;
+          ctx.fillRect(pixelX, mirrorY * pixelSize, pixelSize, pixelSize);
+        }
+      }
+      
+      if (symmetryAxis === 'both') {
+        const mirrorX = 2 * centerX - x;
+        const mirrorY = 2 * centerY - y;
+        if (tool === 'eraser') {
+          ctx.clearRect(mirrorX * pixelSize, mirrorY * pixelSize, pixelSize * brushSize, pixelSize * brushSize);
+        } else if (tool === 'brush') {
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.8;
+          ctx.fillRect(mirrorX * pixelSize, mirrorY * pixelSize, pixelSize * brushSize, pixelSize * brushSize);
+          ctx.globalAlpha = 1.0;
+        } else {
+          ctx.fillStyle = color;
+          ctx.fillRect(mirrorX * pixelSize, mirrorY * pixelSize, pixelSize, pixelSize);
+        }
+      }
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    setIsDrawing(true);
+    const { x, y } = getPixelPosition(e);
     
-    // Download
+    if (selectedTool === 'eyedropper') {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(x * pixelSize + pixelSize/2, y * pixelSize + pixelSize/2, 1, 1);
+      const data = imageData.data;
+      if (data[3] > 0) {
+        const color = `#${((1 << 24) + (data[0] << 16) + (data[1] << 8) + data[2]).toString(16).slice(1)}`;
+        setCurrentColor(color);
+      }
+      return;
+    }
+    
+    drawPixel(x, y, currentColor);
+    saveToHistory();
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDrawing) return;
+    const { x, y } = getPixelPosition(e);
+    drawPixel(x, y, currentColor);
+  };
+
+  const handleMouseUp = () => {
+    setIsDrawing(false);
+  };
+
+  const saveToHistory = () => {
+    const canvas = canvasRef.current;
+    const imageData = canvas.toDataURL();
+    const newHistory = history.slice(0, historyStep + 1);
+    newHistory.push(imageData);
+    setHistory(newHistory);
+    setHistoryStep(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyStep > 0) {
+      setHistoryStep(historyStep - 1);
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = history[historyStep - 1];
+    }
+  };
+
+  const redo = () => {
+    if (historyStep < history.length - 1) {
+      setHistoryStep(historyStep + 1);
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = history[historyStep + 1];
+    }
+  };
+
+  const exportNFT = () => {
+    const canvas = canvasRef.current;
     const link = document.createElement('a');
-    link.download = `pixel-art-${Date.now()}.png`;
-    link.href = canvas.toDataURL();
+    link.download = `nft-character-${characterGender}-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
     link.click();
   };
 
-  const exportAsGIF = () => {
-    // This is a placeholder - actual GIF export would require additional libraries
-    alert("GIF export feature coming soon! For now, you can export individual frames as PNG.");
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
+    saveToHistory();
   };
 
-  // Import image function
-  const importImage = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const pixelCount = parseInt(canvasSize.split('x')[0]);
-        canvas.width = pixelCount;
-        canvas.height = pixelCount;
-        
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        
-        // Draw and scale image to fit canvas
-        ctx.drawImage(img, 0, 0, pixelCount, pixelCount);
-        
-        // Convert to pixels
-        const imageData = ctx.getImageData(0, 0, pixelCount, pixelCount);
-        const newPixels: Pixel[] = [];
-        
-        for (let y = 0; y < pixelCount; y++) {
-          for (let x = 0; x < pixelCount; x++) {
-            const index = (y * pixelCount + x) * 4;
-            const r = imageData.data[index];
-            const g = imageData.data[index + 1];
-            const b = imageData.data[index + 2];
-            const a = imageData.data[index + 3];
-            
-            // Only add non-transparent pixels
-            if (a > 0) {
-              const color = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-              newPixels.push({
-                x,
-                y,
-                color,
-                layerId: activeLayerId
-              });
-            }
-          }
-        }
-        
-        // Update current frame with imported pixels
-        const frameIndex = frames.findIndex(f => f.id === activeFrameId);
-        if (frameIndex >= 0) {
-          const newFrames = [...frames];
-          // Remove existing pixels on current layer
-          newFrames[frameIndex].pixels = newFrames[frameIndex].pixels.filter(
-            p => p.layerId !== activeLayerId
-          );
-          // Add imported pixels
-          newFrames[frameIndex].pixels.push(...newPixels);
-          
-          setFrames(newFrames);
-          addToHistory(newFrames);
-        }
-      };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Save/Load project functions
   const saveProject = () => {
+    const canvas = canvasRef.current;
+    const imageData = canvas.toDataURL();
     const projectData = {
-      version: '1.0',
+      id: Date.now(),
+      name: `NFT Character ${characterGender}`,
+      imageData,
       canvasSize,
+      pixelSize,
+      characterGender,
+      activeSection,
       layers,
-      frames,
       timestamp: Date.now()
     };
     
-    const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.download = `pixel-art-project-${Date.now()}.json`;
-    link.href = URL.createObjectURL(blob);
-    link.click();
+    const saved = JSON.parse(localStorage.getItem('pixel-projects') || '[]');
+    saved.push(projectData);
+    localStorage.setItem('pixel-projects', JSON.stringify(saved));
+    setSavedProjects(saved);
+    alert('Project saved successfully!');
   };
 
-  const loadProject = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const projectData = JSON.parse(e.target?.result as string);
-        
-        if (projectData.version && projectData.layers && projectData.frames) {
-          setCanvasSize(projectData.canvasSize || INITIAL_CANVAS_SIZE);
-          setLayers(projectData.layers);
-          setFrames(projectData.frames);
-          setActiveLayerId(projectData.layers[0]?.id || 0);
-          setActiveFrameId(projectData.frames[0]?.id || 0);
-          
-          // Reset history
-          setHistory([]);
-          setHistoryIndex(-1);
-          addToHistory(projectData.frames);
-          
-          alert('Project loaded successfully!');
-        } else {
-          alert('Invalid project file format.');
-        }
-      } catch (error) {
-        alert('Error loading project file.');
-        console.error(error);
-      }
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  const nextTutorialStep = () => {
+    if (currentTutorialStep < tutorialSteps.length - 1) {
+      setCurrentTutorialStep(currentTutorialStep + 1);
+    } else {
+      setShowTutorial(false);
+      setCurrentTutorialStep(0);
+    }
+  };
+
+  const previousTutorialStep = () => {
+    if (currentTutorialStep > 0) {
+      setCurrentTutorialStep(currentTutorialStep - 1);
+    }
+  };
+
+  const addLayer = () => {
+    const newLayer = {
+      id: layers.length + 1,
+      name: `Layer ${layers.length + 1}`,
+      visible: true,
+      locked: false,
+      opacity: 100
     };
-    reader.readAsText(file);
+    setLayers([...layers, newLayer]);
+    setActiveLayer(newLayer.id);
   };
 
-  // Custom brush functions
-  const createCustomBrush = () => {
-    // Simple 3x3 brush creator - could be expanded to larger sizes
-    const brushSize = 3;
-    const newBrush: BrushPattern = Array(brushSize).fill(null).map(() => Array(brushSize).fill(false));
-    
-    // Default to center pixel active
-    newBrush[1][1] = true;
-    
-    setCustomBrush(newBrush);
+  const deleteLayer = (id) => {
+    if (layers.length <= 1) return; // Prevent deleting the last layer
+    const newLayers = layers.filter(layer => layer.id !== id);
+    setLayers(newLayers);
+    if (activeLayer === id) {
+      setActiveLayer(newLayers[0].id);
+    }
   };
 
-  const toggleBrushPixel = (row: number, col: number) => {
-    if (!customBrush) return;
+  const toggleLayerVisibility = (id) => {
+    setLayers(layers.map(layer => 
+      layer.id === id ? { ...layer, visible: !layer.visible } : layer
+    ));
+  };
+
+  const toggleLayerLock = (id) => {
+    setLayers(layers.map(layer => 
+      layer.id === id ? { ...layer, locked: !layer.locked } : layer
+    ));
+  };
+
+  const updateLayerOpacity = (id, opacity) => {
+    setLayers(layers.map(layer => 
+      layer.id === id ? { ...layer, opacity } : layer
+    ));
+  };
+
+  const detectRarity = () => {
+    // In a real app, this would analyze the artwork complexity and details
+    // Here we'll just simulate it with a random selection
+    const rarities = ['common', 'rare', 'legendary'];
+    const randomRarity = rarities[Math.floor(Math.random() * rarities.length)];
+    setRarityLevel(randomRarity);
+    return randomRarity;
+  };
+
+  const addFrame = () => {
+    const newFrame = {
+      id: frames.length + 1,
+      name: `Frame ${frames.length + 1}`,
+      duration: 100
+    };
+    setFrames([...frames, newFrame]);
+  };
+
+  const toggleSymmetry = () => {
+    setSymmetryEnabled(!symmetryEnabled);
+  };
+
+  const changeSymmetryAxis = (axis) => {
+    setSymmetryAxis(axis);
+  };
+
+  // Tutorial Overlay Component
+  const TutorialOverlay = () => {
+    if (!showTutorial) return null;
     
-    const newBrush = customBrush.map((r, i) => 
-      r.map((c, j) => i === row && j === col ? !c : c)
+    const currentStep = tutorialSteps[currentTutorialStep];
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+        <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4 border border-blue-500">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-blue-400">{currentStep.title}</h3>
+            <span className="text-sm text-gray-400">
+              {currentTutorialStep + 1} / {tutorialSteps.length}
+            </span>
+          </div>
+          <p className="text-gray-300 mb-6">{currentStep.content}</p>
+          <div className="flex justify-between">
+            <button
+              onClick={previousTutorialStep}
+              disabled={currentTutorialStep === 0}
+              className="px-4 py-2 bg-gray-600 text-white rounded disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setShowTutorial(false)}
+              className="px-4 py-2 bg-red-600 text-white rounded"
+            >
+              Skip Tutorial
+            </button>
+            <button
+              onClick={nextTutorialStep}
+              className="px-4 py-2 bg-blue-600 text-white rounded"
+            >
+              {currentTutorialStep === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
+            </button>
+          </div>
+        </div>
+      </div>
     );
-    
-    setCustomBrush(newBrush);
   };
 
-  const applyCustomBrush = (centerX: number, centerY: number) => {
-    if (!customBrush) return;
+  // Templates Panel Component
+  const TemplatesPanel = () => {
+    if (!showTemplates) return null;
     
-    const pixelCount = parseInt(canvasSize.split('x')[0]);
-    const frameIndex = frames.findIndex(f => f.id === activeFrameId);
-    if (frameIndex < 0) return;
-    
-    const newFrames = [...frames];
-    const brushCenter = Math.floor(customBrush.length / 2);
-    
-    customBrush.forEach((row, i) => {
-      row.forEach((active, j) => {
-        if (active) {
-          const x = centerX + (j - brushCenter);
-          const y = centerY + (i - brushCenter);
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+        <div className="bg-gray-800 rounded-lg p-6 w-full max-w-4xl mx-4 border border-purple-500">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-purple-400">Character Templates</h3>
+            <button
+              onClick={() => setShowTemplates(false)}
+              className="p-1 rounded-full bg-gray-700 hover:bg-gray-600"
+            >
+              <X size={20} />
+            </button>
+          </div>
           
-          if (x >= 0 && x < pixelCount && y >= 0 && y < pixelCount) {
-            // Apply the same logic as the pencil tool
-            const pixelIndex = newFrames[frameIndex].pixels.findIndex(
-              p => p.x === x && p.y === y && p.layerId === activeLayerId
-            );
-            
-            if (pixelIndex >= 0) {
-              newFrames[frameIndex].pixels[pixelIndex].color = currentColor;
-            } else {
-              newFrames[frameIndex].pixels.push({
-                x,
-                y,
-                color: currentColor,
-                layerId: activeLayerId
-              });
-            }
-          }
-        }
-      });
-    });
-    
-    setFrames(newFrames);
-  };
-
-  // File input handlers
-  const handleImageImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      importImage(file);
-    }
-    e.target.value = ''; // Reset input
-  };
-
-  const handleProjectLoad = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type === 'application/json') {
-      loadProject(file);
-    }
-    e.target.value = ''; // Reset input
-  };
-
-  // Color management
-  const addToRecentColors = (color: string) => {
-    if (!recentColors.includes(color)) {
-      const newRecentColors = [color, ...recentColors.slice(0, 9)];
-      setRecentColors(newRecentColors);
-    }
-  };
-
-  const handleColorChange = (color: string) => {
-    setCurrentColor(color);
-    addToRecentColors(color);
-  };
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeydown = (e: KeyboardEvent) => {
-      // Only handle shortcuts when not typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-      
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
-          case 'z':
-            e.preventDefault();
-            if (e.shiftKey) {
-              handleRedo();
-            } else {
-              handleUndo();
-            }
-            break;
-          case 's':
-            e.preventDefault();
-            saveProject();
-            break;
-          case 'e':
-            e.preventDefault();
-            exportAsPNG();
-            break;
-        }
-      } else {
-        switch (e.key) {
-          case 'p':
-            setCurrentTool('pencil');
-            break;
-          case 'e':
-            setCurrentTool('eraser');
-            break;
-          case 'f':
-            setCurrentTool('fill');
-            break;
-          case 'i':
-            setCurrentTool('eyedropper');
-            break;
-          case ' ':
-            e.preventDefault();
-            setIsAnimating(!isAnimating);
-            break;
-          case 'g':
-            setShowGrid(!showGrid);
-            break;
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeydown);
-    return () => window.removeEventListener('keydown', handleKeydown);
-  }, [historyIndex, history, currentTool, isAnimating, showGrid]);
-
-  // Main render
-  return (
-    <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
-      <div className="container mx-auto p-4">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-              Pixel Art Creator
-            </h1>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          <div className="mb-4">
+            <div className="flex space-x-4 mb-2">
+              <button 
+                className={`px-4 py-2 rounded ${characterGender === 'male' ? 'bg-blue-600' : 'bg-gray-700'}`}
+                onClick={() => setCharacterGender('male')}
               >
-                {darkMode ? '☀️' : '🌙'}
+                Male Characters
               </button>
-              <button
-                onClick={() => setMintPreviewVisible(!mintPreviewVisible)}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              <button 
+                className={`px-4 py-2 rounded ${characterGender === 'female' ? 'bg-pink-600' : 'bg-gray-700'}`}
+                onClick={() => setCharacterGender('female')}
               >
-                Preview NFT
+                Female Characters
               </button>
             </div>
           </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {characterTemplates[characterGender].map((template) => (
+              <div key={template.name} className="bg-gray-700 rounded-lg p-3 hover:bg-gray-600 cursor-pointer">
+<div className="w-full h-32 bg-gray-600 flex items-center justify-center mb-2">
+                  <img src={template.preview} alt={template.name} className="max-h-full" />
+                </div>
+                <p className="text-center font-semibold">{template.name}</p>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-6 flex justify-end">
+            <button
+              className="px-4 py-2 bg-purple-600 text-white rounded"
+              onClick={() => setShowTemplates(false)}
+            >
+              Close
+            </button>
+          </div>
         </div>
+      </div>
+    );
+  };
 
-        {/* Main Content */}
-        <div className="grid grid-cols-12 gap-4">
-          {/* Left Sidebar - Tools and Options */}
-          <div className="col-span-3 space-y-4">
-            {/* Tool Selection */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-lg">
-              <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">Tools</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'pencil', icon: '✏️', label: 'Pencil (P)' },
-                  { id: 'eraser', icon: '🧹', label: 'Eraser (E)' },
-                  { id: 'fill', icon: '🪣', label: 'Fill (F)' },
-                  { id: 'eyedropper', icon: '💧', label: 'Eyedropper (I)' }
-                ].map(tool => (
+  // Mint Preview Panel Component
+  const MintPreviewPanel = () => {
+    if (!mintPreview) return null;
+    
+    const rarityColor = {
+      'common': 'text-gray-300',
+      'rare': 'text-blue-400',
+      'legendary': 'text-yellow-400'
+    };
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+        <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-600">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-white">NFT Preview</h3>
+            <button
+              onClick={() => setMintPreview(false)}
+              className="p-1 rounded-full bg-gray-700 hover:bg-gray-600"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="bg-gray-900 p-4 rounded-lg mb-4">
+            <div className="bg-gray-800 rounded-lg p-2 mb-4">
+              <canvas 
+                ref={canvasRef} 
+                width={canvasSize.width} 
+                height={canvasSize.height}
+                className="w-full border border-gray-700 rounded"
+              />
+            </div>
+            
+            <div className="flex justify-center mb-2">
+              <span className={`text-2xl font-bold uppercase ${rarityColor[rarityLevel]}`}>
+                {rarityLevel}
+              </span>
+            </div>
+            
+            <div className="flex justify-between text-sm text-gray-400">
+              <span>Created by: You</span>
+              <span>Collection: Pixel Forge</span>
+            </div>
+          </div>
+          
+          <div className="bg-gray-700 p-3 rounded-lg mb-4">
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-300">Estimated Value:</span>
+              <span className="font-bold text-white">
+                {rarityLevel === 'common' ? '0.01-0.05 ETH' : 
+                 rarityLevel === 'rare' ? '0.05-0.2 ETH' : '0.2-1.0 ETH'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-300">Gas Fee (est.):</span>
+              <span className="font-bold text-white">0.002 ETH</span>
+            </div>
+          </div>
+          
+          <div className="flex space-x-3">
+            <button 
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded"
+              onClick={exportNFT}
+            >
+              Export PNG
+            </button>
+            <button 
+              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded"
+              onClick={() => setMintPreview(false)}
+            >
+              Continue Editing
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Animation Timeline Component
+  const AnimationTimeline = () => {
+    if (!showAnimationTimeline) return null;
+    
+    return (
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-white font-bold">Animation Frames</h3>
+          <div className="flex space-x-2">
+            <button
+              className="p-1 bg-blue-600 rounded hover:bg-blue-700"
+              onClick={addFrame}
+              title="Add Frame"
+            >
+              <FilePlus size={16} />
+            </button>
+            <button
+              className={`p-1 rounded ${isPlaying ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+              onClick={() => setIsPlaying(!isPlaying)}
+              title={isPlaying ? 'Stop Animation' : 'Play Animation'}
+            >
+              {isPlaying ? <Square size={16} /> : <Play size={16} />}
+            </button>
+          </div>
+        </div>
+        
+        <div className="flex space-x-2 overflow-x-auto py-2">
+          {frames.map((frame) => (
+            <div 
+              key={frame.id}
+              className={`flex-shrink-0 w-16 h-16 border-2 cursor-pointer ${currentFrame === frame.id ? 'border-blue-500' : 'border-gray-600'} bg-gray-700 flex items-center justify-center`}
+              onClick={() => setCurrentFrame(frame.id)}
+            >
+              <p className="text-xs text-center text-gray-300">{frame.name}</p>
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-2 flex items-center justify-between text-sm">
+          <span className="text-gray-400">Frame {currentFrame}</span>
+          <div className="flex items-center">
+            <span className="text-gray-400 mr-2">Duration:</span>
+            <input 
+              type="range" 
+              min="50" 
+              max="500" 
+              value={frames.find(f => f.id === currentFrame)?.duration || 100}
+              onChange={(e) => {
+                const newFrames = frames.map(f => 
+                  f.id === currentFrame ? {...f, duration: parseInt(e.target.value)} : f
+                );
+                setFrames(newFrames);
+              }}
+              className="w-24"
+            />
+            <span className="text-gray-400 ml-1">
+              {frames.find(f => f.id === currentFrame)?.duration || 100}ms
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Main Component Render
+  return (
+    <div className={`flex flex-col h-screen bg-gray-900 text-white ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+      {/* Header */}
+      <div className="bg-gray-800 px-4 py-2 flex items-center justify-between border-b border-gray-700">
+        <div className="flex items-center">
+          <h1 className="text-xl font-bold text-blue-400 mr-2">Pixel Forge Creator</h1>
+          <span className="bg-purple-700 text-xs px-2 py-1 rounded">NFT Edition</span>
+        </div>
+        
+        <div className="flex space-x-3">
+          <button 
+            onClick={() => setShowTutorial(true)}
+            className="flex items-center px-3 py-1 bg-blue-600 rounded hover:bg-blue-700"
+            title="Help & Tutorial"
+          >
+            <HelpCircle size={16} className="mr-1" />
+            <span className="text-sm">Tutorial</span>
+          </button>
+          
+          <button 
+            onClick={saveProject}
+            className="flex items-center px-3 py-1 bg-green-600 rounded hover:bg-green-700"
+            title="Save Project"
+          >
+            <Save size={16} className="mr-1" />
+            <span className="text-sm">Save</span>
+          </button>
+          
+          <button 
+            onClick={() => setMintPreview(true)}
+            className="flex items-center px-3 py-1 bg-purple-600 rounded hover:bg-purple-700"
+            title="Preview NFT"
+          >
+            <Zap size={16} className="mr-1" />
+            <span className="text-sm">Preview NFT</span>
+          </button>
+          
+          <button 
+            onClick={toggleFullscreen}
+            className="flex items-center px-3 py-1 bg-gray-600 rounded hover:bg-gray-700"
+            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          >
+            <Monitor size={16} />
+          </button>
+        </div>
+      </div>
+      
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar - Tools */}
+        <div className="w-16 bg-gray-800 border-r border-gray-700 flex flex-col p-2">
+          <div className="flex flex-col space-y-3 mb-4">
+            <button 
+              className={`p-2 rounded ${showUIPanel === 'tools' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+              onClick={() => setShowUIPanel('tools')}
+              title="Drawing Tools"
+            >
+              <Brush size={20} />
+            </button>
+            <button 
+              className={`p-2 rounded ${showUIPanel === 'layers' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+              onClick={() => setShowUIPanel('layers')}
+              title="Layers"
+            >
+              <Layers size={20} />
+            </button>
+            <button 
+              className={`p-2 rounded ${showUIPanel === 'animation' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+              onClick={() => {
+                setShowUIPanel('animation');
+                setShowAnimationTimeline(true);
+              }}
+              title="Animation"
+            >
+              <Play size={20} />
+            </button>
+          </div>
+          
+          <div className="flex flex-col space-y-2 items-center mb-4">
+            <div className="h-0.5 w-full bg-gray-700 my-1"></div>
+            <button 
+              className={`p-2 rounded ${showGrid ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+              onClick={() => setShowGrid(!showGrid)}
+              title="Toggle Grid"
+            >
+              <Grid size={20} />
+            </button>
+            <button 
+              className={`p-2 rounded ${showGuides ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+              onClick={() => setShowGuides(!showGuides)}
+              title="Toggle Guidelines"
+            >
+              <Target size={20} />
+            </button>
+            <button 
+              className={`p-2 rounded ${symmetryEnabled ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+              onClick={toggleSymmetry}
+              title="Toggle Symmetry"
+            >
+              <RefreshCw size={20} />
+            </button>
+          </div>
+          
+          <div className="flex flex-col space-y-2 items-center mt-auto">
+            <button 
+              className="p-2 rounded bg-gray-700 hover:bg-gray-600"
+              onClick={undo}
+              title="Undo"
+              disabled={historyStep <= 0}
+            >
+              <Undo size={20} className={historyStep <= 0 ? 'opacity-50' : ''} />
+            </button>
+            <button 
+              className="p-2 rounded bg-gray-700 hover:bg-gray-600"
+              onClick={redo}
+              title="Redo"
+              disabled={historyStep >= history.length - 1}
+            >
+              <Redo size={20} className={historyStep >= history.length - 1 ? 'opacity-50' : ''} />
+            </button>
+            <button 
+              className="p-2 rounded bg-red-700 hover:bg-red-600"
+              onClick={clearCanvas}
+              title="Clear Canvas"
+            >
+              <Trash2 size={20} />
+            </button>
+          </div>
+        </div>
+        
+        {/* Right Panel Based on Active Panel */}
+        <div className="w-64 bg-gray-800 border-l border-gray-700 p-3 overflow-y-auto">
+          {showUIPanel === 'tools' && (
+            <div>
+              <h3 className="text-lg font-bold mb-3">Drawing Tools</h3>
+              
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {advancedTools.map((tool) => (
                   <button
                     key={tool.id}
-                    onClick={() => setCurrentTool(tool.id)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      currentTool === tool.id
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                    }`}
-                    title={tool.label}
+                    className={`p-2 flex flex-col items-center justify-center rounded ${selectedTool === tool.id ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    onClick={() => setSelectedTool(tool.id)}
+                    title={`${tool.name} (${tool.hotkey})`}
                   >
-                    <div className="text-2xl mb-1">{tool.icon}</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {tool.id.charAt(0).toUpperCase() + tool.id.slice(1)}
-                    </div>
+                    <span className="text-lg mb-1">{tool.icon}</span>
+                    <span className="text-xs">{tool.name}</span>
                   </button>
                 ))}
               </div>
               
-              {/* Brush Size */}
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Brush Size: {brushSize}
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={brushSize}
-                  onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Symmetry Mode */}
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Symmetry
-                </label>
-                <select
-                  value={symmetryMode}
-                  onChange={(e) => setSymmetryMode(e.target.value)}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                >
-                  <option value="none">None</option>
-                  <option value="horizontal">Horizontal</option>
-                  <option value="vertical">Vertical</option>
-                  <option value="both">Both</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Color Picker */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-lg">
-              <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">Colors</h3>
-              
-              {/* Current Color */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Current Color
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="color"
-                    value={currentColor}
-                    onChange={(e) => handleColorChange(e.target.value)}
-                    className="w-12 h-12 rounded-lg border-2 border-gray-300 dark:border-gray-600"
-                  />
-                  <input
-                    type="text"
-                    value={currentColor}
-                    onChange={(e) => handleColorChange(e.target.value)}
-                    className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white font-mono text-sm"
-                  />
+              {(selectedTool === 'brush' || selectedTool === 'eraser') && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold mb-2">Brush Size</h4>
+                  <div className="flex justify-between space-x-2">
+                    {brushSizes.map((size) => (
+                      <button
+                        key={size.id}
+                        className={`flex-1 py-1 text-center rounded ${brushSize === size.size ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                        onClick={() => setBrushSize(size.size)}
+                      >
+                        {size.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              {/* Color Palettes */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Palette
-                </label>
-                <select
-                  value={currentPalette}
-                  onChange={(e) => setCurrentPalette(e.target.value)}
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white mb-2"
-                >
-                  <option value="basic">Basic</option>
-                  <option value="pastel">Pastel</option>
-                  <option value="vibrant">Vibrant</option>
-                  <option value="retro">Retro</option>
-                </select>
-                
-                <div className="grid grid-cols-5 gap-1">
-                  {colorPalettes[currentPalette].map((color, index) => (
+              )}
+              
+              {symmetryEnabled && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold mb-2">Symmetry Axis</h4>
+                  <div className="flex justify-between space-x-2">
                     <button
-                      key={`${currentPalette}-${index}`}
-                      onClick={() => handleColorChange(color)}
-                      className={`w-8 h-8 rounded border-2 transition-all ${
-                        currentColor === color
-                          ? 'border-gray-800 dark:border-white scale-110'
-                          : 'border-gray-300 dark:border-gray-600 hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: color }}
-                      title={color}
+                      className={`flex-1 p-1 text-center rounded ${symmetryAxis === 'vertical' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                      onClick={() => changeSymmetryAxis('vertical')}
+                    >
+                      Vertical
+                    </button>
+                    <button
+                      className={`flex-1 p-1 text-center rounded ${symmetryAxis === 'horizontal' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                      onClick={() => changeSymmetryAxis('horizontal')}
+                    >
+                      Horizontal
+                    </button>
+                    <button
+                      className={`flex-1 p-1 text-center rounded ${symmetryAxis === 'both' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                      onClick={() => changeSymmetryAxis('both')}
+                    >
+                      Both
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Color Palette Section */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Color Palette</h4>
+                  <button
+                    className="text-xs p-1 bg-gray-700 rounded hover:bg-gray-600"
+                    title="Color Picker"
+                  >
+                    <Palette size={16} />
+                  </button>
+                </div>
+                
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-400 mb-1">Current Color</label>
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      className="w-8 h-8 rounded border border-gray-600" 
+                      style={{ backgroundColor: currentColor }}
+                    ></div>
+                    <input
+                      type="color"
+                      value={currentColor}
+                      onChange={(e) => setCurrentColor(e.target.value)}
+                      className="w-full bg-gray-700 rounded p-1 h-8 cursor-pointer"
                     />
+                  </div>
+                </div>
+                
+                {/* Professional Color Palettes */}
+                <div className="space-y-3">
+                  {Object.entries(professionalPalettes).map(([key, palette]) => (
+                    <div key={key}>
+                      <label className="block text-xs text-gray-400 mb-1">{palette.name}</label>
+                      <div className="grid grid-cols-8 gap-1">
+                        {palette.colors.map((color, index) => (
+                          <button
+                            key={index}
+                            className="w-6 h-6 rounded border border-gray-600 hover:border-white"
+                            style={{ backgroundColor: color }}
+                            onClick={() => setCurrentColor(color)}
+                          ></button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
-
-              {/* Recent Colors */}
-              {recentColors.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Recent Colors
-                  </label>
-                  <div className="grid grid-cols-5 gap-1">
-                    {recentColors.map((color, index) => (
-                      <button
-                        key={`recent-${index}`}
-                        onClick={() => handleColorChange(color)}
-                        className={`w-8 h-8 rounded border-2 transition-all ${
-                          currentColor === color
-                            ? 'border-gray-800 dark:border-white scale-110'
-                            : 'border-gray-300 dark:border-gray-600 hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: color }}
-                        title={color}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Canvas Settings */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-lg">
-              <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">Canvas</h3>
               
-              <div className="space-y-3">
-                {/* Canvas Size */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Size
-                  </label>
-                  <select
-                    value={canvasSize}
-                    onChange={(e) => setCanvasSize(e.target.value)}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+              {/* Zoom Controls */}
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold mb-2">Zoom</h4>
+                <div className="flex items-center justify-between">
+                  <button 
+                    className="p-1 bg-gray-700 rounded hover:bg-gray-600" 
+                    onClick={() => setZoom(Math.max(25, zoom - 25))}
+                    disabled={zoom <= 25}
                   >
-                    <option value="16x16">16×16</option>
-                    <option value="32x32">32×32</option>
-                    <option value="64x64">64×64</option>
-                    <option value="128x128">128×128</option>
-                  </select>
+                    <ZoomOut size={16} />
+                  </button>
+                  <span className="text-sm">{zoom}%</span>
+                  <button 
+                    className="p-1 bg-gray-700 rounded hover:bg-gray-600" 
+                    onClick={() => setZoom(Math.min(400, zoom + 25))}
+                    disabled={zoom >= 400}
+                  >
+                    <ZoomIn size={16} />
+                  </button>
                 </div>
-
-                {/* Zoom Level */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Zoom: {Math.round(zoomLevel * 100)}%
-                  </label>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="4"
-                    step="0.1"
-                    value={zoomLevel}
-                    onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Grid Toggle */}
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="showGrid"
-                    checked={showGrid}
-                    onChange={(e) => setShowGrid(e.target.checked)}
-                    className="mr-2"
-                  />
-                  <label htmlFor="showGrid" className="text-sm text-gray-700 dark:text-gray-300">
-                    Show Grid (G)
-                  </label>
+              </div>
+              
+              {/* Pixel Size Controls */}
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold mb-2">Pixel Size</h4>
+                <div className="flex items-center justify-between">
+                  <button 
+                    className="p-1 bg-gray-700 rounded hover:bg-gray-600" 
+                    onClick={() => setPixelSize(Math.max(1, pixelSize - 1))}
+                    disabled={pixelSize <= 1}
+                  >
+                    <ZoomOut size={16} />
+                  </button>
+                  <span className="text-sm">{pixelSize}px</span>
+                  <button 
+                    className="p-1 bg-gray-700 rounded hover:bg-gray-600" 
+                    onClick={() => setPixelSize(Math.min(16, pixelSize + 1))}
+                    disabled={pixelSize >= 16}
+                  >
+                    <ZoomIn size={16} />
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Center - Canvas */}
-          <div className="col-span-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-lg">
-              {/* Canvas Controls */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={handleUndo}
-                    disabled={historyIndex <= 0}
-                    className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    title="Undo (Ctrl+Z)"
-                  >
-                    ↶
-                  </button>
-                  <button
-                    onClick={handleRedo}
-                    disabled={historyIndex >= history.length - 1}
-                    className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    title="Redo (Ctrl+Shift+Z)"
-                  >
-                    ↷
-                  </button>
-                  <button
-                    onClick={clearCanvas}
-                    className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
-                    title="Clear Canvas"
-                  >
-                    🗑️
-                  </button>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageImport}
-                    className="hidden"
-                    id="imageImport"
-                  />
-                  <label
-                    htmlFor="imageImport"
-                    className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg cursor-pointer transition-colors"
-                  >
-                    Import Image
-                  </label>
-                  
-                  <button
-                    onClick={exportAsPNG}
-                    className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
-                    title="Export as PNG (Ctrl+E)"
-                  >
-                    Export PNG
-                  </button>
-                </div>
+          )}
+          
+          {showUIPanel === 'layers' && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold">Layers</h3>
+                <button 
+                  className="p-1 bg-blue-600 rounded hover:bg-blue-700"
+                  onClick={addLayer}
+                  title="Add Layer"
+                >
+                  <FilePlus size={16} />
+                </button>
               </div>
-
-              {/* Canvas Container */}
-              <div className="flex justify-center">
-                <div className="relative inline-block border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                  <div
-                    ref={canvasRef}
-                    className="relative cursor-crosshair bg-white"
-                    style={{
-                      width: getCanvasDimensions().width,
-                      height: getCanvasDimensions().height,
-                      backgroundImage: showGrid 
-                        ? `linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)`
-                        : undefined,
-                      backgroundSize: showGrid 
-                        ? `${getPixelSize()}px ${getPixelSize()}px`
-                        : undefined,
-                    }}
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
+              
+              <div className="space-y-2 mb-4">
+                {layers.map((layer) => (
+                  <div 
+                    key={layer.id}
+                    className={`bg-gray-700 p-2 rounded flex items-center ${activeLayer === layer.id ? 'border border-blue-500' : ''}`}
+                    onClick={() => setActiveLayer(layer.id)}
                   >
-                    {/* Render pixels */}
-                    {getCurrentPixels().map((pixel, index) => {
-                      const layer = layers.find(l => l.id === pixel.layerId);
-                      const pixelSize = getPixelSize();
-                      
-                      return (
-                        <div
-                          key={`${pixel.x}-${pixel.y}-${pixel.layerId}-${index}`}
-                          className="absolute"
-                          style={{
-                            left: pixel.x * pixelSize,
-                            top: pixel.y * pixelSize,
-                            width: pixelSize,
-                            height: pixelSize,
-                            backgroundColor: pixel.color,
-                            opacity: layer?.opacity || 1,
-                          }}
-                        />
-                      );
-                    })}
-
-                    {/* Hover indicator */}
-                    {hoveredPixel && (
-                      <div
-                        className="absolute border-2 border-blue-500 pointer-events-none"
-                        style={{
-                          left: hoveredPixel.x * getPixelSize(),
-                          top: hoveredPixel.y * getPixelSize(),
-                          width: getPixelSize(),
-                          height: getPixelSize(),
-                        }}
-                      />
-                    )}
+                    <button 
+                      className="mr-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLayerVisibility(layer.id);
+                      }}
+                    >
+                      <Eye size={16} className={!layer.visible ? 'opacity-30' : ''} />
+                    </button>
+                    
+                    <span className="flex-1 text-sm truncate">{layer.name}</span>
+                    
+                    <button 
+                      className="ml-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLayerLock(layer.id);
+                      }}
+                    >
+                      {layer.locked ? <Lock size={16} /> : <Unlock size={16} className="opacity-30" />}
+                    </button>
+                    
+                    <button 
+                      className="ml-1 text-red-400 hover:text-red-300"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteLayer(layer.id);
+                      }}
+                      disabled={layers.length <= 1}
+                    >
+                      <Trash2 size={16} className={layers.length <= 1 ? 'opacity-30' : ''} />
+                    </button>
                   </div>
-                </div>
-              </div>
-
-              {/* Canvas Info */}
-              <div className="mt-4 text-sm text-gray-600 dark:text-gray-400 text-center">
-                {canvasSize} canvas • {getCurrentPixels().length} pixels drawn
-                {hoveredPixel && ` • Cursor: (${hoveredPixel.x}, ${hoveredPixel.y})`}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Sidebar - Layers, Animation, Browser */}
-          <div className="col-span-3 space-y-4">
-            {/* Panel Tabs */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-lg">
-              <div className="flex border-b border-gray-200 dark:border-gray-600">
-                {[
-                  { id: 'layers', label: 'Layers', icon: '🏠' },
-                  { id: 'animation', label: 'Animation', icon: '🎬' },
-                  { id: 'browser', label: 'Browser', icon: '🛍️' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActivePanel(tab.id)}
-                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                      activePanel === tab.id
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                  <span className="mr-1">{tab.icon}</span>
-                    {tab.label}
-                  </button>
                 ))}
               </div>
-
-              {/* Layers Panel */}
-              {activePanel === 'layers' && (
-                <div className="pt-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Layers</h3>
-                    <button
-                      onClick={addLayer}
-                      className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors"
-                    >
-                      + Add Layer
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {[...layers].reverse().map(layer => (
-                      <div
-                        key={layer.id}
-                        className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                          activeLayerId === layer.id
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                            : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                        }`}
-                        onClick={() => setActiveLayerId(layer.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <input
-                            type="text"
-                            value={layer.name}
-                            onChange={(e) => updateLayerName(layer.id, e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-transparent text-sm font-medium text-gray-800 dark:text-white border-none outline-none flex-1"
-                          />
-                          <div className="flex items-center space-x-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleLayerVisibility(layer.id);
-                              }}
-                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                            >
-                              {layer.visible ? '👁️' : '🙈'}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteLayer(layer.id);
-                              }}
-                              className="p-1 hover:bg-red-200 dark:hover:bg-red-800 rounded text-red-600"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                        <div className="mt-2">
-                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                            Opacity: {Math.round(layer.opacity * 100)}%
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            value={layer.opacity}
-                            onChange={(e) => updateLayerOpacity(layer.id, parseFloat(e.target.value))}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Animation Panel */}
-              {activePanel === 'animation' && (
-                <div className="pt-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Animation</h3>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => setIsAnimating(!isAnimating)}
-                        className={`px-3 py-1 rounded text-sm transition-colors ${
-                          isAnimating
-                            ? 'bg-red-500 hover:bg-red-600 text-white'
-                            : 'bg-green-500 hover:bg-green-600 text-white'
-                        }`}
-                      >
-                        {isAnimating ? '⏸️ Stop' : '▶️ Play'}
-                      </button>
-                      <button
-                        onClick={exportAsGIF}
-                        className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded text-sm transition-colors"
-                      >
-                        Export GIF
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <button
-                      onClick={addFrame}
-                      className="w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
-                    >
-                      + Add Frame
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {frames.map((frame, index) => (
-                      <div
-                        key={frame.id}
-                        className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                          activeFrameId === frame.id
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                            : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                        }`}
-                        onClick={() => setActiveFrameId(frame.id)}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <input
-                            type="text"
-                            value={frame.name}
-                            onChange={(e) => updateFrameName(frame.id, e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-transparent text-sm font-medium text-gray-800 dark:text-white border-none outline-none flex-1"
-                          />
-                          <div className="flex items-center space-x-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                duplicateFrame(frame.id);
-                              }}
-                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                              title="Duplicate Frame"
-                            >
-                              📋
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteFrame(frame.id);
-                              }}
-                              className="p-1 hover:bg-red-200 dark:hover:bg-red-800 rounded text-red-600"
-                              title="Delete Frame"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                            Duration: {frame.duration}ms
-                          </label>
-                          <input
-                            type="range"
-                            min="50"
-                            max="2000"
-                            step="50"
-                            value={frame.duration}
-                            onChange={(e) => updateFrameDuration(frame.id, parseInt(e.target.value))}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Browser Panel */}
-              {activePanel === 'browser' && (
-                <div className="pt-4">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Template Browser</h3>
-                  
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      placeholder="Search templates..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                    />
-
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                    >
-                      <option value="all">All Categories</option>
-                      <option value="characters">Characters</option>
-                      <option value="objects">Objects</option>
-                      <option value="nature">Nature</option>
-                      <option value="abstract">Abstract</option>
-                    </select>
-
-                    <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
-                      {filteredTemplates.map(template => (
-                        <div
-                          key={template.id}
-                          className="border border-gray-200 dark:border-gray-600 rounded-lg p-2 cursor-pointer hover:border-blue-500 transition-colors"
-                          onClick={() => loadTemplate(template)}
-                        >
-                          <div className="w-full h-20 bg-gray-100 dark:bg-gray-700 rounded mb-2 flex items-center justify-center">
-                            <span className="text-2xl">{template.preview}</span>
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 text-center">
-                            {template.name}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Custom Brush Creator */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-lg">
-              <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">Custom Brush</h3>
               
-              <button
-                onClick={createCustomBrush}
-                className="w-full px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded mb-3 transition-colors"
-              >
-                Create Brush
-              </button>
-
-              {customBrush && (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-3 gap-1 max-w-24 mx-auto">
-                    {customBrush.map((row, i) =>
-                      row.map((active, j) => (
-                        <button
-                          key={`${i}-${j}`}
-                          onClick={() => toggleBrushPixel(i, j)}
-                          className={`w-6 h-6 border rounded transition-all ${
-                            active
-                              ? 'bg-blue-500 border-blue-600'
-                              : 'bg-gray-200 dark:bg-gray-600 border-gray-300 dark:border-gray-500'
-                          }`}
-                        />
-                      ))
-                    )}
-                  </div>
-                  <label className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <input
-                      type="checkbox"
-                      checked={currentTool === 'custom'}
-                      onChange={(e) => setCurrentTool(e.target.checked ? 'custom' : 'pencil')}
-                      className="mr-2"
-                    />
-                    Use Custom Brush
-                  </label>
+              {/* Character Sections */}
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold mb-2">Character Sections</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {characterSections.map((section) => (
+                    <button
+                      key={section.id}
+                      className={`p-2 flex items-center rounded text-left ${activeSection === section.id ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                      onClick={() => setActiveSection(section.id)}
+                      style={{ borderLeft: `3px solid ${section.color}` }}
+                    >
+                      <span className="mr-1">{section.icon}</span>
+                      <span className="text-xs">{section.name}</span>
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
-
-            {/* Project Management */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-lg">
-              <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">Project</h3>
+              </div>
               
-              <div className="space-y-2">
-                <button
-                  onClick={saveProject}
-                  className="w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
-                >
-                  Save Project (Ctrl+S)
-                </button>
-                
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleProjectLoad}
-                  className="hidden"
-                  id="projectLoad"
-                />
-                <label
-                  htmlFor="projectLoad"
-                  className="block w-full px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-center cursor-pointer transition-colors"
-                >
-                  Load Project
-                </label>
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold mb-2">Character Type</h4>
+                <div className="flex space-x-2">
+                  <button
+                    className={`flex-1 p-2 rounded flex items-center justify-center ${characterGender === 'male' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    onClick={() => setCharacterGender('male')}
+                  >
+                    <User size={16} className="mr-1" />
+                    <span className="text-xs">Male</span>
+                  </button>
+                  <button
+                    className={`flex-1 p-2 rounded flex items-center justify-center ${characterGender === 'female' ? 'bg-pink-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    onClick={() => setCharacterGender('female')}
+                  >
+                    <UserCheck size={16} className="mr-1" />
+                    <span className="text-xs">Female</span>
+                  </button>
+                  <button
+                    className="p-2 rounded bg-purple-700 hover:bg-purple-600"
+                    onClick={() => setShowTemplates(true)}
+                  >
+                    <Folder size={16} />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+          
+          {showUIPanel === 'animation' && (
+            <div>
+              <h3 className="text-lg font-bold mb-3">Animation</h3>
+              
+              <div className="bg-gray-700 p-3 rounded mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Animation Settings</h4>
+                </div>
+                
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400">Speed:</span>
+                  <div className="flex items-center">
+                    <input 
+                      type="range" 
+                      min="1" 
+                      max="10" 
+                      defaultValue="5"
+                      className="w-24"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">Frames:</span>
+                  <span className="text-xs">{frames.length}</span>
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <button
+                  className={`w-full p-2 rounded bg-green-600 hover:bg-green-700 flex items-center justify-center ${showAnimationTimeline ? 'mb-3' : ''}`}
+                  onClick={() => setShowAnimationTimeline(!showAnimationTimeline)}
+                >
+                  <span className="mr-1">{showAnimationTimeline ? 'Hide' : 'Show'} Timeline</span>
+                  {showAnimationTimeline ? <Eye size={16} /> : <Play size={16} />}
+                </button>
+              </div>
+              
+              <div className="bg-gray-700 p-3 rounded">
+                <h4 className="text-sm font-semibold mb-2">Animation Tips</h4>
+                <ul className="text-xs text-gray-400 space-y-1 list-disc pl-4">
+                  <li>Add frames for character animations</li>
+                  <li>Use onion skinning for smoother animations</li>
+                  <li>Animations can increase rarity level</li>
+                  <li>Export as sprite sheet or animated GIF</li>
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* NFT Preview Modal */}
-        {mintPreviewVisible && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-white">NFT Preview</h2>
-                <button
-                  onClick={() => setMintPreviewVisible(false)}
-                  className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                >
-                  ✕
-                </button>
-              </div>
-              
-              <div className="text-center mb-4">
-                <div className="inline-block border-2 border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden mb-4">
-                  <div
-                    className="bg-white"
-                    style={{
-                      width: 200,
-                      height: 200,
-                      backgroundImage: showGrid 
-                        ? `linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)`
-                        : undefined,
-                      backgroundSize: showGrid 
-                        ? `${200 / parseInt(canvasSize.split('x')[0])}px ${200 / parseInt(canvasSize.split('x')[0])}px`
-                        : undefined,
-                      position: 'relative'
-                    }}
-                  >
-                    {getCurrentPixels().map((pixel, index) => {
-                      const layer = layers.find(l => l.id === pixel.layerId);
-                      const pixelSize = 200 / parseInt(canvasSize.split('x')[0]);
-                      
-                      return (
-                        <div
-                          key={`preview-${pixel.x}-${pixel.y}-${pixel.layerId}-${index}`}
-                          style={{
-                            position: 'absolute',
-                            left: pixel.x * pixelSize,
-                            top: pixel.y * pixelSize,
-                            width: pixelSize,
-                            height: pixelSize,
-                            backgroundColor: pixel.color,
-                            opacity: layer?.opacity || 1,
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-                
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">
-                  Pixel Art #{Date.now() % 10000}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  {canvasSize} • {getCurrentPixels().length} pixels • {frames.length} frame{frames.length !== 1 ? 's' : ''}
-                </p>
-                
-                <div className="space-y-2">
-                  <button className="w-full px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors">
-                    Mint as NFT
-                  </button>
-                  <button className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
-                    Share to Gallery
-                  </button>
-                  <button 
-                    onClick={exportAsPNG}
-                    className="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
-                  >
-                    Download PNG
-                  </button>
-                </div>
-              </div>
+        
+        {/* Main Content Area - Canvas */}
+        <div className="flex-1 relative flex flex-col bg-gray-900 overflow-hidden">
+          {showAnimationTimeline && (
+            <div className="px-4 py-2">
+              <AnimationTimeline />
+            </div>
+          )}
+          
+          <div className="flex-1 flex items-center justify-center overflow-auto p-4">
+            <div 
+              style={{ 
+                transform: `scale(${zoom/100})`, 
+                transformOrigin: 'center',
+                boxShadow: '0 0 20px rgba(0,0,0,0.5)'
+              }}
+              className="bg-gray-300 relative"
+            >
+              <canvas 
+                ref={canvasRef} 
+                width={canvasSize.width} 
+                height={canvasSize.height}
+                className="bg-transparent cursor-crosshair"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              />
             </div>
           </div>
-        )}
-
-        {/* Keyboard Shortcuts Help */}
-        <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg p-4 shadow-lg">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">Keyboard Shortcuts</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-            <div>
-              <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Tools</h4>
-              <div className="space-y-1 text-gray-600 dark:text-gray-400">
-                <div>P - Pencil tool</div>
-                <div>E - Eraser tool</div>
-                <div>F - Fill tool</div>
-                <div>I - Eyedropper tool</div>
+          
+          {/* Status Bar */}
+          <div className="bg-gray-800 border-t border-gray-700 px-4 py-1 flex items-center justify-between text-xs text-gray-400">
+            <div className="flex items-center space-x-4">
+              <div>
+                Canvas: {canvasSize.width}×{canvasSize.height}px
+              </div>
+              <div>
+                Zoom: {zoom}%
+              </div>
+              <div>
+                Tool: {advancedTools.find(t => t.id === selectedTool)?.name || selectedTool}
+              </div>
+              <div>
+                Section: {characterSections.find(s => s.id === activeSection)?.name}
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded mr-1" style={{ backgroundColor: currentColor }}></div>
+                <span>{currentColor.toUpperCase()}</span>
               </div>
             </div>
             <div>
-              <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Actions</h4>
-              <div className="space-y-1 text-gray-600 dark:text-gray-400">
-                <div>Ctrl+Z - Undo</div>
-                <div>Ctrl+Shift+Z - Redo</div>
-                <div>Ctrl+S - Save project</div>
-                <div>Ctrl+E - Export PNG</div>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">View</h4>
-              <div className="space-y-1 text-gray-600 dark:text-gray-400">
-                <div>G - Toggle grid</div>
-                <div>Space - Play/pause animation</div>
-              </div>
+              Rarity Level: <span className="font-semibold">{rarityLevel.charAt(0).toUpperCase() + rarityLevel.slice(1)}</span>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Modals and Overlays */}
+      {showTutorial && <TutorialOverlay />}
+      {showTemplates && <TemplatesPanel />}
+      {mintPreview && <MintPreviewPanel />}
     </div>
   );
 };
 
-export default CreatePage;
+export default PixelForgeCreator;
