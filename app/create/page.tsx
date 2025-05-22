@@ -554,20 +554,36 @@ const PixelForgeCreator = () => {
     }
   };
 
-  const toggleLayerVisibility = (id) => {
-    setLayers(layers.map(layer => 
+  interface Layer {
+    id: number;
+    name: string;
+    visible: boolean;
+    locked: boolean;
+    opacity: number;
+  }
+
+  const toggleLayerVisibility = (id: number) => {
+    setLayers(layers.map((layer: Layer) => 
       layer.id === id ? { ...layer, visible: !layer.visible } : layer
     ));
   };
 
-  const toggleLayerLock = (id) => {
-    setLayers(layers.map(layer => 
+  interface ToggleLayerLock {
+    (id: number): void;
+  }
+
+  const toggleLayerLock: ToggleLayerLock = (id) => {
+    setLayers(layers.map((layer: Layer) => 
       layer.id === id ? { ...layer, locked: !layer.locked } : layer
     ));
   };
 
-  const updateLayerOpacity = (id, opacity) => {
-    setLayers(layers.map(layer => 
+  interface UpdateLayerOpacity {
+    (id: number, opacity: number): void;
+  }
+
+  const updateLayerOpacity: UpdateLayerOpacity = (id, opacity) => {
+    setLayers(layers.map((layer: Layer) => 
       layer.id === id ? { ...layer, opacity } : layer
     ));
   };
