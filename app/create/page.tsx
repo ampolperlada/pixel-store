@@ -479,6 +479,7 @@ const PixelForgeCreator = () => {
 
   const exportNFT = () => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const link = document.createElement('a');
     link.download = `nft-character-${characterGender}-${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
@@ -695,7 +696,7 @@ const PixelForgeCreator = () => {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {characterTemplates[characterGender].map((template) => (
+            {characterTemplates[characterGender as 'male' | 'female'].map((template) => (
               <div key={template.name} className="bg-gray-700 rounded-lg p-3 hover:bg-gray-600 cursor-pointer">
 <div className="w-full h-32 bg-gray-600 flex items-center justify-center mb-2">
                   <img src={template.preview} alt={template.name} className="max-h-full" />
