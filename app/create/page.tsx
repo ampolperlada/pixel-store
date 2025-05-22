@@ -593,7 +593,7 @@ const PixelForgeCreator = () => {
     // Here we'll just simulate it with a random selection
     const rarities = ['common', 'rare', 'legendary'];
     const randomRarity = rarities[Math.floor(Math.random() * rarities.length)];
-    setRarityLevel(randomRarity);
+    setRarityLevel(randomRarity as 'common' | 'rare' | 'legendary');
     return randomRarity;
   };
 
@@ -610,7 +610,11 @@ const PixelForgeCreator = () => {
     setSymmetryEnabled(!symmetryEnabled);
   };
 
-  const changeSymmetryAxis = (axis) => {
+  interface ChangeSymmetryAxis {
+    (axis: 'vertical' | 'horizontal' | 'both'): void;
+  }
+
+  const changeSymmetryAxis: ChangeSymmetryAxis = (axis) => {
     setSymmetryAxis(axis);
   };
 
