@@ -548,9 +548,13 @@ const PixelForgeCreator = () => {
     setActiveLayer(newLayer.id);
   };
 
-  const deleteLayer = (id) => {
+  interface DeleteLayer {
+    (id: number): void;
+  }
+
+  const deleteLayer: DeleteLayer = (id) => {
     if (layers.length <= 1) return; // Prevent deleting the last layer
-    const newLayers = layers.filter(layer => layer.id !== id);
+    const newLayers = layers.filter((layer: Layer) => layer.id !== id);
     setLayers(newLayers);
     if (activeLayer === id) {
       setActiveLayer(newLayers[0].id);
