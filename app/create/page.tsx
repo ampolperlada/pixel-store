@@ -467,59 +467,68 @@ const PixelForgeCreator = () => {
   }
 };
 
-  const redo = () => {
-    if (historyStep < history.length - 1) {
-      setHistoryStep(historyStep + 1);
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      img.onload = () => {
-        if (!ctx) return;
-        ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
-        ctx.drawImage(img, 0, 0);
-      };
-      img.src = history[historyStep + 1];
-    }
-  };
-
-  const exportNFT = () => {
+ const redo = () => {
+  if (historyStep < history.length - 1) {
+    setHistoryStep(historyStep + 1);
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const link = document.createElement('a');
-    link.download = `nft-character-${characterGender}-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  };
-
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
-    saveToHistory();
-  };
-
-  const saveProject = () => {
-    const canvas = canvasRef.current;
-    const imageData = canvas.toDataURL();
-    const projectData = {
-      id: Date.now(),
-      name: `NFT Character ${characterGender}`,
-      imageData,
-      canvasSize,
-      pixelSize,
-      characterGender,
-      activeSection,
-      layers,
-      timestamp: Date.now()
-    };
+    if (!canvas) return; // Add null check here
     
-    const saved = JSON.parse(localStorage.getItem('pixel-projects') || '[]');
-    saved.push(projectData);
-    localStorage.setItem('pixel-projects', JSON.stringify(saved));
-    setSavedProjects(saved);
-    alert('Project saved successfully!');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return; // Also check context
+    
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
+      ctx.drawImage(img, 0, 0);
+    };
+    img.src = history[historyStep + 1];
+  }
+};
+
+const exportNFT = () => {
+  const canvas = canvasRef.current;
+  if (!canvas) return; // This check was already there, good!
+  
+  const link = document.createElement('a');
+  link.download = `nft-character-${characterGender}-${Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+};
+
+const clearCanvas = () => {
+  const canvas = canvasRef.current;
+  if (!canvas) return; // Add null check here
+  
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  
+  ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
+  saveToHistory();
+};
+
+const saveProject = () => {
+  const canvas = canvasRef.current;
+  if (!canvas) return; // Add null check here
+  
+  const imageData = canvas.toDataURL();
+  const projectData = {
+    id: Date.now(),
+    name: `NFT Character ${characterGender}`,
+    imageData,
+    canvasSize,
+    pixelSize,
+    characterGender,
+    activeSection,
+    layers,
+    timestamp: Date.now()
   };
+  
+  const saved = JSON.parse(localStorage.getItem('pixel-projects') || '[]');
+  saved.push(projectData);
+  localStorage.setItem('pixel-projects', JSON.stringify(saved));
+  setSavedProjects(saved);
+  alert('Project saved successfully!');
+};
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
