@@ -459,6 +459,7 @@ const PixelForgeCreator = () => {
     
     const img = new Image();
     img.onload = () => {
+      if (!ctx) return;
       ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
       ctx.drawImage(img, 0, 0);
     };
@@ -473,6 +474,7 @@ const PixelForgeCreator = () => {
       const ctx = canvas.getContext('2d');
       const img = new Image();
       img.onload = () => {
+        if (!ctx) return;
         ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
         ctx.drawImage(img, 0, 0);
       };
