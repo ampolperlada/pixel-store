@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Download, Upload, Undo, Redo, Grid, Palette, Brush, Eye, Save, Folder, Settings, Play, Square, User, UserCheck, Layers, HelpCircle, BookOpen, Zap, Target, Ruler, Lock, Unlock, RotateCcw, Copy, Trash2, Move, ZoomIn, ZoomOut, Lightbulb, Star, X, Monitor, FilePlus, Edit3, AlertTriangle, Copy as CopyIcon, RefreshCw } from 'lucide-react';
 
