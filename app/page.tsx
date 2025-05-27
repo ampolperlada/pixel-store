@@ -39,7 +39,7 @@ export default function Home() {
 
       <ArtistShowcase />
 
-      {/* <TrendingSection /> */}
+      <TrendingSection /> 
 
       <HowItWorks />
 
