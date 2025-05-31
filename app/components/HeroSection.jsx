@@ -141,4 +141,20 @@ export default function HeroSection() {
         
         <div className="absolute bottom-4 left-4 text-xs text-green-400 font-mono opacity-60">
           <div className="animate-pulse">[STATUS: CONNECTED]</div>
-          <div
+          <div className="animate-bounce mt-1">▲ ▼ ▶ ◀</div>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 1s ease-out;
+        }
+      `}</style>
+    </section>
+  );
+}
