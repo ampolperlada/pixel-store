@@ -40,10 +40,10 @@ export default function HeroSection() {
 
   const getTileColor = (index) => {
     if (hoveredTile === index) {
-      const colors = ['bg-pink-500/40', 'bg-purple-500/40', 'bg-cyan-500/40', 'bg-yellow-500/40'];
-      return colors[index % colors.length];
+      const colors = ['bg-pink-500/60', 'bg-purple-500/60', 'bg-cyan-500/60', 'bg-yellow-500/60'];
+      return `${colors[index % colors.length]} border-2 border-white/50 shadow-lg transform scale-110 z-20`;
     }
-    return 'hover:bg-blue-500/30';
+    return 'hover:bg-blue-500/20 hover:border-blue-300/30 transition-all duration-200';
   };
 
   return (
@@ -52,14 +52,18 @@ export default function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-r from-purple-900 to-blue-900 opacity-70"></div>
       
       {/* Animated pixel grid */}
-      <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 opacity-20">
+      <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 opacity-30">
         {Array(144).fill(0).map((_, i) => (
           <div 
             key={i} 
-            className={`border border-blue-500/20 transition-all duration-300 cursor-pointer ${getTileColor(i)}`}
+            className={`border border-blue-500/20 transition-all duration-200 cursor-pointer relative ${getTileColor(i)}`}
             onMouseEnter={() => setHoveredTile(i)}
             onMouseLeave={() => setHoveredTile(null)}
-          />
+          >
+            {hoveredTile === i && (
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent animate-pulse" />
+            )}
+          </div>
         ))}
       </div>
 
