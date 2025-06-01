@@ -5,9 +5,29 @@ import React, { useState, useEffect } from 'react';
 export default function HeroSection() {
   const [hoveredTile, setHoveredTile] = useState(null);
   const [rockets, setRockets] = useState([]);
+  const [particles, setParticles] = useState([]);
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure we're on the client before rendering random elements
+  useEffect(() => {
+    setIsClient(true);
+    
+    // Generate particles only on client
+    const generatedParticles = Array(20).fill(0).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      animationDelay: Math.random() * 2,
+      animationDuration: 2 + Math.random() * 3
+    }));
+    
+    setParticles(generatedParticles);
+  }, []);
 
   // Generate flying rockets periodically
   useEffect(() => {
+    if (!isClient) return;
+    
     const spawnRocket = () => {
       const newRocket = {
         id: Math.random(),
@@ -21,10 +41,12 @@ export default function HeroSection() {
 
     const interval = setInterval(spawnRocket, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isClient]);
 
   // Animate rockets
   useEffect(() => {
+    if (!isClient) return;
+    
     const animateRockets = () => {
       setRockets(prev => prev
         .map(rocket => ({
@@ -32,13 +54,13 @@ export default function HeroSection() {
           x: rocket.x + rocket.speed,
           trail: [...rocket.trail.slice(-8), { x: rocket.x, y: rocket.y }]
         }))
-        .filter(rocket => rocket.x < window.innerWidth + 100)
+        .filter(rocket => rocket.x < (typeof window !== 'undefined' ? window.innerWidth + 100 : 1200))
       );
     };
 
     const animationFrame = setInterval(animateRockets, 50);
     return () => clearInterval(animationFrame);
-  }, []);
+  }, [isClient]);
 
   const getTileColor = (index) => {
     if (hoveredTile === index) {
@@ -69,8 +91,8 @@ export default function HeroSection() {
         ))}
       </div>
 
-      {/* Flying rockets */}
-      {rockets.map(rocket => (
+      {/* Flying rockets - only render on client */}
+      {isClient && rockets.map(rocket => (
         <div key={rocket.id} className="absolute pointer-events-none z-5">
           {/* Rocket trail */}
           {rocket.trail.map((point, idx) => (
@@ -101,21 +123,23 @@ export default function HeroSection() {
         </div>
       ))}
 
-      {/* Floating particles */}
-      <div className="absolute inset-0 z-5">
-        {Array(20).fill(0).map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-cyan-300/60 rounded-full animate-bounce"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 2}s`,
-              animationDuration: `${2 + Math.random() * 3}s`
-            }}
-          />
-        ))}
-      </div>
+      {/* Floating particles - only render on client */}
+      {isClient && (
+        <div className="absolute inset-0 z-5">
+          {particles.map((particle) => (
+            <div
+              key={particle.id}
+              className="absolute w-1 h-1 bg-cyan-300/60 rounded-full animate-bounce"
+              style={{
+                left: `${particle.left}%`,
+                top: `${particle.top}%`,
+                animationDelay: `${particle.animationDelay}s`,
+                animationDuration: `${particle.animationDuration}s`
+              }}
+            />
+          ))}
+        </div>
+      )}
       
       {/* Main content */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-4 text-center">
