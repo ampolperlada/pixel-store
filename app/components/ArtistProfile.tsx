@@ -11,6 +11,16 @@ interface ArtistProfileProps {
   sales?: number;
 }
 
+interface PortfolioItem {
+  id: number;
+  title: string;
+  image: string;
+  price: number;
+  likes: number;
+  views: number;
+  category: string;
+}
+
 const ArtistProfile: React.FC<ArtistProfileProps> = ({
   artistName = "PixelMaster",
   specialization = "Character Design",
