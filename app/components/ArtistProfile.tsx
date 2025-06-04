@@ -284,7 +284,7 @@ const ArtistProfile: React.FC<ArtistProfileProps> = ({
                   </div>
                   <div className="flex-grow">
                     <p className="text-white">
-                      <span className="font-semibold">Created new artwork</span>
+                      <span classNam="font-semiold">Created new artwork</span>
                       <span className="text-gray-400"> - "Cyberpunk Warrior"</span>
                    </p>
                     <p className="text-sm text-gray-400">3 hours ago</p>
