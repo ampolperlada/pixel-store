@@ -1,15 +1,6 @@
 import React, { useState } from 'react';
 import { Star, Heart, Eye, Share2, MessageCircle, Calendar, MapPin, Award, TrendingUp, Users } from 'lucide-react';
 
-interface PortfolioItem {
-  id: number;
-  title: string;
-  image: string;
-  price: number;
-  likes: number;
-  views: number;
-  category: string;
-}
 
 interface ArtistProfileProps {
   artistName?: string;
