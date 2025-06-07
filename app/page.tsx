@@ -20,70 +20,11 @@ import HowItWorks from "./components/HowItWorks";
 import RoyaltySystem from "./components/Royalty";
 import TrendingSection from './components/TrendingSection';
 import ProtectedRoute from './components/ProtectedRoute';
-import ArtistProfile from './components/ArtistProfile';
+
 
 export default function Home() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignupOpen, setIsSignupOpen] = useState(false);
-  const [showProfile, setShowProfile] = useState<string | null>(null);
-
-  // Sample artist data - you can replace this with real data
-  const artistProfiles = {
-    pixelmaster: {
-      artistName: "PixelMaster",
-      specialization: "Character Design",
-      earned: 12450,
-      followers: 1250,
-      rating: 4.9,
-      sales: 28
-    },
-    bitcreator: {
-      artistName: "BitCreator",
-      specialization: "Environment Art",
-      earned: 8320,
-      followers: 980,
-      rating: 4.7,
-      sales: 19
-    },
-    pixelpro: {
-      artistName: "PixelPro",
-      specialization: "UI/UX Elements",
-      earned: 9650,
-      followers: 1120,
-      rating: 4.8,
-      sales: 24
-    }
-  };
-
-  const handleViewProfile = (artistId: string) => {
-    setShowProfile(artistId);
-  };
-
-  const handleBackToHome = () => {
-    setShowProfile(null);
-  };
-
-  // If showing a profile, render the profile component
-  if (showProfile && artistProfiles[showProfile as keyof typeof artistProfiles]) {
-    return (
-      <div>
-        {/* Back button */}
-        <div className="fixed top-4 left-4 z-50">
-          <button
-            onClick={handleBackToHome}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
-          >
-            <span>←</span>
-            <span>Back to Home</span>
-          </button>
-        </div>
-        
-        <ArtistProfile 
-          {...artistProfiles[showProfile as keyof typeof artistProfiles]}
-        />
-      </div>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -96,10 +37,7 @@ export default function Home() {
       {/* Featured Artwork Carousel */}
       <FeaturedArtworkCarousel featuredArt={featuredArt} />
 
-      {/* Artist Showcase with Profile Integration */}
-      <div className="relative">
-        <ArtistShowcase onViewProfile={handleViewProfile} />
-      </div>
+      <ArtistShowcase />
 
       <TrendingSection /> 
 
