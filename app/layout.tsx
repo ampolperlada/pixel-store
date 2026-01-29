@@ -6,7 +6,7 @@ import "./globals.css";
 // Global context providers
 import Providers from "./provider";
 import { AuthProvider } from './components/context/AuthContext';
-import { ModalProvider, useModal } from './components/context/ModalContext'; // ✅ modal context
+import { ModalProvider, useModal } from './components/context/ModalContext';
 import { SessionProvider } from 'next-auth/react';
 
 // Import your LoginModal component
@@ -40,15 +40,19 @@ export default function RootLayout({ children }: LayoutProps) {
   return (
     <html lang="en">
       <head>
-        <title>My App</title>
+        <title>Pixel Store - Digital Art Marketplace for Creators</title>
+        <meta name="description" content="Buy, sell, and create unique pixel art NFTs. Join thousands of artists and collectors in the future of digital art." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta property="og:title" content="Pixel Store - Digital Art Marketplace" />
+        <meta property="og:description" content="Join 10,000+ creators building the future of digital art" />
+        <meta property="og:type" content="website" />
       </head>
       <body style={{ backgroundColor: 'black', color: 'white' }}>
         <SessionProvider>
           <Providers>
             <AuthProvider>
               <ModalProvider>
-                <LayoutContent>{children}</LayoutContent> {/* ✅ Main content with modal support */}
+                <LayoutContent>{children}</LayoutContent>
               </ModalProvider>
             </AuthProvider>
           </Providers>
