@@ -14,11 +14,30 @@ export default function WaitlistPage() {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, role }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Failed to join waitlist');
+        setLoading(false);
+        return;
+      }
+
       setSubmitted(true);
+    } catch (error) {
+      console.error('Waitlist error:', error);
+      alert('Something went wrong. Please try again.');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   if (submitted) {
