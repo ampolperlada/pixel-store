@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 export default function HeroSection() {
   const [hoveredTile, setHoveredTile] = useState(null);
@@ -327,17 +328,26 @@ export default function HeroSection() {
         </p>
         
         <div className="flex flex-wrap justify-center gap-4">
-          <button className="group px-6 py-3 bg-gradient-to-r from-pink-600 to-pink-500 text-white font-bold hover:from-pink-700 hover:to-pink-600 transition-all duration-300 border-2 border-pink-400 shadow-lg shadow-pink-500/50 hover:shadow-pink-500/80 hover:scale-105 active:scale-95 transform backdrop-blur-sm">
+          <Link 
+            href="/explore"
+            className="group px-6 py-3 bg-gradient-to-r from-pink-600 to-pink-500 text-white font-bold hover:from-pink-700 hover:to-pink-600 transition-all duration-300 border-2 border-pink-400 shadow-lg shadow-pink-500/50 hover:shadow-pink-500/80 hover:scale-105 active:scale-95 transform backdrop-blur-sm"
+          >
             <span className="group-hover:animate-pulse">EXPLORE ART</span>
-          </button>
+          </Link>
           
-          <button className="group px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold hover:from-purple-700 hover:to-purple-600 transition-all duration-300 border-2 border-purple-400 shadow-lg shadow-purple-500/50 hover:shadow-purple-500/80 hover:scale-105 active:scale-95 transform backdrop-blur-sm">
+          <Link 
+            href="/create"
+            className="group px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold hover:from-purple-700 hover:to-purple-600 transition-all duration-300 border-2 border-purple-400 shadow-lg shadow-purple-500/50 hover:shadow-purple-500/80 hover:scale-105 active:scale-95 transform backdrop-blur-sm"
+          >
             <span className="group-hover:animate-pulse">CREATE PIXEL ART</span>
-          </button>
+          </Link>
           
-          <button className="group px-6 py-3 bg-transparent text-cyan-300 font-bold hover:text-cyan-100 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 transition-all duration-300 border-2 border-cyan-500 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/60 hover:scale-105 active:scale-95 transform backdrop-blur-sm">
+          <Link 
+            href="/games"
+            className="group px-6 py-3 bg-transparent text-cyan-300 font-bold hover:text-cyan-100 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 transition-all duration-300 border-2 border-cyan-500 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/60 hover:scale-105 active:scale-95 transform backdrop-blur-sm"
+          >
             <span className="group-hover:animate-pulse">GAMES INTEGRATION</span>
-          </button>
+          </Link>
         </div>
 
         {/* Enhanced cyberpunk elements */}
