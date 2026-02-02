@@ -36,13 +36,12 @@ const NavBar = ({ transparent = false }) => {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <NavLink href="/explore">Explore</NavLink>
-            <NavLink href="/create">Create</NavLink>
-            <NavLink href="/games">Games</NavLink>
-            <NavLink href="/community">Community</NavLink>
-          </div>
+         {/* Desktop Navigation */}
+<div className="hidden md:flex items-center space-x-8">
+  <NavLink href="/explore">EXPLORE ART</NavLink>
+  <NavLink href="/create">CREATE PIXEL ART</NavLink>
+  <NavLink href="/games">GAMES INTEGRATION</NavLink>
+</div>
 
           {/* Action Buttons */}
           <div className="flex items-center space-x-4">
