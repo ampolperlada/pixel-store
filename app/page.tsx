@@ -38,7 +38,7 @@ export default function Home() {
       {/* Featured Artwork Carousel */}
       <FeaturedArtworkCarousel featuredArt={featuredArt} />
 
-      <ArtistShowcase />
+      <ArtistShowcase /> 
 
       <TrendingSection /> 
 
