@@ -15,6 +15,10 @@ const nextConfig = {
     }
     return config
   },
+  // Disable static optimization for all pages
+  experimental: {
+    isrMemoryCacheSize: 0,
+  },
 }
 
 module.exports = nextConfig

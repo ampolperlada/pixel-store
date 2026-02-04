@@ -6,60 +6,53 @@ import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from './context/AuthContext';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   triggerReason?: string;
   onSwitchToSignup?: () => void;
-  onLoginSuccess?: () => void; // Add 
-  
-
-}
-
-interface LoginModalProps { 
-  isOpen: boolean;
-  onClose: () => void;
-  onSignupClick?: () => void; // Add the optional onSignupClick prop
-  onLoginSuccess?: () => void; // Add the optional onLoginSuccess prop
+  onLoginSuccess?: () => void;
 }
 
 const GoogleReCAPTCHA = dynamic(() => import('react-google-recaptcha'), {
   ssr: false,
 });
 
-const LoginModal: React.FC<LoginModalProps> = ({ 
-  isOpen, 
-  onClose, 
+// Inner component that safely uses useSearchParams
+function LoginModalContent({
+  isOpen,
+  onClose,
   triggerReason,
   onSwitchToSignup,
-  onLoginSuccess
-}) => {
+  onLoginSuccess,
+}: LoginModalProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get('callbackUrl') || '/';
   const { login } = useAuth();
-  
+
   // Form states
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     rememberMe: false,
   });
-  
+
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [serverErrorType, setServerErrorType] = useState<'auth' | 'server' | 'network' | null>(null);
-  
+
   // Forgot password states
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [forgotPasswordStatus, setForgotPasswordStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [forgotPasswordError, setForgotPasswordError] = useState('');
 
-  // Check for error in URL params (for when users are redirected back after failed auth)
+  // Check for error in URL params
   useEffect(() => {
     const error = searchParams?.get('error');
     if (error === 'CredentialsSignin') {
@@ -72,7 +65,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   const handleClose = () => {
-    // Reset all states
     setFormData({
       username: '',
       password: '',
@@ -86,7 +78,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     setForgotPasswordStatus('idle');
     setForgotPasswordError('');
     setServerErrorType(null);
-    
+
     onClose();
   };
 
@@ -97,7 +89,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
       [name]: type === 'checkbox' ? checked : value,
     }));
 
-    // Clear error for this field if it exists
     if (formErrors[name]) {
       setFormErrors((prev) => {
         const newErrors = { ...prev };
@@ -105,8 +96,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         return newErrors;
       });
     }
-    
-    // Also clear field-specific errors
+
     if (fieldErrors[name]) {
       setFieldErrors((prev) => {
         const newErrors = { ...prev };
@@ -115,7 +105,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
       });
     }
 
-    // Clear any server errors when the user starts typing again
     if (serverErrorType) {
       setServerErrorType(null);
       setFormErrors((prev) => {
@@ -134,12 +123,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
       errors.username = 'Username is required';
       field_errors.username = 'Please enter your username';
     }
-    
+
     if (!formData.password) {
       errors.password = 'Password is required';
       field_errors.password = 'Please enter your password';
     }
-    
+
     if (!captchaToken && !forgotPasswordMode) {
       errors.captcha = 'Please complete the CAPTCHA';
     }
@@ -149,58 +138,54 @@ const LoginModal: React.FC<LoginModalProps> = ({
     return Object.keys(errors).length === 0;
   };
 
-
   const handleAuthError = (error: string) => {
     console.log('Handling auth error:', error);
-    
-    // Map backend errors to user-friendly messages
-    const errorMap: Record<string, { 
-      message: string, 
-      field?: string,
-      type: 'auth' | 'server' | 'network'
-    }> = {
-      'Invalid credentials': { 
-        message: 'The username or password you entered is incorrect', 
+
+    const errorMap: Record<
+      string,
+      { message: string; field?: string; type: 'auth' | 'server' | 'network' }
+    > = {
+      'Invalid credentials': {
+        message: 'The username or password you entered is incorrect',
         field: 'password',
-        type: 'auth'
+        type: 'auth',
       },
       'User not found': {
         message: 'No account found with this username',
         field: 'username',
-        type: 'auth'
+        type: 'auth',
       },
-      'CredentialsSignin': {
+      CredentialsSignin: {
         message: 'Invalid login credentials',
-        type: 'auth'
+        type: 'auth',
       },
-      'Database timeout': { 
-        message: 'Our servers are busy right now. Please try again in a moment.', 
-        type: 'server'
+      'Database timeout': {
+        message: 'Our servers are busy right now. Please try again in a moment.',
+        type: 'server',
       },
-      'Authentication service unavailable': { 
-        message: 'Login service is currently undergoing maintenance', 
-        type: 'server'
+      'Authentication service unavailable': {
+        message: 'Login service is currently undergoing maintenance',
+        type: 'server',
       },
-      'Database service unavailable': { 
-        message: 'System maintenance in progress. Please try again later.', 
-        type: 'server'
+      'Database service unavailable': {
+        message: 'System maintenance in progress. Please try again later.',
+        type: 'server',
       },
       'Network error': {
         message: 'Unable to connect to our servers. Please check your internet connection.',
-        type: 'network'
-      }
+        type: 'network',
+      },
     };
-    
-    // Look up the error message. If not found in our map, default to an auth issue
-    const errorInfo = errorMap[error] || { 
-      message: 'Login failed. Please check your credentials and try again.',
-      type: 'auth'
-    };
-    
+
+    const errorInfo =
+      errorMap[error] || {
+        message: 'Login failed. Please check your credentials and try again.',
+        type: 'auth',
+      };
+
     setServerErrorType(errorInfo.type);
     setFormErrors({ submit: errorInfo.message });
-    
-    // Set field-specific error if applicable
+
     if (errorInfo.field) {
       setFieldErrors({ [errorInfo.field]: errorInfo.message });
     }
@@ -221,7 +206,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         password: formData.password,
         rememberMe: formData.rememberMe.toString(),
         redirect: false,
-        callbackUrl: callbackUrl
+        callbackUrl: callbackUrl,
       });
 
       if (result?.error) {
@@ -231,7 +216,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
       }
 
       if (result?.ok) {
-        // Call the onLoginSuccess callback before redirecting
         if (onLoginSuccess) {
           onLoginSuccess();
         }
@@ -244,7 +228,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
         }
       }
     } catch (error) {
-      // Error is already handled in handleAuthError
       console.error('Login error:', error);
     } finally {
       setIsSubmitting(false);
@@ -252,8 +235,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   const handleGoogleLogin = () => {
-    signIn('google', { 
-      callbackUrl: callbackUrl !== '/' ? decodeURIComponent(callbackUrl) : window.location.origin 
+    signIn('google', {
+      callbackUrl: callbackUrl !== '/' ? decodeURIComponent(callbackUrl) : window.location.origin,
     });
   };
 
@@ -271,16 +254,15 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setForgotPasswordError('');
-    
+
     if (!forgotPasswordEmail) {
       setForgotPasswordError('Email is required');
       return;
     }
-  
+
     setForgotPasswordStatus('sending');
-    
+
     try {
-      // Replace with your actual API endpoint
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: {
@@ -288,34 +270,26 @@ const LoginModal: React.FC<LoginModalProps> = ({
         },
         body: JSON.stringify({ email: forgotPasswordEmail }),
       });
-      
-      // First check if response is OK
+
       if (!response.ok) {
-        // Try to parse as JSON, but fall back to text if parsing fails
         let errorText;
         try {
           const errorData = await response.json();
           errorText = errorData.message || 'Failed to send reset link';
-        } catch (parseError) {
-          // If JSON parsing fails, get the text instead
+        } catch {
           errorText = await response.text();
-          console.error('Response parsing error:', parseError);
-          console.log('Raw response:', errorText);
           errorText = 'Server returned an invalid response. Please try again later.';
         }
         throw new Error(errorText);
       }
-      
-      // If we got here, the response was OK
+
       const data = await response.json();
       setForgotPasswordStatus('success');
     } catch (error) {
       console.error('Forgot password error:', error);
       setForgotPasswordStatus('error');
       setForgotPasswordError(
-        error instanceof Error
-          ? error.message
-          : 'An unexpected error occurred. Please try again.'
+        error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.',
       );
     }
   };
@@ -334,7 +308,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }
   }, [callbackUrl]);
 
-  // Function to get error message styling based on error type
   const getErrorStylesByType = (type: 'auth' | 'server' | 'network' | null) => {
     switch (type) {
       case 'auth':
@@ -343,10 +316,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
           borderColor: 'border-red-800/50',
           textColor: 'text-red-400',
           icon: (
-            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path>
+            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-          )
+          ),
         };
       case 'server':
         return {
@@ -354,10 +327,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
           borderColor: 'border-yellow-800/50',
           textColor: 'text-yellow-400',
           icon: (
-            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path>
+            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-          )
+          ),
         };
       case 'network':
         return {
@@ -365,10 +338,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
           borderColor: 'border-blue-800/50',
           textColor: 'text-blue-400',
           icon: (
-            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" clipRule="evenodd"></path>
+            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" clipRule="evenodd" />
             </svg>
-          )
+          ),
         };
       default:
         return {
@@ -376,15 +349,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
           borderColor: 'border-red-800/50',
           textColor: 'text-red-400',
           icon: (
-            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path>
+            <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-          )
+          ),
         };
     }
   };
 
-  // Function to get helpful suggestions based on error type
   const getErrorHelpText = (type: 'auth' | 'server' | 'network' | null) => {
     switch (type) {
       case 'auth':
@@ -406,7 +378,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         className="absolute inset-0 bg-black/90 backdrop-blur-md transition-opacity duration-300"
         onClick={handleClose}
       ></div>
-      
+
       <div className="relative w-full max-w-4xl bg-gradient-to-br from-gray-900 via-gray-800 to-black p-6 rounded-xl border border-cyan-500 shadow-lg shadow-cyan-500/20 flex flex-col md:flex-row">
         <button
           onClick={handleClose}
@@ -423,13 +395,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
           <h2 className="text-3xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
             {forgotPasswordMode ? 'Reset Password' : 'Welcome Back'}
           </h2>
-          
+
           {triggerReason && (
             <p className="text-sm text-gray-300 mb-4 text-center">
               You need to log in to {triggerReason}.
             </p>
           )}
-          
+
           {!forgotPasswordMode && (
             <>
               <div className="hidden md:block mt-8">
@@ -438,12 +410,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 </div>
                 <p className="text-gray-400 text-center mt-4">Secure login to access your account</p>
               </div>
-              
+
               <div className="mt-6 md:mt-auto text-center">
                 <p className="text-sm text-gray-500">
                   Don't have an account?{' '}
-                  <button 
-                    onClick={handleSwitchToSignup} 
+                  <button
+                    onClick={handleSwitchToSignup}
                     className="text-cyan-400 hover:underline font-medium"
                   >
                     Sign up
@@ -462,7 +434,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
               <p className="text-gray-300 mb-4">
                 Enter your email address and we'll send you a link to reset your password.
               </p>
-              
+
               {forgotPasswordStatus === 'success' ? (
                 <div className="p-4 bg-green-900/20 border border-green-800/50 rounded-lg">
                   <p className="text-green-400">
@@ -494,7 +466,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                       <p className="text-red-400 text-xs mt-1">{forgotPasswordError}</p>
                     )}
                   </div>
-                  
+
                   <div className="flex gap-3">
                     <button
                       type="button"
@@ -520,28 +492,27 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
           ) : (
             <>
-              {/* Enhanced error message with colored indicators and helpful text based on error type */}
               {formErrors.submit && (
                 <div>
                   {(() => {
                     const styles = getErrorStylesByType(serverErrorType);
                     const helpText = getErrorHelpText(serverErrorType);
-                    
+
                     return (
-                      <div className={`mb-4 ${styles.textColor} text-sm p-3 ${styles.bgColor} border ${styles.borderColor} rounded-lg`}>
+                      <div
+                        className={`mb-4 ${styles.textColor} text-sm p-3 ${styles.bgColor} border ${styles.borderColor} rounded-lg`}
+                      >
                         <div className="flex items-center">
                           {styles.icon}
                           <span className="font-medium">{formErrors.submit}</span>
                         </div>
-                        {helpText && (
-                          <p className="mt-1 ml-7 text-xs opacity-80">{helpText}</p>
-                        )}
+                        {helpText && <p className="mt-1 ml-7 text-xs opacity-80">{helpText}</p>}
                       </div>
                     );
                   })()}
                 </div>
               )}
-            
+
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div>
                   <label className="block text-cyan-300 text-sm font-medium mb-1">USERNAME</label>
@@ -550,7 +521,9 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     name="username"
                     value={formData.username}
                     onChange={handleInputChange}
-                    className={`w-full bg-gray-700/50 text-white border ${fieldErrors.username ? 'border-red-500' : 'border-gray-600'} rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                    className={`w-full bg-gray-700/50 text-white border ${
+                      fieldErrors.username ? 'border-red-500' : 'border-gray-600'
+                    } rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
                     placeholder="Enter your username"
                   />
                   {formErrors.username && (
@@ -565,7 +538,9 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`w-full bg-gray-700/50 text-white border ${fieldErrors.password ? 'border-red-500' : 'border-gray-600'} rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
+                    className={`w-full bg-gray-700/50 text-white border ${
+                      fieldErrors.password ? 'border-red-500' : 'border-gray-600'
+                    } rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent`}
                     placeholder="••••••••"
                   />
                   {fieldErrors.password && (
@@ -586,9 +561,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
                       onChange={handleInputChange}
                       className="w-4 h-4 border border-gray-600 rounded bg-gray-700 focus:ring-2 focus:ring-cyan-500"
                     />
-                    <label htmlFor="rememberMe" className="ml-2 text-cyan-300">Remember me</label>
+                    <label htmlFor="rememberMe" className="ml-2 text-cyan-300">
+                      Remember me
+                    </label>
                   </div>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setForgotPasswordMode(true)}
                     className="text-cyan-400 hover:underline"
@@ -610,7 +587,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     <p className="text-red-400 text-xs text-center mt-1">{formErrors.captcha}</p>
                   )}
                 </div>
-                
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -638,10 +615,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 </svg>
                 Continue with Google
               </button>
-              
+
               <div className="mt-6 text-center md:hidden">
                 <p className="text-sm text-gray-400 text-center mt-4">
-                  Don't have an account?{" "}
+                  Don't have an account?{' '}
                   <button
                     type="button"
                     onClick={handleSwitchToSignup}
@@ -656,6 +633,15 @@ const LoginModal: React.FC<LoginModalProps> = ({
         </div>
       </div>
     </div>
+  );
+}
+
+// Main exported component with Suspense
+const LoginModal: React.FC<LoginModalProps> = (props) => {
+  return (
+    <Suspense fallback={null}>
+      <LoginModalContent {...props} />
+    </Suspense>
   );
 };
 

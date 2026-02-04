@@ -22,6 +22,8 @@ import TrendingSection from './components/TrendingSection';
 import ProtectedRoute from './components/ProtectedRoute';
 import Footer from "./components/Footer";
 
+// ADD THIS LINE RIGHT HERE
+export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);

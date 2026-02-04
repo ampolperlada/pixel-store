@@ -1,8 +1,12 @@
 // app/login/page.tsx
 'use client';
+
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import LoginModal from '../components/LoginModal';
+
+// Add this to disable static generation
+export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,14 +14,13 @@ export default function LoginPage() {
 
   const handleClose = () => {
     setShowLoginModal(false);
-    router.push('/'); // Navigate back to home
+    router.push('/');
   };
 
   const handleSwitchToSignup = () => {
-    router.push('/signup'); // Navigate to signup page
+    router.push('/signup');
   };
 
-  // If modal is closed, navigate back
   useEffect(() => {
     if (!showLoginModal) {
       router.push('/');
