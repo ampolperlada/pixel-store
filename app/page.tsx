@@ -22,7 +22,6 @@ import TrendingSection from './components/TrendingSection';
 import ProtectedRoute from './components/ProtectedRoute';
 import Footer from "./components/Footer";
 
-// ADD THIS LINE RIGHT HERE
 export const dynamic = 'force-dynamic';
 
 export default function Home() {
@@ -31,6 +30,21 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-black text-white">
+      {/* Demo Banner - NEW */}
+      <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-b border-yellow-500/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-2 text-center">
+            <p className="text-yellow-200 font-semibold text-sm md:text-base">
+              🎨 <strong>Demo Portfolio Project</strong> - Showcasing UI/UX Design & Full-Stack Development
+            </p>
+          </div>
+          <p className="text-yellow-100/80 text-xs md:text-sm text-center mt-1">
+            <span className="hidden md:inline">Tech Stack: Next.js 15 • TypeScript • Prisma ORM • NextAuth • MetaMask Integration • </span>
+            <span className="text-yellow-400">Using sample data for demonstration</span>
+          </p>
+        </div>
+      </div>
+
       {/* Notification Bar */}
       <NotificationBar />
 
@@ -70,7 +84,7 @@ export default function Home() {
       <div className="text-center py-16 bg-gray-900">
         <div className="max-w-4xl mx-auto px-6">
           <div className="inline-block px-4 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm font-semibold mb-4 border border-purple-500/30">
-            ✨ BETA - Now Open to All Creators
+            ✨ DEMO FEATURE - Explore the UI
           </div>
           <h2 className="text-4xl font-bold mb-4 text-cyan-300">Launch Your Art Career Today</h2>
           <p className="text-gray-300 mb-8 max-w-2xl mx-auto text-lg">
@@ -80,11 +94,11 @@ export default function Home() {
             Start Creating (Free)
             <span>→</span>
           </Link>
-          <p className="text-gray-500 text-sm mt-4">No credit card required • Launch in minutes</p>
+          <p className="text-gray-500 text-sm mt-4">Demo Mode • Explore the interface</p>
         </div>
       </div>
 
-      {/* About Platform Section - NEW */}
+      {/* About Platform Section */}
       <div className="py-20 px-6 bg-gradient-to-b from-gray-900 to-black">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
