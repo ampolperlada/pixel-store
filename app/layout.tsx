@@ -5,9 +5,14 @@ import "./globals.css";
 import Providers from "./provider";
 import { AuthProvider } from './components/context/AuthContext';
 import { ModalProvider, useModal } from './components/context/ModalContext';
-// Remove SessionProvider import
 import LoginModal from './components/LoginModal';
 import NavBar from './components/layout/NavBar';
+
+// ADD THESE LINES
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+export const revalidate = 0;
+
 interface LayoutProps {
   children: ReactNode;
 }
