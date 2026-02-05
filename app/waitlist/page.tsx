@@ -50,9 +50,9 @@ export default function WaitlistPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-4xl font-bold mb-4">You're on the List!</h1>
+            <h1 className="text-4xl font-bold mb-4">You are on the List!</h1>
             <p className="text-xl text-gray-300 mb-8">
-              Thank you for joining the Pixel Store waitlist. We'll notify you as soon as we launch.
+              Thank you for joining the Pixel Store waitlist. We will notify you as soon as we launch.
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export default function WaitlistPage() {
                 </div>
                 <div>
                   <h4 className="font-semibold mb-1">Early Access Invitation</h4>
-                  <p className="text-gray-400 text-sm">You'll receive an exclusive invite before our public launch</p>
+                  <p className="text-gray-400 text-sm">You will receive an exclusive invite before our public launch</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -110,7 +110,6 @@ export default function WaitlistPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
       <div className="border-b border-white/10 bg-black/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <Link href="/" className="text-xl font-bold text-pink-400 hover:text-pink-300 transition">
@@ -119,7 +118,6 @@ export default function WaitlistPage() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-4xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
           <div className="inline-block px-4 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm font-semibold mb-6 border border-purple-500/30">
@@ -133,7 +131,6 @@ export default function WaitlistPage() {
           </p>
         </div>
 
-        {/* Benefits Grid */}
         <div className="grid md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
             <div className="w-12 h-12 bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg flex items-center justify-center mb-4">
@@ -166,7 +163,6 @@ export default function WaitlistPage() {
           </div>
         </div>
 
-        {/* Form */}
         <div className="bg-gradient-to-br from-pink-900/20 to-purple-900/20 rounded-2xl p-8 border border-pink-500/30 backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -201,7 +197,7 @@ export default function WaitlistPage() {
 
             <div>
               <label htmlFor="role" className="block text-sm font-semibold mb-2">
-                I'm interested as a...
+                I am interested as a...
               </label>
               <select
                 id="role"
@@ -230,7 +226,6 @@ export default function WaitlistPage() {
           </form>
         </div>
 
-        {/* Stats */}
         <div className="mt-12 grid grid-cols-3 gap-6 text-center">
           <div>
             <div className="text-3xl font-bold text-pink-400 mb-1">847</div>
