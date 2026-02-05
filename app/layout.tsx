@@ -8,10 +8,10 @@ import { ModalProvider, useModal } from './components/context/ModalContext';
 import LoginModal from './components/LoginModal';
 import NavBar from './components/layout/NavBar';
 
-// ADD THESE LINES
-export const dynamic = 'force-dynamic';
-export const dynamicParams = true;
-export const revalidate = 0;
+// REMOVE these lines - they don't work in client components
+// export const dynamic = 'force-dynamic';
+// export const dynamicParams = true;
+// export const revalidate = 0;
 
 interface LayoutProps {
   children: ReactNode;

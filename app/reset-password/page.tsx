@@ -1,11 +1,14 @@
 // app/reset-password/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function ResetPasswordPage() {
+export const dynamic = 'force-dynamic';
+
+// Inner component that uses searchParams
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams?.get('token');
@@ -259,5 +262,23 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+// Main component wrapped in Suspense
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center px-4">
+        <div className="w-full max-w-md p-6 bg-gray-800/50 rounded-xl border border-gray-700 shadow-lg">
+          <h1 className="text-2xl font-bold text-center mb-6 text-cyan-400">Loading...</h1>
+          <div className="flex justify-center">
+            <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
