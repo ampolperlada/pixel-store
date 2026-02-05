@@ -5,7 +5,6 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import GoogleReCAPTCHA from 'react-google-recaptcha';
 
-// Updated and consolidated ethereum type definition
 declare global {
   interface Ethereum {
     isMetaMask?: boolean;
@@ -29,7 +28,6 @@ interface SignupModalProps {
   };
 }
 
-// Helper function to format Ethereum addresses
 const formatEthereumAddress = (address: string): string => {
   if (!address || address.length < 10) return address;
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -39,7 +37,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
   const router = useRouter();
   const captchaRef = useRef<GoogleReCAPTCHA>(null);
   
-  // Form state
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,7 +46,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Error state
   const [errors, setErrors] = useState({
     username: '',
     email: '',
@@ -60,7 +56,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
     wallet: ''
   });
   
-  // Enhanced wallet connection state
   const [walletState, setWalletState] = useState({
     isConnecting: false,
     isConnected: false,
@@ -70,7 +65,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
     isMetaMaskInstalled: false
   });
 
-  // Check for MetaMask on component mount
   useEffect(() => {
     setWalletState(prev => ({
       ...prev,
@@ -83,13 +77,11 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     
-    // Clear error for this field
     setErrors(prev => ({
       ...prev,
       [name]: ''
     }));
     
-    // Update the appropriate state
     switch (name) {
       case 'username':
         setUsername(value);
@@ -120,12 +112,10 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
         isMetaMaskInstalled: walletState.isMetaMaskInstalled
       });
       
-      // Check if Ethereum provider is available
       if (!window.ethereum) {
         throw new Error('MetaMask not detected. Please install the extension.');
       }
       
-      // Request account access
       const accounts = await window.ethereum.request({ 
         method: 'eth_requestAccounts' 
       });
@@ -134,32 +124,13 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
         throw new Error('No accounts found or user rejected the request');
       }
       
-      // Ensure the address is properly formatted
       const formattedAddress = accounts[0].toLowerCase();
       
-      // Validate the address format
       if (!/^0x[a-f0-9]{40}$/i.test(formattedAddress)) {
         throw new Error('Invalid wallet address format');
       }
       
-      // Check if wallet is already connected to another account
-      const res = await fetch('/api/check-wallet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: formattedAddress })
-      });
-      
-      if (!res.ok) {
-        const data = await res.json();
-        if (res.status === 409) {
-          throw new Error(data.error || 'Wallet already connected', {
-            cause: { conflictingUser: data.conflictingUser }
-          });
-        }
-        throw new Error(data.error || 'Wallet check failed');
-      }
-
-      // Update wallet state
+      // DEMO MODE: Skip wallet check API call
       setWalletState({
         isConnecting: false,
         isConnected: true,
@@ -175,14 +146,10 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
         isConnected: false,
         address: null,
         error: error instanceof Error ? error.message : 'Connection failed',
-        conflictingUser:
-          error instanceof Error && typeof (error as any).cause === 'object'
-            ? (error as any).cause?.conflictingUser || null
-            : null,
+        conflictingUser: null,
         isMetaMaskInstalled: walletState.isMetaMaskInstalled
       });
       
-      // Also set the error in the form errors
       setErrors(prev => ({
         ...prev,
         wallet: error instanceof Error ? error.message : 'Wallet connection failed'
@@ -205,7 +172,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
     e.preventDefault();
     if (isSubmitting) return;
 
-    // Clear previous errors
     setErrors({
       username: '',
       email: '',
@@ -216,7 +182,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
       wallet: ''
     });
 
-    // Client-side validation
     let hasErrors = false;
     const newErrors = { ...errors };
 
@@ -261,106 +226,42 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
       return;
     }
 
-    // Captcha validation
-    if (!isGoogleSignup && !captchaToken) {
-      try {
-        const token = await captchaRef.current?.executeAsync();
-        setCaptchaToken(token || '');
-        if (!token) {
-          setErrors({ ...errors, general: 'CAPTCHA verification failed' });
-          return;
-        }
-      } catch (error) {
-        console.error('CAPTCHA error:', error);
-        setErrors({ ...errors, general: 'CAPTCHA verification failed' });
-        return;
-      }
-    }
-
-    // Proceed with form submission
     setIsSubmitting(true);
 
+    // DEMO MODE: Store locally and redirect to success page
     try {
-      // 1. First create the user account
-      const signupResponse = await fetch('/api/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          email,
-          password,
-          wallet_address: walletState.address || null,
-          agreedToTerms,
-          profile_image_url: '',
-          captchaToken,
-          isGoogleSignup
-        }),
-      });
-
-      const signupData = await signupResponse.json();
-
-      if (!signupResponse.ok) {
-        throw new Error(signupData.error || 'Signup failed. Please try again.');
+      // Simulate API delay for realistic UX
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Store in localStorage for demo
+      const waitlistEntry = {
+        username,
+        email,
+        walletAddress: walletState.address || null,
+        timestamp: new Date().toISOString()
+      };
+      
+      localStorage.setItem('pixel-forge-waitlist', JSON.stringify(waitlistEntry));
+      
+      // Show success message
+      if (toast) {
+        toast.showToast(
+          'Account created successfully! This is demo mode - data stored locally.',
+          'success'
+        );
       }
-
-      // 2. Attempt auto sign-in for email/password signup
-      if (!isGoogleSignup) {
-        console.log('Attempting auto sign-in...');
-        const signInResult = await signIn('credentials', {
-          redirect: false,
-          email,
-          password,
-          callbackUrl: '/dashboard'
-        });
-
-        if (signInResult?.error) {
-          throw new Error(`Auto sign-in failed: ${signInResult.error}`);
-        }
-
-        // 3. If wallet was connected, link it to the account
-        if (walletState.address) {
-          try {
-            const walletResponse = await fetch('/api/connect-wallet', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                // If you need an Authorization header, obtain a token after sign-in
-              },
-              body: JSON.stringify({
-                walletAddress: walletState.address
-              }),
-            });
-
-            if (!walletResponse.ok) {
-              console.warn('Wallet connection failed (non-critical)');
-            }
-          } catch (walletError) {
-            console.warn('Wallet connection error:', walletError);
-          }
-        }
-
-        // Success handling
-        if (toast) {
-          toast.showToast('Account created successfully!', 'success');
-          if (walletState.address) {
-            toast.showToast('Wallet connected successfully!', 'success');
-          }
-        }
-
-        // Close modal and redirect
-        onClose();
-        router.push(signInResult?.url || '/dashboard');
-      } else {
-        // For Google signup, just close the modal
-        onClose();
-      }
+      
+      // Close modal
+      onClose();
+      
+      // Redirect to success page
+      router.push('/waitlist/success');
+      
     } catch (error) {
-      console.error('Signup error:', error);
+      console.error('Demo signup error:', error);
       setErrors({
         ...errors,
-        general: error instanceof Error ? error.message : 'An unexpected error occurred'
+        general: 'Something went wrong. Please try again.'
       });
     } finally {
       setIsSubmitting(false);
@@ -377,32 +278,20 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
         return;
       }
       
-      setIsGoogleSignup(true);
-      setIsSubmitting(true);
-      
-      // Sign in with Google via NextAuth
-      const result = await signIn('google', { 
-        redirect: false,
-        callbackUrl: window.location.origin 
-      });
-      
-      if (result?.error) {
-        throw new Error(result.error);
+      // DEMO MODE: Just show a message
+      if (toast) {
+        toast.showToast(
+          'Google signup is disabled in demo mode. Use the regular signup form.',
+          'info'
+        );
       }
       
-      // Close the modal if successful
-      if (!result?.error) {
-        onClose();
-      }
     } catch (error) {
       console.error('Error initiating Google signup:', error);
       setErrors({ 
         ...errors,
         general: error instanceof Error ? error.message : 'Google signup failed. Please try again.' 
       });
-      setIsGoogleSignup(false);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -417,7 +306,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
   };
 
   const handleSwitchToLogin = () => {
-    // Reset form state before switching
     setUsername('');
     setEmail('');
     setPassword('');
@@ -434,7 +322,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
       wallet: ''
     });
     
-    // Reset wallet state
     setWalletState({
       isConnecting: false,
       isConnected: false,
@@ -444,14 +331,12 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
       isMetaMaskInstalled: walletState.isMetaMaskInstalled
     });
     
-    // If onSwitchToLogin is provided, call it
     if (onSwitchToLogin) {
       onSwitchToLogin();
     } else {
       console.warn("No onSwitchToLogin callback provided");
     }
     
-    // Close this modal
     onClose();
   };
 
@@ -477,6 +362,13 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
         <h2 className="text-3xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
           Create Your Account
         </h2>
+
+        {/* Demo Mode Notice */}
+        <div className="bg-yellow-900/20 border border-yellow-500/50 rounded-lg p-3 mb-6">
+          <p className="text-yellow-200 text-sm text-center">
+            Demo Mode: Signup will store data locally for demonstration purposes
+          </p>
+        </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Left Column - Form */}
@@ -544,7 +436,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
                 </div>
               </div>
 
-              {/* Enhanced Wallet Connection Section */}
+              {/* Wallet Connection Section - REPLACED VERSION */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Wallet Connection (Optional)
@@ -590,11 +482,6 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
                       <span>Connection Error</span>
                     </div>
                     <p className="text-sm mt-1">{walletState.error}</p>
-                    {walletState.conflictingUser && (
-                      <p className="text-sm mt-1">
-                        This wallet is already linked to user: <strong>{walletState.conflictingUser}</strong>
-                      </p>
-                    )}
                     <button
                       type="button"
                       className="mt-2 px-3 py-1 text-sm bg-red-900/30 hover:bg-red-800/50 rounded"
@@ -614,14 +501,13 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
                     <p className="text-sm mt-1">
                       To connect a wallet, please install the MetaMask browser extension.
                     </p>
-                    <a
-                      href="https://metamask.io/download/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 px-3 py-1 text-sm bg-yellow-900/30 hover:bg-yellow-800/50 rounded inline-block"
+                    <button
+                      type="button"
+                      onClick={() => window.open('https://metamask.io/download/', '_blank')}
+                      className="mt-2 px-3 py-1 text-sm bg-yellow-900/30 hover:bg-yellow-800/50 rounded"
                     >
                       Download MetaMask
-                    </a>
+                    </button>
                   </div>
                 ) : (
                   <div>
@@ -719,11 +605,11 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, onSwitchToLo
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.255H17.92C17.665 15.63 16.89 16.795 15.725 17.575V20.115H19.28C21.36 18.14 22.56 15.42 22.56 12.25Z" fill="#4285F4"/>
- <path d="M12 23C14.97 23 17.46 21.99 19.28 20.115L15.725 17.575C14.745 18.235 13.48 18.625 12 18.625C9.135 18.625 6.71 16.69 5.845 14.09H2.17V16.695C3.98 20.375 7.7 23 12 23Z" fill="#34A853"/>
+                  <path d="M12 23C14.97 23 17.46 21.99 19.28 20.115L15.725 17.575C14.745 18.235 13.48 18.625 12 18.625C9.135 18.625 6.71 16.69 5.845 14.09H2.17V16.695C3.98 20.375 7.7 23 12 23Z" fill="#34A853"/>
                   <path d="M5.845 14.09C5.625 13.43 5.505 12.725 5.505 12C5.505 11.275 5.625 10.57 5.845 9.91V7.305H2.17C1.4 8.76 0.975 10.35 0.975 12C0.975 13.65 1.4 15.24 2.17 16.695L5.845 14.09Z" fill="#FBBC05"/>
                   <path d="M12 5.375C13.615 5.375 15.065 5.93 16.205 7.02L19.36 3.865C17.455 2.09 14.965 1 12 1C7.7 1 3.98 3.625 2.17 7.305L5.845 9.91C6.71 7.31 9.135 5.375 12 5.375Z" fill="#EA4335"/>
                 </svg>
-                Continue with Google
+                Continue with Google (Demo Disabled)
               </button>
 
               <div className="text-center my-4">
