@@ -6,12 +6,8 @@ import Providers from "./provider";
 import { AuthProvider } from './components/context/AuthContext';
 import { ModalProvider, useModal } from './components/context/ModalContext';
 import LoginModal from './components/LoginModal';
-import NavBar from './components/layout/NavBar';
-
-// REMOVE these lines - they don't work in client components
-// export const dynamic = 'force-dynamic';
-// export const dynamicParams = true;
-// export const revalidate = 0;
+import ConditionalNavBar from './components/layout/ConditionalNavBar'; // CHANGED
+import Footer from './components/Footer';
 
 interface LayoutProps {
   children: ReactNode;
@@ -46,8 +42,9 @@ export default function RootLayout({ children }: LayoutProps) {
         <Providers>
           <AuthProvider>
             <ModalProvider>
-              <NavBar />
+              <ConditionalNavBar /> {/* CHANGED - Now conditional */}
               <LayoutContent>{children}</LayoutContent>
+              <Footer />
             </ModalProvider>
           </AuthProvider>
         </Providers>
