@@ -4,11 +4,11 @@ export default function Footer() {
   return (
     <footer className="bg-black border-t border-white/10 py-12 px-6">
       <div className="max-w-7xl mx-auto">
-        {/* Demo Disclaimer Section - NEW */}
+        {/* Demo Disclaimer Section */}
         <div className="bg-gradient-to-r from-cyan-900/20 to-purple-900/20 border border-cyan-500/30 rounded-lg p-6 mb-8">
           <div className="text-center">
             <h3 className="text-lg font-semibold text-cyan-400 mb-2">
-               Portfolio Demonstration Project
+              Portfolio Demonstration Project
             </h3>
             <p className="text-gray-300 text-sm mb-3 max-w-3xl mx-auto">
               <strong className="text-white">Pixel Forge</strong> is a full-stack web application built to showcase modern development practices and UI/UX design capabilities.
@@ -55,10 +55,10 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Resources</h4>
             <ul className="space-y-2 text-gray-400 text-sm">
-              <li><a href="https://github.com/ampolperlada/pixel-forge" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">View Source Code</a></li>
+              <li><a href="https://github.com/ampolperlada" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">View Source Code</a></li>
               <li><Link href="/waitlist" className="hover:text-white transition">Join Waitlist (Demo)</Link></li>
-              <li><a href="#" className="hover:text-white transition">Documentation</a></li>
-              <li><a href="#" className="hover:text-white transition">Tech Stack</a></li>
+              <li><a href="https://github.com/ampolperlada" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Documentation</a></li>
+              <li><a href="https://github.com/ampolperlada" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Tech Stack</a></li>
             </ul>
           </div>
 
@@ -67,9 +67,8 @@ export default function Footer() {
             <h4 className="font-semibold mb-4">Connect</h4>
             <ul className="space-y-2 text-gray-400 text-sm mb-4">
               <li><a href="https://github.com/ampolperlada" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">GitHub</a></li>
-              <li><a href="https://linkedin.com/in/ampolperlada" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">LinkedIn</a></li>
-              <li><a href="https://twitter.com/ampolperlada" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Twitter</a></li>
-              <li><a href="mailto:hello@ampolperlada.dev" className="hover:text-white transition">Contact</a></li>
+              <li><a href="https://www.linkedin.com/in/christian-paul-perlada/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">LinkedIn</a></li>
+              <li><a href="mailto:christianp.perlada@gmail.com" className="hover:text-white transition">Email</a></li>
             </ul>
           </div>
         </div>
@@ -81,17 +80,17 @@ export default function Footer() {
               © 2024 Pixel Forge - Demo Portfolio Project
             </p>
             <p className="text-gray-500 text-xs mt-1">
-              Built by <a href="https://github.com/ampolperlada" className="text-cyan-400 hover:text-cyan-300 transition" target="_blank" rel="noopener noreferrer">ampolperlada</a> • Not for commercial use
+              Built by <a href="https://github.com/ampolperlada" className="text-cyan-400 hover:text-cyan-300 transition" target="_blank" rel="noopener noreferrer">Christian Perlada</a> • Not for commercial use
             </p>
           </div>
           <div className="flex gap-6 text-gray-400 text-sm">
-            <a href="https://github.com/ampolperlada/pixel-forge" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
+            <a href="https://github.com/ampolperlada" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
               Source Code
             </a>
-            <a href="https://github.com/ampolperlada/pixel-forge#readme" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
+            <a href="https://github.com/ampolperlada" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
               About Project
             </a>
-            <a href="https://linkedin.com/in/ampolperlada" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
+            <a href="https://www.linkedin.com/in/christian-paul-perlada/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
               LinkedIn
             </a>
           </div>

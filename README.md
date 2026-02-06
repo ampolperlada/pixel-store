@@ -392,11 +392,11 @@ This project is open source for educational purposes. Not for commercial use.
 
 ## Contact
 
-**Developer**: Your Name  
-**Email**: your.email@example.com  
-**LinkedIn**: [linkedin.com/in/yourprofile](https://linkedin.com/in/yourprofile)  
-**GitHub**: [github.com/yourusername](https://github.com/yourusername)  
-**Portfolio**: [yourportfolio.com](https://yourportfolio.com)
+
+**Developer**: Christian Paul Perlada  
+**Email**: christianp.perlada@gmail.com  
+**LinkedIn**: [linkedin.com/in/christian-paul-perlada](https://www.linkedin.com/in/christian-paul-perlada/)  
+**GitHub**: [github.com/ampolperlada](https://github.com/ampolperlada)  
 
 ---
 
