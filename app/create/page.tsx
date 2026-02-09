@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Download, Upload, Undo, Redo, Grid, Palette, Brush, Eye, Save, Folder, Settings, Play, Square, User, UserCheck, Layers, HelpCircle, BookOpen, Zap, Target, Ruler, Lock, Unlock, RotateCcw, Copy, Trash2, Move, ZoomIn, ZoomOut, Lightbulb, Star, X, Monitor, FilePlus, Edit3, AlertTriangle, Copy as CopyIcon, RefreshCw } from 'lucide-react';
+import DesktopOnly from '../components/DesktopOnly';
+
 
 const PixelForgeCreator = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -146,6 +148,7 @@ const PixelForgeCreator = () => {
       { name: 'Healer', preview: '/api/placeholder/64/64', data: null }
     ]
   };
+  
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -1387,4 +1390,10 @@ const saveProject = () => {
   );
 };
 
-export default PixelForgeCreator;
+export default function CreatePage() {
+  return (
+    <DesktopOnly pageName="The Pixel Art Creator" showMobileAppMessage={true}>
+      <PixelForgeCreator />
+    </DesktopOnly>
+  );
+}
