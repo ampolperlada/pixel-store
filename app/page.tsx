@@ -30,18 +30,18 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* Demo Banner - NEW */}
+      {/* Demo Banner - Mobile Optimized */}
       <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-b border-yellow-500/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-2 text-center">
-            <p className="text-yellow-200 font-semibold text-sm md:text-base">
+        <div className="max-w-7xl mx-auto px-4 py-2 sm:py-3">
+          <div className="flex flex-col items-center justify-center gap-1 sm:gap-2 text-center">
+            <p className="text-yellow-200 font-semibold text-xs sm:text-sm md:text-base">
               🎨 <strong>Demo Portfolio Project</strong> - Showcasing UI/UX Design & Full-Stack Development
             </p>
+            <p className="text-yellow-100/80 text-[10px] sm:text-xs md:text-sm">
+              <span className="hidden sm:inline">Tech Stack: Next.js 15 • TypeScript • Prisma ORM • NextAuth • MetaMask Integration • </span>
+              <span className="text-yellow-400">Using sample data for demonstration</span>
+            </p>
           </div>
-          <p className="text-yellow-100/80 text-xs md:text-sm text-center mt-1">
-            <span className="hidden md:inline">Tech Stack: Next.js 15 • TypeScript • Prisma ORM • NextAuth • MetaMask Integration • </span>
-            <span className="text-yellow-400">Using sample data for demonstration</span>
-          </p>
         </div>
       </div>
 
