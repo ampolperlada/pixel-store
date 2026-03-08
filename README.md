@@ -2,7 +2,9 @@
 
 > A full-stack NFT marketplace where users can create pixel art, connect their crypto wallet, and interact with a live blockchain-ready platform.
 
-### [Live Demo → pixelforge-nft.vercel.app](https://pixelforge-nft.vercel.app)
+**Status: Actively in development** — core features built, more on the way.
+
+### [Preview → pixelforge-nft.vercel.app](https://pixelforge-nft.vercel.app)
 
 ---
 
