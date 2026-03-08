@@ -1,63 +1,70 @@
 # Pixel Forge NFT
 
-A web platform for exploring and managing NFT collections.
+> A full-stack NFT marketplace where users can create pixel art, connect their crypto wallet, and interact with a live blockchain-ready platform.
 
-## Live Demo
-https://pixelforge-nft.vercel.app/
+### [Live Demo → pixelforge-nft.vercel.app](https://pixelforge-nft.vercel.app)
+
+---
+
+## What It Does
+
+Pixel Forge NFT is a full-stack marketplace demo that brings together Web3 and creative tooling in one place:
+
+- **Pixel Art Creator** — in-browser drawing tool to design and mint original NFT artwork
+- **MetaMask Integration** — connect your wallet and interact with the Ethereum ecosystem
+- **Authentication System** — secure sign-in with NextAuth, backed by a real database
+- **NFT Marketplace UI** — browse, list, and explore NFT collections with a modern responsive interface
+
+---
 
 ## Tech Stack
-- Next.js
-- TypeScript
-- React
-- Web3 Integration
 
-## Getting Started
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 15, React, TypeScript, Tailwind CSS |
+| Backend | Next.js API Routes, Prisma ORM |
+| Database | PostgreSQL |
+| Auth | NextAuth.js |
+| Web3 | MetaMask, Ethereum |
+| Deployment | Vercel |
 
-First, install dependencies:
+---
+
+## Screenshot
+
+![Pixel Forge NFT](./public/screenshot.png)
+
+---
+
+## Key Features
+
+- **Pixel art canvas** built from scratch in the browser
+- **MetaMask wallet** connect and authentication
+- **Full auth system** with session management via NextAuth
+- **Persistent data** via Prisma + PostgreSQL
+- **Fully responsive** UI with Tailwind CSS
+- **Next.js 15 App Router** with server components
+
+---
+
+## Running Locally
 
 ```bash
+# Install dependencies
 npm install
-```
 
-Then run the development server:
+# Set up environment variables
+cp .env.example .env.local
 
-```bash
+# Push database schema
+npx prisma db push
+
+# Start development server
 npm run dev
 ```
 
-Open http://localhost:3000 in your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying:
+---
 
-```
-app/page.tsx
-```
-
-The page automatically updates as you edit the file.
-
-## Features
-
-- NFT collection browsing
-- Web3 integration
-- Modern responsive UI
-- Built with Next.js App Router
-
-## Learn More
-
-To learn more about the technologies used in this project:
-
-- Next.js Documentation  
-https://nextjs.org/docs
-
-- Learn Next.js  
-https://nextjs.org/learn
-
-- Next.js GitHub Repository  
-https://github.com/vercel/next.js
-
-## Deployment
-
-The easiest way to deploy this project is through Vercel.
-
-Deployment documentation:  
-https://nextjs.org/docs/app/building-your-application/deploying
+*Built as a portfolio project to demonstrate full-stack and Web3 development skills.*
