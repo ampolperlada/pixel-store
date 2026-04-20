@@ -4,7 +4,6 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { supabase } from '../../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
-import { NextApiRequest, NextApiResponse } from 'next';
 import { NextAuthOptions } from 'next-auth';
 
 // Create an admin client that bypasses RLS
@@ -310,9 +309,6 @@ export const authOptions: NextAuthOptions = {
   debug: process.env.NODE_ENV === 'development'
 };
 
-// Use the extracted authOptions in the handler
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  return NextAuth(req, res, authOptions);
-};
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

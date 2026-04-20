@@ -1,0 +1,25 @@
+name: 
+
+trigger:
+ - main
+ - develop
+
+  pool: 
+  vmImage: 'ubuntu-latest'
+
+  variables:
+   -group: 'PixelStore-Variables'
+   -name: imageTag
+   value: $(Build.BuildId)
+
+   stages:
+   - stage: Install
+    displayName: 'Install Dependencies'
+    jobs:
+    - job:NpmInstall
+    steps:
+    -task: NodeTool@0
+    inputs:
+    versionSpec: '18.x'
+    inputs: 
+    version

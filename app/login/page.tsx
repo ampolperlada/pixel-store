@@ -1,11 +1,16 @@
 // app/login/page.tsx
 'use client';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import LoginModal from '../components/LoginModal';
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
+
+  const error = searchParams.get('error');
+
   const [showLoginModal, setShowLoginModal] = useState(true);
 
   const handleClose = () => {
@@ -14,10 +19,10 @@ export default function LoginPage() {
   };
 
   const handleSwitchToSignup = () => {
-    router.push('/signup'); // Navigate to signup page
+    router.push('/signup');
   };
 
-  // If modal is closed, navigate back
+  // If modal is closed → go home
   useEffect(() => {
     if (!showLoginModal) {
       router.push('/');
@@ -25,10 +30,27 @@ export default function LoginPage() {
   }, [showLoginModal, router]);
 
   return (
-    <LoginModal
-      isOpen={showLoginModal}
-      onClose={handleClose}
-      onSwitchToSignup={handleSwitchToSignup}
-    />
+    <>
+      {error && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <strong className="font-bold">Error: </strong>
+          <span>{error}</span>
+        </div>
+      )}
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={handleClose}
+        onSwitchToSignup={handleSwitchToSignup}
+      />
+    </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
